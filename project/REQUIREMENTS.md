@@ -1,19 +1,22 @@
 # Requirements
 
-## Functional
-- Accept requests from client-facing surfaces and route them through n8n.
-- Support Discovery, HR Consultant, SOP, and Org Chart workflows.
-- Preserve company and user scope across requests.
-- Support asynchronous processing where the client cannot wait for long-running agent work.
-- Return structured status, answer/output, confidence/source metadata where applicable, and review flags.
-- Generate SOP and Org Chart diagrams in `.drawio` format as the canonical diagram artifact.
-- Support human review/escalation for low-confidence or policy-sensitive cases.
+## Functional Requirements
+- Client-facing surface များမှ request လက်ခံပြီး n8n မှတစ်ဆင့် route လုပ်နိုင်ရမည်။
+- Discovery, HR Consultant, SOP နှင့် Org Chart workflows ကို support လုပ်ရမည်။
+- Request တစ်ခုလုံးတွင် `company_id` နှင့် `user_id` scope မပျောက်ရ။
+- Long-running agent work အတွက် asynchronous processing ကို support လုပ်ရမည်။
+- Request contract တွင် အနည်းဆုံး `request_id`, `company_id`, `user_id`, `question`, `category` တို့ကို လက်ခံနိုင်ရမည်။
+- Response တွင် workflow အလိုက် `status`, `ai_answer` သို့မဟုတ် output, `confidence`, `sources`, review flag metadata တို့ကို structured format ဖြင့်ပြန်ပေးနိုင်ရမည်။
+- SOP နှင့် Org Chart diagram များ၏ canonical artifact သည် `.drawio` ဖြစ်ရမည်။
+- Low-confidence, policy-sensitive သို့မဟုတ် escalation လိုအပ်သည့် case များအတွက် Human-in-the-loop review path ရှိရမည်။
+- Knowledge loader / RAG path ကို company scope ဖြင့်အသုံးပြုနိုင်ရမည်။
 
-## Non-functional
-- Deterministic validation around critical structured outputs.
-- Auditability for requests, decisions, failures, retries, and approvals.
-- Idempotency for externally retried requests where applicable.
-- Explicit timeout/fallback behavior.
-- No cross-company data leakage.
-- Secrets must stay outside committed documentation and source.
-- Production-impacting changes require explicit approval and verification.
+## Non-functional Requirements
+- Critical structured output များတွင် deterministic validation ရှိရမည်။
+- Request, decision, failure, retry, approval တို့ကို audit ပြန်လုပ်နိုင်ရမည်။
+- External retry ဖြစ်နိုင်သည့် request များတွင် idempotency ရှိရမည်။
+- Timeout နှင့် fallback behavior ကို explicit သတ်မှတ်ထားရမည်။
+- Company တစ်ခု၏ data သည် အခြား company သို့ မယိုစိမ့်ရ။
+- Secrets များကို committed documentation/source ထဲမထည့်ရ။
+- Production-impacting change များသည် explicit approval နှင့် verification လိုအပ်သည်။
+- Completion claim မပြုမီ test သို့မဟုတ် observable verification evidence ရှိရမည်။
