@@ -1,0 +1,29 @@
+version: 1
+project: panellistmm
+principles:
+  - name: plan_alignment
+    rule: implementation must remain within approved plan and scope
+  - name: human_approval
+    rule: material architecture, production, destructive, security, or external-impact changes require explicit human approval
+  - name: evidence_first
+    rule: repository and verification evidence outrank saved summaries
+  - name: context_minimization
+    rule: load only context relevant to the active task
+boundaries:
+  - from: client-surfaces
+    to: n8n
+    policy: allow
+  - from: n8n
+    to: supabase
+    policy: allow
+  - from: specialized-agents
+    to: project-scope
+    policy: deny
+  - from: sop-agent
+    to: diagram-output
+    policy: allow-via-interface
+    via_interface: drawio
+  - from: org-chart-agent
+    to: diagram-output
+    policy: allow-via-interface
+    via_interface: drawio
