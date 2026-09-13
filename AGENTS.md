@@ -2,6 +2,13 @@
 
 This repository uses a plan-first, evidence-first workflow.
 
+## Language
+- Repository documentation written or updated by Claude Code, Codex, or other coding agents must be written in **Myanmar (Burmese)** by default.
+- Use clear, natural Burmese suitable for technical work.
+- Keep code, identifiers, file paths, commands, API names, database/table/column names, JSON keys, environment-variable names, product names, and technical terms in English when translating them would reduce precision.
+- Existing English source code and machine-readable configuration do not need to be translated.
+- If the owner explicitly requests another language for a specific artifact, that request overrides this default for that artifact only.
+
 ## Start here
 1. Read `project/CURRENT_STATE.md`.
 2. Read the active ticket under `work/tickets/active/`.
