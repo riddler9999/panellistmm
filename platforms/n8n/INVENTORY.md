@@ -43,7 +43,28 @@ Credentials wired: `Google Drive account 2` (`bHh55IupgMJpCVKl`), `mhtet` google
 
 ### Blockers
 1. ✅ **ဖြေရှင်းပြီး** — `source_type = 'sop'` သည် `hr_kb_source_type_check` တွင်မပါသဖြင့် SOP upsert တိုင်း fail ဖြစ်မည်ဖြစ်သည်။ Migration `hr_kb_allow_sop_source_type` ဖြင့် `'sop'` ကိုထည့်ပြီး。 (Workflow ကို တစ်ခါမှ run မဖူးသေး၍ ဤ bug ပေါ်မလာခဲ့ပါ。)
-2. ⏳ **Postgres credential** — Postgres node ၃ ခု (`Upsert SOP Chunks into hr_kb`, `Upsert FAQ Chunks into hr_kb`, `Global Reconcile hr_kb`) တွင် credential မရှိသေးဘဲ disabled ဖြစ်နေသည်။ Panellist Supabase database သို့ညွှန်သော postgres credential လိုအပ်သည်。
+2. ✅ **ဖြေရှင်းပြီး** — Postgres node ၃ ခုတွင် credential မရှိဘဲ disabled ဖြစ်နေခဲ့သည်။ `Panellst` credential (`j1mRvDCfnGpgDZPN`) ကို wire လုပ်ပြီး enable လုပ်ပြီး。
+3. 🔴 **ဖွင့်ထားဆဲ — `Panellst` credential သည် မှားသော database သို့ညွှန်နေသည်**
+
+   Execution `62223` (2026-09-15) သည် status `success` ပြသော်လည်း row ၀ ခုသာရေးသည်။ Upsert node နှစ်ခုစလုံး၏ error-output branch တွင် —
+   ```
+   relation "public.hr_kb" does not exist
+   ```
+   RLS, permission သို့မဟုတ် schema ပြဿနာမဟုတ်ပါ (တူညီသော INSERT ကို `postgres` role ဖြင့်တိုက်ရိုက် run ရာ အောင်မြင်သည်) — credential သည် `hr_kb` မရှိသော database တစ်ခုသို့ချိတ်နေခြင်းဖြစ်သည်。
+
+   မျှော်မှန်းထားသော connection —
+   | Field | Value |
+   |---|---|
+   | Host | `db.apnvkmwcmfpkkifzmdfc.supabase.co` (သို့) ap-southeast-2 pooler host |
+   | Port | `5432` (pooler ဆိုလျှင် `6543`) |
+   | Database | `postgres` |
+   | User | `postgres` (pooler ဆိုလျှင် `postgres.apnvkmwcmfpkkifzmdfc`) |
+   | SSL | require |
+
+   ⚠️ **Silent-failure သတိပေးချက်** — upsert node များ၏ error ကို `Collect Ingest Errors` သို့ route လုပ်ထားသဖြင့် **execution status မှာ `success` ပြသည်**。 ထို့အပြင် `Collect Ingest Errors` သည် Postgres error ၏ အကြောင်းရင်းကို မသိမ်းဘဲ SQL text သာသိမ်းသည် — အမှန်တကယ့်အကြောင်းရင်းသည် node ၏ error-output branch (`data.main[1]` ၏ `.json.message`) တွင်သာရှိသည်。 **Run တစ်ခုပြီးတိုင်း `hr_kb` row count ကိုတကယ်စစ်ရမည်၊ execution status ကိုမယုံရ。**
+
+### Verified working (execution `62223`)
+DB write မှလွဲ၍ pipeline တစ်ခုလုံးအောင်မြင်သည် — Drive docx copy/export, bilingual split, Zawgyi detect/convert + NFC normalize, chunk + sha256, `gemini-embedding-001` @1536 embedding အားလုံး error မရှိ。
 
 ## ⚠️ ADR-001 နှင့် ဆက်စပ်၍ စစ်ဆေးရန်
 

@@ -31,7 +31,9 @@ Inventory: `platforms/n8n/INVENTORY.md` — ဤ repo သည် index သာဖ�
 Owner ၏ **Part 1 / Part 3** သည် roadmap ၏ **Phase 0–5** နှင့်မတူ — Part 1 = Phase 2 (HR Consultant + RAG), Part 3 = Phase 3+4 (SOP/Org)。
 
 ## Blockers
-**`KB Bulk Ingest` workflow ၏ Postgres credential** — Postgres node ၃ ခုတွင် credential မရှိသေးဘဲ disabled ဖြစ်နေသည်။ Panellist Supabase သို့ညွှန်သော postgres credential လိုအပ်သည်။ ၎င်းမရှိဘဲ KB seed မလုပ်နိုင်ပါ။
+🔴 **`Panellst` postgres credential သည် မှားသော database သို့ညွှန်နေသည်** — `relation "public.hr_kb" does not exist`。 Credential ကို Panellist Supabase (`apnvkmwcmfpkkifzmdfc`) သို့ပြင်ရန်လိုအပ်သည်။ အသေးစိတ်နှင့် expected connection values: `platforms/n8n/INVENTORY.md`。
+
+⚠️ ဤ run သည် execution status `success` ပြသော်လည်း row ၀ ခုသာရေးခဲ့သည် — **ingest run တိုင်းအပြီး `hr_kb` row count ကို တကယ်စစ်ရမည်**。
 
 ပြီးစီးပြီး —
 - Retrieval benchmark gate (`work/reviews/TASK-002-retrieval-benchmark.md`)
