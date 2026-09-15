@@ -1,0 +1,43 @@
+# TASK-001 — Discovery Routing Test Cases (Evidence Draft)
+
+## Source
+`Pocket HR Partner` Glide app ၏ production data export (`Tickets`, `>Messages`, `Ticket_Categories_Assignment`, `Options` sheets) ကို analyze လုပ်ပြီး ထုတ်ယူထားသော representative test case များဖြစ်သည်။ PII (real company name, contact person, email, phone, address) များကို ဖယ်ရှားထားပြီး `request_id` / `company_id` / `user_id` တို့ကို placeholder ဖြင့်အစားထိုးထားသည်။ ဤဖိုင်သည် **SPEC-001 §Verification** ("HR, SOP, Org Chart, unknown, missing-field case များအတွက် test evidence") အတွက် draft evidence ဖြစ်ပြီး၊ TASK-001 acceptance criteria "At least five representative test cases are recorded and pass" ကို ကိုးကားရန်အသုံးပြုနိုင်သည်။ Actual implementation ရေးသားပြီးမှ pass/fail ကို confirm ရမည်။
+
+## Finding — Real Category Taxonomy vs SPEC-001 Intents
+
+Production `Options` / `Ticket_Categories_Assignment` sheet များအရ actual ticket category ၈ ခုရှိသည်: `Job Description`, `Recruitment`, `KPI / Performance`, `HR Policies / Procedures`, `Employee Conflict / Discipline`, `Workplace Communication`, `HR Forms / Documents`, `SOP / Process`, `Organization Chart / Structure`.
+
+Mapping result:
+- `SOP / Process` → `sop_generation`
+- `Organization Chart / Structure` → `org_chart_generation`
+- ကျန် ၇ category (`Job Description`, `Recruitment`, `KPI / Performance`, `HR Policies / Procedures`, `Employee Conflict / Discipline`, `Workplace Communication`, `HR Forms / Documents`) → **အားလုံး `hr_consultation` အောက်ကျရောက်သည်**
+
+**Conclusion**: SPEC-001 ၏ ၃-intent model (`hr_consultation` / `sop_generation` / `org_chart_generation` / `unknown`) သည် production category taxonomy ကို gap မရှိဘဲ cover လုပ်နိုင်သည် — Discovery Agent မှာ intent အသစ်ထပ်ဖြည့်စရာမလိုပါ။ Sub-category (Recruitment, KPI/Performance, စသည်) များကို Handoff Contract ၏ ရှိနှင့်ပြီးသား `category` field (`SPEC-001` line 15/50) ထဲသို့ pass-through metadata အဖြစ်ထားသင့်ပြီး၊ Discovery Agent ၏ intent classification logic ထဲ hardcode မထည့်သင့်ပါ။ ဤ finding ကို SPEC-001 ပြင်ရန်မလိုပါ — confirmatory evidence သာဖြစ်သည်။
+
+## Test Cases
+
+| # | Intent (expected) | `category` (passthrough) | Question (redacted, real-derived) | Notes |
+|---|---|---|---|---|
+| 1 | `hr_consultation` | `Recruitment` | "Can't find a suitable candidate for the Finance Manager position and candidate quality is very poor. I want suggestions and an interview checklist for this." | Real ticket content (English), clean single-intent case |
+| 2 | `hr_consultation` | `Employee Conflict / Discipline` | "An employee is not happy with their recent increment and submitted a resignation. They still have a contract with us for another 6 months." | Real ticket content; conflict/discipline sub-case |
+| 3 | `hr_consultation` | `Workplace Communication` | "ကျွန်ုပ်တို့ Company တွင် Sales Team မှ Employee Turnover Rate မြင့်မားနေပြီး ၆ လအတွင်း ဝန်ထမ်း ၈ ဦး အလုပ်ထွက်ခဲ့ပါသည်။ Exit Interview အရ Salary၊ Supervisor Management နှင့် Career Growth အပိုင်းများတွင် ပြဿနာရှိကြောင်းတွေ့ရပါသည်။" | Real ticket content (Burmese); multi-topic, still single `hr_consultation` intent |
+| 4 | `sop_generation` | `SOP / Process` | "I want an SOP for our company's probation process." | Real ticket content, explicit SOP request |
+| 5 | `sop_generation` | `SOP / Process` | "Orientation နဲ့ ပတ်သက်ပြီး SOP တစ်ခုကို လိုချင်ပါတယ်။ Orientation ပေးချိန်တိုင်း struggle လုပ်နေရလို့ပါ။" | Real ticket content (Burmese) |
+| 6 | `org_chart_generation` | `Organization Chart / Structure` | "I need an updated organization chart for our department after the recent restructuring, showing reporting lines down to team-lead level." | ⚠️ **Synthesized** — production `Organization Chart / Structure` tickets in this export contain only placeholder/test text (no usable real example). Flag as a real coverage gap in production data, not a spec gap. |
+| 7 | `unknown` | `Job Description` (raw label only, no body) | "test" | Real ticket — too sparse to classify; correct behavior is `unknown` / clarification, not forced routing into `hr_consultation` on category label alone |
+| 8 | `unknown` | `KPI / Performance` (raw label only) | "test turnover" | Real ticket — same sparse-input pattern |
+| 9 | `hr_consultation` (needs_clarification candidate) | `SOP / Process` (as labeled) | "ကျွန်ုပ်၏ Company တွင် HR Department မရှိသေးဘဲ Employee ၆၀ ခန့် ရှိပါသည်။ လက်ရှိတွင် HR Policy၊ Job Description၊ Salary Structure နှင့် Performance Management System များ မပြည့်စုံသေးသောကြောင့် HR System တစ်ခုလုံးကို ပြန်လည်တည်ဆောက်လိုပါသည်။" | Real ticket, human-labeled `SOP / Process` but content spans multi-domain HR setup (policy + JD + comp + performance), not a single SOP artifact request — good edge case to verify Discovery does **not** force a single-document `sop_generation` route on broad requests |
+| 10 | validation failure | — | Same as case #1 but with `company_id` omitted from request payload | Synthetic contract-level test (not data-derived) — required for SPEC-001 §Failure Handling: "Required field မရှိပါက agent call မလုပ်ဘဲ validation error ထုတ်ရမည်" |
+| 11 | validation failure | — | Same as case #4 but with `user_id` omitted | Synthetic — required-field coverage for a second field |
+
+## Coverage vs Acceptance Criteria
+
+- ✅ Valid HR request → `hr_consultation` (cases 1–3)
+- ✅ Valid SOP request → `sop_generation` (cases 4–5)
+- ⚠️ Valid Org Chart request → `org_chart_generation` (case 6, synthesized — no clean real example in this export; recommend requesting a real Org Chart ticket sample from product owner before treating this as fully evidenced)
+- ✅ Ambiguous/sparse request → `unknown`, not forced routing (cases 7–8)
+- ✅ Missing required field → validation failure, no agent call (cases 10–11)
+- ✅ `request_id` / `company_id` / `user_id` unchanged through handoff — to be verified against implementation once built (not derivable from static data alone)
+
+## Status
+DRAFT — implementation မတည်ဆောက်မီ acceptance-criteria alignment အတွက် reference documentation သာဖြစ်သည်။ Case 6 အတွက် real Org Chart example ရယူရန် product owner ကို follow-up တောင်းဆိုသင့်သည်။
