@@ -59,25 +59,53 @@ Ticket တစ်ခု၏ review lifecycle —
 | `reviewed_by` | text | Glide action | Audit |
 | `reviewed_at` | timestamp | Glide action | Audit |
 
-### Supabase — Core tables
+### Supabase — RAG corpus: ရှိပြီးသား `public.hr_kb` ကိုသုံးမည်
+
+⚠️ **Supabase project `Panellist` တွင် `public.hr_kb` table ရှိပြီးသားဖြစ်သည်** (migration `20260909184210_hr_kb_pgvector_schema`, rows 0)။ ဤ spec ၏ မူလ draft တွင် `knowledge_entries` အသစ်ကိုအဆိုပြုခဲ့သော်လည်း — `agent/RULES.md` ("duplicate abstraction မဖန်တီးရ") အရ **ရှိပြီးသား `hr_kb` ကိုသာသုံးမည်**။
+
+ရှိပြီးသား schema —
 
 ```
-knowledge_entries                      -- RAG corpus
-  id uuid pk
-  source_type text                     -- 'resource' | 'correction'
-  knowledge_scope text                 -- 'general' | 'company_policy'
-  company_id uuid null                 -- company_policy ဖြစ်မှသာ set
-  question_text text                   -- embed လုပ်သည့် field (အောက်တွင်ရှင်းပြ)
-  answer_text text                     -- retrieval က return ပြန်သည့် content
-  category text                        -- ticket category taxonomy
-  language text                        -- 'my' | 'en' | 'mixed'
-  embedding vector(1536)               -- gemini-embedding-001, MRL truncated
-  is_active boolean default true
-  superseded_by uuid null fk -> knowledge_entries.id
-  source_ticket_id uuid null
-  created_by text                      -- consultant email
-  created_at timestamptz
+public.hr_kb
+  id                bigint identity pk
+  source_id         text            -- provenance key
+  source_version    text
+  embedding_version text
+  pipeline_version  text
+  source_type       text CHECK IN (glidedoc, faq, ticketqa, law,
+                                   contextnote, meta, admin_correction)
+  title             text
+  category          text
+  language          text
+  scope             text CHECK (scope = 'generic')      -- ⚠️ generic သာခွင့်ပြု
+  chunk_text        text            -- embed လုပ်သည့် field
+  chunk_hash        text
+  embedding         vector(1536)
+  priority          integer default 0
+  updated_at        timestamptz
 
+  UNIQUE (source_id, chunk_hash)                        -- dedup
+  INDEX  hnsw (embedding vector_cosine_ops)             -- ANN
+  RLS enabled, policy ၀ ခု                              -- service_role သာဝင်နိုင်
+```
+
+**Mapping**: Resources → `source_type = 'glidedoc'`, consultant correction → `source_type = 'admin_correction'`, ticket Q&A → `'ticketqa'`。
+
+**ရှိပြီးသား schema က ဤ spec ထက်ပိုကောင်းသည့်အချက်များ**: `pipeline_version` / `embedding_version` (re-embed migration အတွက်), `chunk_hash` + unique index (dedup), `priority` (ranking boost)。ဤအချက်များကို ဤ spec သို့ လက်ခံထည့်သွင်းသည်。
+
+**Gap — TASK-003 မစမီ ဆုံးဖြတ်ရန် (Open Items §4, §5)**:
+| လိုအပ်ချက် | `hr_kb` အခြေအနေ |
+|---|---|
+| Question/answer ခွဲခြားခြင်း | `chunk_text` တစ်ခုတည်း — `answer_text` column ထပ်ဖြည့်ရန်လိုနိုင် |
+| `company_policy` scope | `scope` CHECK က `'generic'` သာခွင့်ပြု — extend လုပ်မလား မလုပ်မလား |
+| `is_active` / `superseded_by` | မရှိ — conflict handling အတွက်လိုအပ် |
+| `created_by` audit | မရှိ |
+
+ဤအားလုံးသည် **additive migration** များဖြစ်၍ data loss မရှိပါ။ သို့သော် `platforms/supabase/MIGRATIONS.md` gate အရ owner approval လိုအပ်သည်。
+
+### Supabase — Metric table (အသစ်)
+
+```
 review_events                          -- metric + audit
   id uuid pk
   ticket_id uuid
@@ -96,16 +124,17 @@ review_events                          -- metric + audit
 
 **Dimension = 1536** (MRL truncation)။ အကြောင်းရင်း: pgvector ၏ HNSW/IVFFlat index များသည် **dimension 2000 တွင်ကန့်သတ်ထားသည်** — default 3072 ကို index လုပ်၍မရပါ။ 1536 သည် limit အတွင်းရှိပြီး storage သက်သာသည်။ (အခြားရွေးချယ်စရာ: `halfvec` သည် 4000 dim အထိ index လုပ်နိုင်သည် — corpus ကြီးလာပြီး precision လိုအပ်လာမှ ပြန်စဉ်းစားရန်။)
 
-### ⚠️ Pre-implementation gate — Burmese retrieval benchmark
-မြန်မာစာသည် low-resource language ဖြစ်သည်။ Model ၏ multilingual claim ကို **ဤ corpus အပေါ် verify မလုပ်ဘဲ** RAG တစ်ခုလုံးမတည်ဆောက်ရ။
+### ✅ Pre-implementation gate — Burmese retrieval benchmark (ပြီးစီး)
 
-Implementation မစမီ —
-1. `Resources` ၂၂၄ ခု၏ `description` + `detail_info` ကို embed လုပ်
-2. Export ထဲမှ real question ~၁၂ ခု (မြန်မာ + English ရောနှော) ဖြင့် retrieve
-3. Top-5 hit rate ကိုတိုင်း
-4. Hit rate နိမ့်ပါက alternative model (multilingual-e5-large, BGE-M3 စသည်) ကို benchmark လုပ်ပြီး ADR ရေးရန်
+မြန်မာစာသည် low-resource language ဖြစ်၍ model ၏ multilingual claim ကို ဤ corpus အပေါ် verify ရန်လိုအပ်ခဲ့သည်။
 
-ဤ gate မကျော်ဘဲ production RAG မတည်ဆောက်ရ။
+**ရလဒ်: GATE PASSED** — evidence: `work/reviews/TASK-002-retrieval-benchmark.md`
+- Self-retrieval (မြန်မာ ၄၀ query): R@5 = 1.00, median rank = 1
+- Real ticket question ၁၂ ခု: ၁၀ ခု top-1 တိကျ
+- **မြန်မာ top-1 similarity ≈ 0.673 vs English ≈ 0.674 — မြန်မာစာ deficit မရှိ**
+- Cross-lingual retrieval အလုပ်လုပ်သည် (မြန်မာ query → English document)
+
+Corpus gap တစ်ခုတွေ့ရှိသည် — `Resources` သည် template/form များသာဖြစ်ပြီး advice content မဟုတ်၍ broad strategic question များတွင် generic ရလဒ်ထွက်သည်။ ၎င်းသည် model ပြဿနာမဟုတ်ဘဲ၊ correction learning loop က ဖြည့်ပေးရမည့်အရာဖြစ်သည် (benchmark evidence file §ဒုတိယ Finding)。
 
 ### 🔑 ဘာကို embed လုပ်မလဲ — critical design decision
 Correction တစ်ခုကို သိမ်းသည့်အခါ **အဖြေတစ်ခုတည်း မသိမ်းရ**။ `(question, answer)` pair အဖြစ်သိမ်းပြီး —
@@ -116,15 +145,18 @@ Correction တစ်ခုကို သိမ်းသည့်အခါ **အ�
 အကြောင်းရင်း: incoming query များသည် **မေးခွန်း** ဖြစ်သည်။ Question-to-question similarity သည် question-to-answer similarity ထက် သိသိသာသာပိုတိကျသည် (asymmetric retrieval problem)။ အဖြေကို embed လုပ်ပါက retrieval quality ကျဆင်းပြီး learning loop အလုပ်မလုပ်ပါ။
 
 ### Retrieval scope rule
-Company `X` ၏ request တစ်ခုအတွက် retrieve လုပ်ရာတွင် —
+
+လက်ရှိ `hr_kb` သည် `scope = 'generic'` သာခွင့်ပြုသဖြင့် retrieval သည် corpus တစ်ခုလုံးပေါ်တွင်ဖြစ်သည် — company filter မလိုပါ။
+
+`company_policy` ကို support လုပ်ရန်ဆုံးဖြတ်ပါက (Open Item §5) scope rule မှာ —
 
 ```sql
 WHERE is_active = true
-  AND ( knowledge_scope = 'general'
-        OR (knowledge_scope = 'company_policy' AND company_id = X) )
+  AND ( scope = 'generic'
+        OR (scope = 'company' AND company_id = X) )
 ```
 
-`company_policy` entry များကို အခြား company သို့ **လုံးဝမပြန်ထုတ်ရ** — privacy အတွက်မဟုတ်ဘဲ **correctness** အတွက်ဖြစ်သည် (Company A ၏ probation policy သည် Company B အတွက် မှားနေသောအဖြေဖြစ်သည်)။
+`company` scope entry များကို အခြား company သို့ **လုံးဝမပြန်ထုတ်ရ** — privacy အတွက်မဟုတ်ဘဲ **correctness** အတွက်ဖြစ်သည် (Company A ၏ probation policy သည် Company B အတွက် မှားနေသောအဖြေဖြစ်သည်)။ ၎င်းကို Supabase RLS ဖြင့် enforce လုပ်ရမည်၊ application logic တစ်ခုတည်းဖြင့်မလုံလောက်ပါ။
 
 ### De-identification (ingest မလုပ်မီ mandatory)
 Correction ကို `knowledge_entries` သို့မသွင်းမီ အောက်ပါတို့ကို strip/replace လုပ်ရမည် — company name, person name, email address, phone number, invoice number။ `general` scope entry များတွင် ဤ de-identification **မဖြစ်မနေလိုအပ်သည်**။
@@ -194,3 +226,7 @@ Acceptance criteria တိုင်းအတွက် observable evidence လိ
 1. Near-duplicate similarity threshold မည်မျှထားမည်
 2. LLM provider / model ရွေးချယ်မှု (`ARCHITECTURE.md:11` အရ model ကို architecture invariant အဖြစ် lock မလုပ်ရ)
 3. Google Drive document ingestion ကို မည်သည့်အဆင့်တွင်ထည့်မည် (day-1 မဟုတ်)
+4. **`hr_kb` တွင် `answer_text` column ထပ်ဖြည့်မလား** — လက်ရှိ `chunk_text` တစ်ခုတည်းသာရှိသည်။ Correction များအတွက် "question ကို embed, answer ကို return" pattern လုပ်ရန် answer field သီးသန့်လိုအပ်သည်။ အခြားရွေးချယ်စရာ: `chunk_text` ထဲ `Q: ... / A: ...` ပေါင်းထည့်ခြင်း (schema မပြောင်းရ၊ သို့သော် embedding သည် answer ကိုပါဖုံးလွှမ်းသွားမည်)。
+5. **`scope` CHECK ကို `'company'` အထိ ချဲ့မလား** — လက်ရှိ `'generic'` သာ။ ချဲ့ပါက `company_id` column + RLS policy လိုအပ်မည်။ မချဲ့ပါက company-specific correction များကို **ingest မလုပ်ဘဲထားရမည်** (consultant ဖြေပေးရုံသာ၊ learn မလုပ်)。 လုံခြုံမှုအရ ရိုးရှင်းသော်လည်း learning coverage ကျဉ်းမြောင်းသည်。
+6. **`is_active` / `superseded_by` / `created_by` column များ ထပ်ဖြည့်ရန်** — conflict handling (§Learning Ingestion Rules #3) နှင့် audit အတွက် လိုအပ်သည်။
+7. `hr_kb` ၏ RLS policy ၀ ခုဖြစ်နေခြင်းကို **intentional အဖြစ်အတည်ပြုရန်** — လက်ရှိတွင် service_role သာဝင်နိုင်သည် (KB အတွက် မှန်ကန်သော default)。 n8n က service_role ဖြင့်ဝင်မည်ဖြစ်၍ အဆင်ပြေသော်လည်း documented ဖြစ်သင့်သည်。
