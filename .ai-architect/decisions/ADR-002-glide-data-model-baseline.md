@@ -5,17 +5,21 @@ Proposed — **owner review/approval မရှိသေးပါ။ Migration fi
 
 ## Context
 
-`ARCHITECTURE.md` က data/state layer ကို "Supabase Postgres" ဟုသာ high-level သတ်မှတ်ထားပြီး concrete schema မရှိသေးပါ။ Client surface (Glide) ၏ production data export ("Pocket HR Partner" app, `Users/Services/Resources/AIChat/Messages/Tickets/...` — 14 tables) နှင့် Glide app builder ၏ screen recording ကို analyze လုပ်ရာ အောက်ပါ concrete evidence များတွေ့ရသည် —
+`ARCHITECTURE.md` က data/state layer ကို "Supabase Postgres" ဟုသာ high-level သတ်မှတ်ထားပြီး concrete schema မရှိသေးပါ။ Client surface (Glide) ၏ data export ("Pocket HR Partner" app, `Users/Services/Resources/AIChat/Messages/Tickets/...` — 14 tables) နှင့် Glide app builder ၏ screen recording ကို analyze လုပ်ရာ အောက်ပါ concrete evidence များတွေ့ရသည် —
+
+> **Stage note**: Pocket HR သည် **development stage** တွင်ရှိပြီး live customer မရှိသေးပါ။ Export ထဲက user, company, invoice, payment နှင့် ticket record များသည် demo data ဖြစ်သည်။ ထို့ကြောင့် အောက်ပါ evidence များကို **app configuration / structural design** အထောက်အထားအဖြစ်သာ ယူသင့်ပြီး usage သို့မဟုတ် demand အထောက်အထားအဖြစ် မယူရပါ။
 
 1. **Glide ၏ native Workflows engine ရှိသည်** — `Workflows` tab အောက်တွင် `Workflow Run Log` / `Workflow Step Log` table (Run ID, Step index, Result, Message, Data(JSON), Output) auto-generate ဖြစ်နေသည် (လက်ရှိ 0 rows — configured ပြီး၊ သို့သော် execution အနည်းငယ်သာ)။ ဒါက Glide ကိုယ်တိုင်မှာ orchestration capability ရှိနေသည်ဟုဆိုလိုသည်။
-2. **Glide → external webhook trigger ရှိပြီးသား** — Layout custom action ထဲတွင် "Communication → Call API / Trigger webhook" action ကို configure လုပ်ထားသည် (URL + Request Body builder)။ ၎င်းသည် `SCOPE.md` ၏ "Glide integration and asynchronous request/response handling" requirement ကို client-side မှာ implement လုပ်ရန် concrete mechanism ဖြစ်သည်။ **သတိပြုရန်** — recording ထဲက observed config သည် webhook URL ကို fixed n8n endpoint မဟုတ်ဘဲ per-row column (`Ticket_Title`) နှင့် bind ထားသည်ကိုတွေ့ရသည် — ၎င်းသည် in-progress/placeholder configuration ဖြစ်နိုင်ပြီး production webhook URL ကို verify လုပ်ရန်လိုအပ်သည်။
+2. **Glide → external webhook trigger ရှိပြီးသား** — Layout custom action ထဲတွင် "Communication → Call API / Trigger webhook" action ကို configure လုပ်ထားသည် (URL + Request Body builder)။ ၎င်းသည် `SCOPE.md` ၏ "Glide integration and asynchronous request/response handling" requirement ကို client-side မှာ implement လုပ်ရန် concrete mechanism ဖြစ်သည်။ **သတိပြုရန်** — recording ထဲက observed config သည် webhook URL ကို fixed n8n endpoint မဟုတ်ဘဲ per-row column (`Ticket_Title`) နှင့် bind ထားသည်ကိုတွေ့ရသည် — ၎င်းသည် in-progress/placeholder configuration ဖြစ်နိုင်ပြီး အမှန်တကယ်အသုံးပြုမည့် n8n webhook endpoint binding ကို verify လုပ်ရန်လိုအပ်သည်။
 3. **Glide Tables ၏ auto-generated REST API ("Show API")** — Table တိုင်းတွင် API access ရနိုင်သည်။ ဆိုလိုသည်မှာ n8n → Glide response leg အတွက် (a) Glide-provided callback webhook သို့မဟုတ် (b) n8n မှ Glide Tables API ကိုတိုက်ရိုက် write ပြန်ခြင်း — ရွေးချယ်စရာလမ်းနှစ်သွယ်ရှိသည်။ ဒါက **architecture-level integration decision တစ်ခုအဖြစ် owner ဆုံးဖြတ်ရန်လိုအပ်သည်** (ADR scope ပြင်ပ၊ ဤစာရွက်တွင် flag သာလုပ်သည်)။
-4. **Tickets table တွင် email notification columns ရှိပြီးသား** (`Ticket_Request_Con_Email_Subject`, `Ticket_Request_Update_Email_Body`, `Status_Summary_Template` — HTML template) — production မှာ client ကို auto-notify လုပ်နေသည့် behavior ရှိသည်။ n8n orchestration ဆီပြောင်းသည့်အခါ ဒီ notification behavior ကို parity ဖြစ်အောင် preserve လုပ်ရန်လိုအပ်သည်။
-5. AIChat/Messages data model က session-per-timestamp UI pattern ဖြင့် production ထဲတွင် confirm ဖြစ်နေသည် — schema design အောက်ပါ 1:N structure (session → messages) နှင့်ကိုက်ညီသည်။
+4. **Tickets table တွင် email notification columns ရှိပြီးသား** (`Ticket_Request_Con_Email_Subject`, `Ticket_Request_Update_Email_Body`, `Status_Summary_Template` — HTML template) — client ကို auto-notify လုပ်ရန် app ထဲတွင် configure ထားပြီးဖြစ်သည်။ n8n orchestration ဆီပြောင်းသည့်အခါ ဒီ notification behavior ကို parity ဖြစ်အောင် preserve လုပ်ရန်လိုအပ်သည်။
+5. AIChat/Messages data model က session-per-timestamp UI pattern ဖြင့် app ထဲတွင် confirm ဖြစ်နေသည် — schema design အောက်ပါ 1:N structure (session → messages) နှင့်ကိုက်ညီသည်။
+
+6. **Live customer မရှိသေးခြင်း၏ architectural အကျိုးဆက်** — cutover window, data-migration urgency နှင့် backward-compatibility constraint မရှိပါ။ ထို့ကြောင့် Supabase schema ကို Glide ၏ table shape အတိုင်း mirror လုပ်ရန် **မလိုအပ်ပါ** — normalization နှင့် tenancy ကို စနစ်တကျ ဒီဇိုင်းလုပ်ခွင့်ရှိသည်။ အောက်ပါ `legacy_glide_row_id` column များသည် demo data ကို seed အဖြစ်တင်လိုပါက traceability ပေးရုံသာဖြစ်ပြီး **optional** ဖြစ်သည်၊ schema invariant မဟုတ်ပါ။
 
 ## Decision (Proposed)
 
-Glide sheet structure ကို Supabase Postgres schema baseline အဖြစ် အောက်ပါအတိုင်း map လုပ်ရန် အဆိုပြုသည်။ Column name များကို production Glide field name အတိုင်း traceability အတွက် comment အဖြစ်ထားသည်။
+Glide sheet structure ကို Supabase Postgres schema baseline အဖြစ် အောက်ပါအတိုင်း map လုပ်ရန် အဆိုပြုသည်။ Column name များကို Glide field name အတိုင်း traceability အတွက် comment အဖြစ်ထားသည်။
 
 ```
 companies
@@ -125,10 +129,10 @@ ticket_remarks   -- same shape as ticket_comments, separate in source; confirm i
 ```
 
 ### Intent-taxonomy note (cross-reference: `work/reviews/TASK-001-test-cases.md`)
-`tickets.category` ၏ real-world value ၉ခု (Job Description ⋯ Organization Chart / Structure) အားလုံးသည် SPEC-001 ၏ intent သုံးခု (`hr_consultation`/`sop_generation`/`org_chart_generation`) အောက်တွင် cleanly map ဖြစ်ကြောင်း confirm ပြီးသားဖြစ်သည်။ `SOP / Process` → `sop_generation`, `Organization Chart / Structure` → `org_chart_generation`, ကျန်အားလုံး → `hr_consultation`။ ဤ table structure က `category` ကို top-level intent မှ independent column အဖြစ်ထားထားခြင်းက ဒီ mapping ကို schema level ကတည်းက support လုပ်ပေးသည်။
+`tickets.category` ၏ configured value ၉ခု (Job Description ⋯ Organization Chart / Structure) အားလုံးသည် SPEC-001 ၏ intent သုံးခု (`hr_consultation`/`sop_generation`/`org_chart_generation`) အောက်တွင် cleanly map ဖြစ်ကြောင်း confirm ပြီးသားဖြစ်သည်။ `SOP / Process` → `sop_generation`, `Organization Chart / Structure` → `org_chart_generation`, ကျန်အားလုံး → `hr_consultation`။ ဤ table structure က `category` ကို top-level intent မှ independent column အဖြစ်ထားထားခြင်းက ဒီ mapping ကို schema level ကတည်းက support လုပ်ပေးသည်။
 
 ## Alternatives Considered
-- **Glide ကို system-of-record အဖြစ်ဆက်ထားပြီး Supabase ကို derived cache/RAG index အဖြစ်သာသုံးခြင်း** — migration risk အနည်းဆုံးဖြစ်သော်လည်း `REQUIREMENTS.md` ၏ auditability/idempotency/company-scoping requirement များကို Glide ၏ no-code data layer အပေါ်မှာ enforce လုပ်ရခက်သည်။ Long-term architecture goal (n8n orchestration + Supabase state) နှင့်လည်းကွဲလွဲသည်။
+- **Glide ကို system-of-record အဖြစ်ဆက်ထားပြီး Supabase ကို derived cache/RAG index အဖြစ်သာသုံးခြင်း** — migration risk အနည်းဆုံးဖြစ်သော်လည်း `REQUIREMENTS.md` ၏ auditability/idempotency/company-scoping requirement များကို Glide ၏ no-code data layer အပေါ်မှာ enforce လုပ်ရခက်သည်။ Long-term architecture goal (n8n orchestration + Supabase state) နှင့်လည်းကွဲလွဲသည်။ Live customer မရှိသေးသဖြင့် "migration risk နည်းခြင်း" ဟူသော အားသာချက်မှာ ယခုအချိန်တွင် သိသာစွာလျော့နည်းသည်။
 - **Glide ၏ Workflow Run/Step Log schema ကို Supabase audit table pattern အဖြစ်တိုက်ရိုက် copy ယူခြင်း** — reasonable pattern ဖြစ်သော်လည်း n8n ကို orchestration layer အဖြစ် သတ်မှတ်ထားသည့် `ARCHITECTURE.md:26` နှင့် dual-orchestration-source risk ရှိသည် (အောက်တွင် Consequences တွင်ဖော်ပြ)။
 
 ## Consequences
