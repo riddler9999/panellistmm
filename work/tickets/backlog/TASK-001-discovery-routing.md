@@ -1,7 +1,7 @@
 # TASK-001 — Discovery Routing Baseline
 
 ## Status
-ACTIVE
+BACKLOG — owner decision (2026-09-15) အရ HR Consultant Agent (SPEC-002) ကို ဦးစားပေးပြောင်းထားသည်။ ဤ ticket ၏ content မပြောင်းလဲပါ၊ ပြန်စရန်အသင့်ရှိသည်။
 
 ## Spec
 `work/specs/SPEC-001-discovery-routing.md`
