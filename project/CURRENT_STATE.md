@@ -15,20 +15,35 @@ Pocket HR Glide app ၏ data export နှင့် app-builder recording ကိ
 ## Backlog
 - `SPEC-001` / `TASK-001` — Discovery routing (content အသင့်ရှိ၊ ပြန်စရန်စောင့်)
 
+## ⚠️ Repo နှင့် Reality ကွာဟမှု (2026-09-15 တွင်တွေ့ရှိ)
+
+ဤ repo သည် ကာလတစ်ခုအထိ "implementation မစသေး" ဟု မှတ်တမ်းတင်ထားခဲ့သည်။ **၎င်းမှားသည်။** n8n instance ပေါ်တွင် Panellist workflow ၁၄ ခုကျော်ရှိပြီး အများစု active ဖြစ်နေသည် — Part 1 (HR Consultant + RAG) နှင့် Part 3 (SOP/Org `.drawio`) နှစ်ခုလုံး တည်ဆောက်ဆဲဖြစ်သည်။ Supabase တွင်လည်း `hr_kb` schema ရှိပြီးဖြစ်သည်။
+
+Inventory: `platforms/n8n/INVENTORY.md` — ဤ repo သည် index သာဖြစ်ပြီး **n8n instance နှင့် Supabase သည် ground truth** ဖြစ်သည်။
+
 ## Verified Infrastructure
 - Supabase project **`Panellist`** (`apnvkmwcmfpkkifzmdfc`, ap-southeast-2, Postgres 17.6)
-- `public.hr_kb` table ရှိပြီးသား — `vector(1536)` + HNSW cosine index, `(source_id, chunk_hash)` unique dedup, `source_type` တွင် `admin_correction` ပါဝင်ပြီး၊ rows 0, RLS enabled/policy ၀ (service_role သာ)
+- `public.hr_kb` — `vector(1536)` + HNSW cosine index, `(source_id, chunk_hash)` unique dedup, `source_id` သည် `source_type:` ဖြင့်စရမည်ဟူသော constraint ရှိ, rows 0, RLS enabled/policy ၀ (service_role သာ)
 - `vector` extension 0.8.2 installed
-- Migration history: `20260909184210_hr_kb_pgvector_schema` တစ်ခုတည်း
+- Migrations: `hr_kb_pgvector_schema` → `hr_kb_hitl_learning_loop_support` (SPEC-002 columns) → `hr_kb_allow_sop_source_type` (ingest bug fix)
+
+## Terminology
+Owner ၏ **Part 1 / Part 3** သည် roadmap ၏ **Phase 0–5** နှင့်မတူ — Part 1 = Phase 2 (HR Consultant + RAG), Part 3 = Phase 3+4 (SOP/Org)。
 
 ## Blockers
-`TASK-002` ၏ retrieval benchmark gate **ကျော်ပြီးဖြစ်သည်** (`work/reviews/TASK-002-retrieval-benchmark.md`)。 လက်ရှိ blocker မှာ — `hr_kb` ၏ gap များ (answer field, scope extension, is_active/superseded_by, created_by) အတွက် **additive migration ကို owner approve လိုအပ်သည်** (SPEC-002 Open Items §4–7)。
+**`KB Bulk Ingest` workflow ၏ Postgres credential** — Postgres node ၃ ခုတွင် credential မရှိသေးဘဲ disabled ဖြစ်နေသည်။ Panellist Supabase သို့ညွှန်သော postgres credential လိုအပ်သည်။ ၎င်းမရှိဘဲ KB seed မလုပ်နိုင်ပါ။
+
+ပြီးစီးပြီး —
+- Retrieval benchmark gate (`work/reviews/TASK-002-retrieval-benchmark.md`)
+- SPEC-002 columns migration (answer_text, is_active, superseded_by, created_by + superseded-not-active constraint)
+- `source_type = 'sop'` ingest bug fix
 
 ## Next
-1. `hr_kb` gap များအတွက် migration ကို owner နှင့်အတူ ဆုံးဖြတ်မည်။
-2. `Resources` ၂၂၀ ကို `hr_kb` ထဲ ingest မည်။
-3. Review loop (TASK-003) ကို ticket အဖြစ်ဖွင့်မည်။
-4. Supabase migration ကို owner approval မရှိဘဲ apply မလုပ်ရ။
+1. Postgres credential wire ပြီးလျှင် `KB Bulk Ingest` ကို run မည် (SOP ၁၂ + FAQ ၅၀)。
+2. Ingest ပြီးနောက် real query များဖြင့် retrieval ကို verify မည်。
+3. Review loop (TASK-003) ကို ticket အဖြစ်ဖွင့်မည်。
+4. Glide `Resources` ၂၂၀ ကို ingest မလုပ်ရသေး — SOP/FAQ corpus ပြီးမှ ဆုံးဖြတ်မည် (template content ဖြစ်၍ advice corpus ထက် priority နိမ့်သည်)。
+5. Supabase migration ကို owner approval မရှိဘဲ apply မလုပ်ရ。
 
 ## Relevant Decisions
 - SOP နှင့် Org Chart canonical diagram artifact သည် `.drawio` ဖြစ်ရမည် (ADR-001)။

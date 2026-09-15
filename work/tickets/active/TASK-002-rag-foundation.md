@@ -39,10 +39,15 @@ HR Consultant Agent ၏ RAG layer အတွက် knowledge schema တည်ဆ�
 - [x] English query များနှင့် နှိုင်းယှဉ်ထားသည် — မြန်မာ ≈ 0.673 vs English ≈ 0.674 top-1 similarity, deficit မရှိ
 - [x] Embedding dimension = 1536 အတည်ပြုပြီး — `hr_kb.embedding` သည် `vector(1536)` ဖြစ်ပြီး HNSW cosine index ရှိပြီးသား
 - [x] ရှိပြီးသား `hr_kb` schema ကို SPEC-002 နှင့် gap analysis လုပ်ပြီး (SPEC-002 §Supabase — RAG corpus)
-- [ ] `hr_kb` gap များအတွက် additive migration ကို owner approve လုပ်သည် (Open Items §4–7)
-- [ ] `Resources` content ၂၂၀ ခု `hr_kb` ထဲ ingest ပြီးစီးပြီး embedding ရှိသည်
-- [ ] Ingestion သည် `chunk_hash` dedup ကိုလိုက်နာသည် (ထပ်ရင် duplicate row မဖြစ်ရ)
-- [ ] Production data ဖြင့် retrieval query end-to-end အလုပ်လုပ်သည်
+- [x] `hr_kb` gap များအတွက် additive migration owner approve ပြီး apply ပြီး — `hr_kb_hitl_learning_loop_support`
+- [x] Ingest blocker bug ဖြေရှင်းပြီး — `source_type = 'sop'` ကို CHECK တွင်ထည့်ပြီး (`hr_kb_allow_sop_source_type`)
+- [ ] `KB Bulk Ingest` workflow ၏ Postgres credential wire လုပ်ပြီး node ၃ ခု enable လုပ်သည်
+- [ ] SOP ၁၂ + FAQ ၅၀ ကို `hr_kb` ထဲ ingest ပြီးစီးပြီး embedding ရှိသည်
+- [ ] Ingestion သည် `chunk_hash` dedup ကိုလိုက်နာသည် (ထပ် run ရင် duplicate row မဖြစ်ရ)
+- [ ] Ingest ပြီးသော data ဖြင့် retrieval query end-to-end အလုပ်လုပ်သည်
+
+## လုပ်ဆောင်ချက် ပြောင်းလဲမှု (2026-09-15)
+ဤ ticket သည် မူလက ingestion pipeline အသစ်ဆောက်ရန်ဖြစ်ခဲ့သည်။ n8n တွင် `KB Bulk Ingest — Drive SOP + FAQ` workflow ရှိပြီးသားဖြစ်ကြောင်းတွေ့ရှိသဖြင့် — owner decision အရ **၎င်းကိုပြီးအောင်လုပ်မည်**၊ အသစ်မဆောက်တော့ပါ (`platforms/n8n/INVENTORY.md`)。 ထို့အတူ corpus သည် Glide `Resources` ၂၂၀ (template များ) မဟုတ်တော့ဘဲ SOP ၁၂ + FAQ ၅၀ (advice content) ဖြစ်သည် — benchmark တွင်တွေ့ခဲ့သော corpus gap ကို ပိုကောင်းစွာဖြည့်ပေးသည်。
 
 ## Verification Evidence
 `work/reviews/TASK-002-retrieval-benchmark.md` တွင် —
