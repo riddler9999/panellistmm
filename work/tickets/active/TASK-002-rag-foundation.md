@@ -1,60 +1,78 @@
 # TASK-002 — HR Consultant RAG Foundation
 
 ## Status
-ACTIVE
+ACTIVE — reconciliation complete; one acceptance criterion still lacks direct rerun evidence
 
 ## Spec
 `work/specs/SPEC-002-hr-consultant-hitl-learning.md`
 
 ## Objective
-HR Consultant Agent ၏ RAG layer အတွက် knowledge schema တည်ဆောက်ပြီး၊ ရှိပြီးသား `Resources` content ကို ingest လုပ်ကာ၊ **မြန်မာစာ retrieval quality ကို တိုင်းတာ၍ evidence ထုတ်ရန်**။ ဤ benchmark ရလဒ်သည် SPEC-002 ၏ pre-implementation gate ဖြစ်ပြီး၊ review loop (TASK-003) ကို မတည်ဆောက်မီ ဖြတ်ကျော်ရမည်။
+HR Consultant Agent ၏ RAG layer အတွက် knowledge schema တည်ဆောက်ပြီး၊ advice corpus ကို ingest လုပ်ကာ retrieval quality ကို evidence ဖြင့်အတည်ပြုရန်။
 
 ## In Scope
-- ရှိပြီးသား `public.hr_kb` schema ကို SPEC-002 လိုအပ်ချက်နှင့် gap analysis (table အသစ်မဆောက်ရ)
-- `Resources` ၂၂၀ ခု၏ `description` + `detail_info` text ကို ingest
-- Embedding pipeline (`gemini-embedding-001`, MRL truncate → 1536)
-- Retrieval query
-- **Burmese + English retrieval benchmark နှင့် hit-rate evidence**
+- ရှိပြီးသား `public.hr_kb` schema ကို SPEC-002 နှင့် align လုပ်ရန်
+- `gemini-embedding-001` → 1536-dim embedding pipeline
+- FAQ / SOP / TicketQA corpus ingestion
+- Retrieval query + deterministic retrieval gate
+- Burmese + English retrieval benchmark
 
 ## Out of Scope
 - Review loop UI / state machine (TASK-003)
-- Correction ingestion (TASK-003)
-- Google Drive document extraction
+- Consultant correction-learning implementation (TASK-003)
 - Discovery routing (TASK-001 — backlog)
-- Production deployment / production migration apply
+- Production deployment / publish
+- Real HR PII model approval
 
 ## Relevant Context
 - `work/specs/SPEC-002-hr-consultant-hitl-learning.md`
-- `.ai-architect/decisions/ADR-002-glide-data-model-baseline.md` (Proposed)
-- `platforms/supabase/` — schema, RLS, migration gate
-- `project/REQUIREMENTS.md` — company scoping, deterministic validation
+- `work/reviews/TASK-002-retrieval-benchmark.md`
+- `work/reviews/2026-09-16-hr-consultant-runtime-reconciliation.md`
+- `project/CURRENT_STATE.md`
+- `platforms/n8n/INVENTORY.md`
 
-## Expected Changes
-- `supabase/` — `knowledge_entries` migration (owner approval ရပြီးမှ apply)
-- `workflows/` သို့မဟုတ် script — ingestion + embedding pipeline
-- `work/reviews/TASK-002-retrieval-benchmark.md` — benchmark evidence
+## Acceptance Criteria — reconciled 2026-09-16
+- [x] Burmese retrieval benchmark recorded — R@5 = 1.00 (self-retrieval); real-question benchmark previously recorded 10/12 top-1.
+- [x] English comparison recorded — Burmese ≈ 0.673 vs English ≈ 0.674 top-1 similarity; no Burmese-specific deficit found.
+- [x] Embedding dimension = 1536 confirmed; `hr_kb.embedding` uses `vector(1536)` with HNSW cosine index.
+- [x] Existing `hr_kb` schema gap analysis completed.
+- [x] Additive migration `hr_kb_hitl_learning_loop_support` recorded as applied.
+- [x] SOP source-type ingest blocker recorded as fixed via `hr_kb_allow_sop_source_type`.
+- [x] Earlier Postgres credential / empty-table blocker is superseded by later runtime evidence; FAQ/SOP/TicketQA knowledge was subsequently ingested and used in retrieval tests.
+- [x] Ingested data was exercised end-to-end through the hardened RAG path. Recorded executions include `62697`, `62699`, `62706`, `62695`, `62701`, `62703`, and `62704`.
+- [ ] **Explicit ingest rerun dedup verification**: the schema has `(source_id, chunk_hash)` unique dedup protection, but the canonical evidence set does not yet contain a direct before/after rerun proving that a repeated ingest creates zero duplicate rows.
 
-## Acceptance Criteria
-- [x] **မြန်မာစာ query များအတွက် hit rate ကို တိုင်းတာပြီး မှတ်တမ်းတင်ထားသည်** — R@5 = 1.00 (self-retrieval), real question ၁၂ ခုတွင် ၁၀ ခု top-1 တိကျ
-- [x] English query များနှင့် နှိုင်းယှဉ်ထားသည် — မြန်မာ ≈ 0.673 vs English ≈ 0.674 top-1 similarity, deficit မရှိ
-- [x] Embedding dimension = 1536 အတည်ပြုပြီး — `hr_kb.embedding` သည် `vector(1536)` ဖြစ်ပြီး HNSW cosine index ရှိပြီးသား
-- [x] ရှိပြီးသား `hr_kb` schema ကို SPEC-002 နှင့် gap analysis လုပ်ပြီး (SPEC-002 §Supabase — RAG corpus)
-- [x] `hr_kb` gap များအတွက် additive migration owner approve ပြီး apply ပြီး — `hr_kb_hitl_learning_loop_support`
-- [x] Ingest blocker bug ဖြေရှင်းပြီး — `source_type = 'sop'` ကို CHECK တွင်ထည့်ပြီး (`hr_kb_allow_sop_source_type`)
-- [ ] `KB Bulk Ingest` workflow ၏ Postgres credential wire လုပ်ပြီး node ၃ ခု enable လုပ်သည်
-- [ ] SOP ၁၂ + FAQ ၅၀ ကို `hr_kb` ထဲ ingest ပြီးစီးပြီး embedding ရှိသည်
-- [ ] Ingestion သည် `chunk_hash` dedup ကိုလိုက်နာသည် (ထပ် run ရင် duplicate row မဖြစ်ရ)
-- [ ] Ingest ပြီးသော data ဖြင့် retrieval query end-to-end အလုပ်လုပ်သည်
+## 2026-09-16 Runtime State
+Main workflow: `HR Consultant Agent` (`oWB6VGMxXPT0uzI7`).
 
-## လုပ်ဆောင်ချက် ပြောင်းလဲမှု (2026-09-15)
-ဤ ticket သည် မူလက ingestion pipeline အသစ်ဆောက်ရန်ဖြစ်ခဲ့သည်။ n8n တွင် `KB Bulk Ingest — Drive SOP + FAQ` workflow ရှိပြီးသားဖြစ်ကြောင်းတွေ့ရှိသဖြင့် — owner decision အရ **၎င်းကိုပြီးအောင်လုပ်မည်**၊ အသစ်မဆောက်တော့ပါ (`platforms/n8n/INVENTORY.md`)。 ထို့အတူ corpus သည် Glide `Resources` ၂၂၀ (template များ) မဟုတ်တော့ဘဲ SOP ၁၂ + FAQ ၅၀ (advice content) ဖြစ်သည် — benchmark တွင်တွေ့ခဲ့သော corpus gap ကို ပိုကောင်းစွာဖြည့်ပေးသည်。
+Retrieval workflow: `Panellist HR KB Search — Agent Tool` (`I2BXh1yN53KcwV0z`).
 
-## Verification Evidence
-`work/reviews/TASK-002-retrieval-benchmark.md` တွင် —
-- Query set (မြန်မာ + English), expected relevant entry, actual top-5 result
-- Hit rate ဂဏန်း
-- Cross-company negative test ရလဒ်
-- Model နှိုင်းယှဉ်ချက် (လိုအပ်ပါက)
+Hardened deterministic path:
 
-## Completion Gate
-Benchmark evidence မရှိဘဲ `COMPLETED` မသတ်မှတ်ရ။ Hit rate ကောင်း/မကောင်း မည်သို့ပင်ဖြစ်စေ ရလဒ်ကို မှတ်တမ်းတင်ရမည် — မကောင်းပါက ၎င်းသည် TASK-003 မစမီ ဖြေရှင်းရမည့် blocker ဖြစ်သည်။
+`Input Validation -> Session Isolation -> Retrieval -> Retrieval Quality Gate -> Clarify Extraction -> Deterministic Router -> Answer Generation -> Channel Response`
+
+Routes: `CLARIFY`, `KB_ANSWER`, `NO_MATCH`, `RETRIEVAL_ERROR`.
+
+Thresholds recorded at verification time:
+- minimum similarity: `0.63`
+- TicketQA near-top clarify delta: `0.01`
+
+The hardened draft was intentionally not published.
+
+## Remaining Closure Gate
+TASK-002 should not be marked `COMPLETED` until one explicit idempotency/dedup verification is captured:
+
+1. Record current row count / unique `(source_id, chunk_hash)` count for the chosen ingest sample.
+2. Re-run the same ingest input without changing source content.
+3. Confirm duplicate row count remains zero and unique count does not increase unexpectedly.
+4. Record execution ID and counts in the runtime reconciliation review.
+
+This is a verification task only. Do not redesign the ingestion pipeline or add another dedup layer unless the rerun proves the existing constraint is insufficient.
+
+## TASK-003 Gate
+`TASK-003` (HITL review + consultant correction-learning loop) remains the next product task, but implementation should begin only after the dedup closure evidence above is recorded.
+
+Production HR consultation remains 100% HITL:
+
+`User request -> grounded AI draft -> consultant review/edit/approve -> final delivery`
+
+Direct AI-to-client publishing is not authorized by TASK-002 completion.
