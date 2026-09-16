@@ -7,7 +7,7 @@
 - Organization Chart generation
 - `.drawio` diagram output
 - လိုအပ်သည့်နေရာများတွင် Human-in-the-loop review
-- Company / user scoping
+- User / request scoping
 - Auditability, fallback, timeout, retry နှင့် failure handling
 - လိုအပ်သည့်နေရာတွင် Supabase-backed state နှင့် knowledge
 - n8n orchestration
@@ -15,6 +15,7 @@
 - Glide integration နှင့် asynchronous request/response handling
 
 ## Explicit approval မရှိလျှင် Scope အပြင်ဘက်
+- `company_id` / multi-company tenant scoping, tenant-specific RAG filtering နှင့် company-isolation architecture
 - မသက်ဆိုင်သည့် CRM / ERP modules
 - Autonomous production deployment
 - Unapproved destructive database / infrastructure operations
