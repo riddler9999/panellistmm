@@ -11,10 +11,7 @@ Work performed during the session included:
 - Opened and worked with the existing Glide app through Codex Computer Use.
 - Inspected the current app rather than redesigning from assumptions.
 - Used the live Glide implementation to understand the existing screen/navigation structure and HR workflow behavior.
-- Reviewed the app as the reference for matching a replacement/rebuild implementation.
-- Established that a Google AI Studio rebuild should match the current Glide app closely instead of introducing an unrelated redesign.
 - The intended reverse-engineering scope includes screen/navigation structure, components, forms, filters, visibility rules, roles, actions/workflows, data relationships, CRUD behavior, permissions/validation, state changes, and responsive behavior.
-- Reference rule established: do not invent screens/features when the current Glide implementation does not support them.
 
 ### Integration context observed/used
 
@@ -54,16 +51,6 @@ Saved changes on 2026-09-18:
 Saved n8n version:
 
 - `4acbd529-9882-481e-ac51-ad828e62e88a` — Accept Glide Tickets row field names
-
-## Workstream 4 — Rebuild/reference direction
-
-A separate implementation direction was established for rebuilding the Panellist HR app in Google AI Studio:
-
-- Existing Glide app = source of truth.
-- Match the current app before improving it.
-- Preserve functional behavior, not only visual similarity.
-- Reverse-engineer data and workflow semantics as well as UI.
-- Avoid adding speculative features that are not demonstrated by the current app.
 
 ## State at end of 2026-09-18
 
