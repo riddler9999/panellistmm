@@ -1,0 +1,162 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://panellistmm.com/contracts/request-envelope.schema.json",
+  "title": "Panellist Request Envelope",
+  "description": "Glide/Sheet intake ကို deterministic router သို့မပို့မီသုံးမည့် normalized request contract.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "request_id",
+    "source",
+    "subject",
+    "hr_issue",
+    "description",
+    "attachments",
+    "submitted_at"
+  ],
+  "properties": {
+    "request_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200
+    },
+    "user_id": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 200
+    },
+    "source": {
+      "type": "string",
+      "enum": [
+        "glide",
+        "telegram",
+        "api"
+      ]
+    },
+    "subject": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 200
+    },
+    "hr_issue": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 200
+    },
+    "description": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 20000
+    },
+    "attachments": {
+      "type": "array",
+      "maxItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "url",
+          "name",
+          "mime_type"
+        ],
+        "properties": {
+          "url": {
+            "type": "string",
+            "format": "uri",
+            "maxLength": 4000
+          },
+          "name": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 255
+          },
+          "mime_type": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 200
+          },
+          "size_bytes": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 0
+          }
+        }
+      }
+    },
+    "submitted_at": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date-time"
+    },
+    "source_locator": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "sheet_name": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 200
+        },
+        "row_number": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 2
+        }
+      }
+    }
+  },
+  "anyOf": [
+    {
+      "properties": {
+        "subject": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    {
+      "properties": {
+        "hr_issue": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    {
+      "properties": {
+        "description": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    {
+      "properties": {
+        "attachments": {
+          "type": "array",
+          "minItems": 1
+        }
+      }
+    }
+  ]
+}
