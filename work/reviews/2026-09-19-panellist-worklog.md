@@ -75,3 +75,28 @@ When continuing Panellist work, verify live state before changing documentation:
 3. Confirm Google Sheets bridge columns still match the current Glide app.
 4. Update `platforms/n8n/INVENTORY.md` if workflow roles, names, or active status change.
 5. Keep runtime credentials/secrets out of Git.
+
+
+## Glide HITL review inspection — verified 2026-09-19
+
+Glide ticket review flow ကို live configuration မှာ စစ်ဆေးခဲ့သည်။ ဤအပိုင်းသည် inspection evidence သာဖြစ်ပြီး Glide setting သို့မဟုတ် ticket data ကို မပြောင်းထားပါ။
+
+### တွေ့ရှိချက်
+
+- `Approve` action သည် လက်ရှိ `Final_Answer ← AI_Answer` အဖြစ်သတ်မှတ်ထားသည်。
+- စစ်ဆေးခဲ့သည့် ticket row တွင် `AI_Answer` နှင့် `Consultant_Answer` သည် empty ဖြစ်ပြီး n8n ဖြေစာသည် `Sheet_AI_Answer` တွင်သာရှိသည်။ ထို့ကြောင့် `Approve` နှိပ်လျှင် empty value ကို `Final_Answer` ထဲကူးသဖြင့် user-facing answer မပြောင်းပေ。
+- `Approve` action သည် `Ticket_Status` ကို မပြောင်းပါ။ Published page refresh ပြီးနောက် ticket သည် `Submitted` အဖြစ်ဆက်ရှိပြီး review buttons များလည်းဆက်ပေါ်သည်。
+- Button Block နှင့် `Consultant Review/Editing` field နှစ်ခုလုံးတွင် Visibility Condition မရှိပါ။ ထို့ကြောင့် Admin/Consultant သီးသန့်မဟုတ်ဘဲ normal user များလည်း Approve/Edit/Done controls ကိုမြင်နိုင်သည်。
+
+### Implementation contract to apply later
+
+အောက်ပါပြင်ဆင်မှုများကို သတ်မှတ်ထားသော်လည်း ဤ inspection တွင် မလုပ်ရသေးပါ。
+
+1. Approve: `Final_Answer ← Sheet_AI_Answer` နှင့် `Ticket_Status ← Resolved`。
+2. Edit ပြီး Done: `Final_Answer ← Consultant_Answer` နှင့် `Ticket_Status ← Resolved`。
+3. Button Block နှင့် consultant editing field များကို Admin/Consultant role များအတွက်သာ visible လုပ်ရန်。
+4. Normal user အတွက် `Final_Answer` ရှိလျှင်သာ answer ကိုပြရန်။ Unapproved `Sheet_AI_Answer` ကို normal user မှ မမြင်ရစေရန်。
+
+### Contract reconciliation required
+
+`SPEC-002` သည် approved draft ကို `final_answer` သို့ကူးရမည်ဟုသတ်မှတ်ထားသည်။ လက်ရှိ Glide column name သည် `AI_Answer` ဖြစ်သော်လည်း live n8n write-back သည် `Sheet_AI_Answer` တွင်ရှိနေသည်။ Implementation မစမီ n8n/Google Sheets/Glide field mapping ကို live state ဖြင့်ပြန်လည်အတည်ပြုပြီး single canonical draft field ကိုသတ်မှတ်ရမည်。
