@@ -33,18 +33,19 @@ Status values: `Submitted` → `Pending_Review` → `Resolved`.
 
 ---
 
-## ⚠️ Prerequisite dependency — n8n write-back field reconciliation
+## ✅ Prerequisite dependency — n8n write-back field reconciliation (RESOLVED 2026-09-20, Option A)
 
-လက်ရှိ live poller (`Process pending Glide Panellist requests`, `I01u0vd30Db7xSfx`) ၏ `Prepare Unified Bridge Write` node သည် AI output ကို **`AI_Answer` column** သို့ရေးသည် — canonical draft field အဖြစ်သတ်မှတ်လိုက်သော **`Sheet_AI_Answer` မဟုတ်ပါ**။
+**Status: DONE** — owner-approved (Option A)。 Poller `Process pending Glide Panellist requests` (`I01u0vd30Db7xSfx`) ကို reconcile လုပ်ပြီး live publish လုပ်ပြီး (active version `0adfde70-6046-48c0-a2dd-ffd6f3ae05d0`)。 အသေးစိတ်: `learnings/FIXES.md` §F-001。
 
-**ထို့ကြောင့် Glide Approve action ကို `Final_Answer ← Sheet_AI_Answer` အဖြစ်တပ်ဆင်လျှင်၊ poller ၏ output (`AI_Answer` ထဲရှိ) ကို read လုပ်မည်မဟုတ်ဘဲ empty value ကို copy လုပ်မိနိုင်သည်** (worklog 09-19 က ဤ empty-copy risk ကို တွေ့ရှိထားပြီးဖြစ်သည်)။
+Applied changes —
+- `Prepare Unified Bridge Write` output key `AI_Answer` → **`Sheet_AI_Answer`** (canonical consultant-only draft field)。
+- `Keep Pending Requests` pending-dedup guard ကို `Sheet_AI_Answer` empty သို့ align (infinite re-draft loop ကာကွယ်ရန်)。
+- `Select One Pending Row` ၏ `AI_Answer` suppression ကို ထားခဲ့ (historical backlog re-draft storm ကာကွယ်)。
+- `Final_Answer` ကို မထိ။
 
-Owner ဆုံးဖြတ်ရန် — အောက်ပါ နှစ်ခုမှ တစ်ခုကို ရွေးပါ (ဤ handoff scope ပြင်ပ၊ သီးခြား n8n change round လိုအပ်) —
+ထို့ကြောင့် ယခု n8n က AI draft ကို **`Sheet_AI_Answer`** သို့ရေးသည်။ Glide Approve action ကို `Final_Answer ← Sheet_AI_Answer` အဖြစ်တပ်ဆင်လျှင် canonical field ကို တိုက်ရိုက်ဖတ်နိုင်ပြီ (empty-copy risk ဖြေရှင်းပြီး)。
 
-- **Option A (recommended)**: n8n poller ၏ write field ကို `AI_Answer` → `Sheet_AI_Answer` သို့ reconcile လုပ်ရန် (single-line map change, active workflow edit → owner approval gate)။ Approve action က `Sheet_AI_Answer` ကိုဖတ်မည်။
-- **Option B**: Glide Approve action ကို `Final_Answer ← AI_Answer` အဖြစ်ထား၍ canonical draft field ကို `AI_Answer` အဖြစ်ပြန်သတ်မှတ်ရန်။ ဤ doc ရှိ `Sheet_AI_Answer` reference အားလုံးကို `AI_Answer` ဖြင့်အစားထိုးပါ။
-
-**Verification gate**: Approve implement ပြီးလျှင် — reviewed ticket တစ်ခု၏ draft field (`Sheet_AI_Answer` သို့ `AI_Answer`) တွင် n8n answer တကယ်ရှိကြောင်း၊ Approve ပြီးနောက် `Final_Answer` သည် ထို draft နှင့်တူညီကြောင်း **empty မဟုတ်ဘဲ** verify ရမည်။
+**Verification gate (Glide implement ပြီးမှ)**: reviewed ticket တစ်ခု၏ `Sheet_AI_Answer` တွင် n8n answer တကယ်ရှိကြောင်း၊ Approve ပြီးနောက် `Final_Answer` = ထို draft (**empty မဟုတ်ဘဲ**) verify ရမည်။
 
 ---
 
@@ -117,7 +118,7 @@ Owner ဆုံးဖြတ်ရန် — အောက်ပါ နှစ်�
 
 ## Residual / follow-up (ဤ handoff scope ပြင်ပ)
 
-1. **n8n write-field reconciliation** (§Prerequisite) — active workflow edit, owner-approval gate。
+1. ~~**n8n write-field reconciliation** (§Prerequisite)~~ — ✅ DONE 2026-09-20 (Option A, version `0adfde70`)。
 2. **n8n Ticket_Status write** — poller က `Ticket_Status = Pending_Review` ကို set သင့် (state machine ကို machine-driven စေရန်)။ လက်ရှိ poller မ set — Glide-only gating သည် "Final_Answer is not empty" condition ဖြင့်လည်း လုံလောက်သော်လည်း status-driven gating ပို robust。 သီးခြား n8n round。
 3. Field-name drift ကို `SPEC-002` §Data Contracts နှင့် reconcile (canonical: `Sheet_AI_Answer` draft / `Final_Answer` client)。
 4. Audit Finding 5 (PII posture) — client-visible gating က leak ကိုပိတ်သော်လည်း Google Sheet bridge ရှိ PII posture ကို သီးခြားဆုံးဖြတ်ရန်။
