@@ -68,7 +68,7 @@ Package review → UAT walkthrough → Checklist sign-off → Final payment
 
 | Party | Name | Signature | Date |
 |---|---|---|---|
-| Client (acceptance) | `<CLIENT_NAME>` | __________ | ______ |
-| Vendor (delivery) | `<VENDOR_NAME>` | __________ | ______ |
+| Client (acceptance) | Panellist Business Services | __________ | ______ |
+| Vendor (delivery) | Moe Htet | __________ | ______ |
 
 > Sign-off ပြီးမှ § Document 06 ၏ maintenance period စတင်သည်။

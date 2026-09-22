@@ -6,7 +6,7 @@
 
 ## 1. Objective
 
-ဤ document သည် `<CLIENT_NAME>` အတွက် တည်ဆောက်ပြီးစီးသော **Panellist HR AI System** ကို handover လုပ်ရာတွင် ဘာတွေ deliver လုပ်သည်၊ မည်သူက ဘာတာဝန်ယူသည်၊ acceptance ကို မည်သို့ဆောင်ရွက်မည် ဆိုသည်ကို executive-level ဖြင့် အကျဉ်းချုပ်ဖော်ပြရန်ဖြစ်သည်။
+ဤ document သည် Panellist Business Services အတွက် တည်ဆောက်ပြီးစီးသော **Panellist HR AI System** ကို handover လုပ်ရာတွင် ဘာတွေ deliver လုပ်သည်၊ မည်သူက ဘာတာဝန်ယူသည်၊ acceptance ကို မည်သို့ဆောင်ရွက်မည် ဆိုသည်ကို executive-level ဖြင့် အကျဉ်းချုပ်ဖော်ပြရန်ဖြစ်သည်။
 
 ## 2. What is being delivered
 
@@ -39,7 +39,7 @@ Deliver လုပ်သည့် capability များ —
 | Component | Hosting / Owner | မှတ်ချက် |
 |---|---|---|
 | **n8n orchestration** | **Vendor server** (vendor-managed) | Managed-service model — vendor operates & maintains |
-| **Supabase database** | **Client account** (`<CLIENT_GMAIL>`) | Handover target — client owns data |
+| **Supabase database** | **Client account** (info@panellistmm.com) | Handover target — client owns data |
 | **OpenRouter (AI API)** | **Client account** | Client funds usage (initial top-up by vendor) |
 | **Glide (Pocket HR) app** | **Client account** | Client-owned; out of delivery scope |
 

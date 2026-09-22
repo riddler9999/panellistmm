@@ -9,9 +9,9 @@
 
 | Role | Name |
 |---|---|
-| Service Provider (Vendor) | `<VENDOR_NAME>` |
-| Client | `<CLIENT_NAME>` |
-| Effective date | `<EFFECTIVE_DATE>` |
+| Service Provider (Vendor) | Moe Htet |
+| Client | Panellist Business Services |
+| Effective date | ____________ (signing ရက်စွဲ) |
 
 ## 2. Objective
 
@@ -46,11 +46,11 @@ Panellist HR AI System ၏ n8n orchestration layer ကို vendor server ပ�
 
 | Metric | Target |
 |---|---|
-| n8n instance uptime | Best-effort `<TARGET, e.g. 99%>` monthly (server infra limitation အလိုက်) |
-| Critical bug response | `<e.g. 1 business day>` အတွင်း acknowledge |
-| Non-critical fix | `<e.g. 3–5 business days>` |
+| n8n instance uptime | Best-effort 99% monthly (server infra limitation အလိုက်) |
+| Critical bug response | 1 business day အတွင်း acknowledge |
+| Non-critical fix | 3–5 business days |
 | Maintenance report | လစဉ် |
-| Support channel | `<VENDOR_CONTACT>` |
+| Support channel | Moe Htet · 09-969222535 |
 
 > SLA target များကို နှစ်ဖက်သဘောတူ၍ ဖြည့်ရန်။ Uptime သည် vendor server infrastructure + upstream provider (Supabase, OpenRouter) ၏ availability အပေါ်မူတည်သည်။
 
@@ -77,8 +77,8 @@ Panellist HR AI System ၏ n8n orchestration layer ကို vendor server ပ�
 
 | Item | Terms |
 |---|---|
-| Initial term | `<e.g. month-to-month / 6-month>` |
-| Notice period | `<e.g. 30 days>` |
+| Initial term | month-to-month |
+| Notice period | 30 days |
 | On termination | Vendor သည် client ကို operational handover (credential, runbook) ပေးအပ်; client က key rotate (§ Document 05) |
 | Data ownership on exit | Client ၏ Supabase data + OpenRouter account သည် client ပိုင်ဆက်ဖြစ် |
 
@@ -92,5 +92,5 @@ Delivered scope ပြင်ပ work အားလုံးကို written chan
 
 | Party | Name | Signature | Date |
 |---|---|---|---|
-| Service Provider | `<VENDOR_NAME>` | __________ | ______ |
-| Client | `<CLIENT_NAME>` | __________ | ______ |
+| Service Provider | Moe Htet | __________ | ______ |
+| Client | Panellist Business Services | __________ | ______ |

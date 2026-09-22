@@ -1,7 +1,7 @@
 # Panellist HR AI System — Client Delivery Package
 
-> **Prepared for**: `<CLIENT_NAME>` (Panellist)
-> **Prepared by**: `<VENDOR_NAME>` — AI Automation & Systems Engineering
+> **Prepared for**: Panellist Business Services (Panellist)
+> **Prepared by**: Moe Htet — AI Automation & Systems Engineering
 > **Version**: 1.0 · **Date**: 2026-09-22 (Asia/Yangon)
 > **Status**: Delivery dossier — migration/handover execution gated on final payment (§ Document 06)
 
@@ -50,8 +50,8 @@ Handover မတိုင်မီ အောက်ပါ placeholder များ
 
 | Placeholder | ဆိုလိုရင်း |
 |---|---|
-| `<VENDOR_NAME>` | Developer / vendor legal or trading name |
-| `<CLIENT_NAME>` | Client / organization name |
-| `<CLIENT_GMAIL>` | Client Supabase / OpenRouter account email (Gmail) |
-| `<VENDOR_CONTACT>` | Support contact (phone / email / Telegram) |
-| `<EFFECTIVE_DATE>` | Agreement effective date |
+| Moe Htet | Developer / vendor legal or trading name |
+| Panellist Business Services | Client / organization name |
+| info@panellistmm.com | Client Supabase / OpenRouter account email (Gmail) |
+| Moe Htet · 09-969222535 | Support contact (phone / email / Telegram) |
+| ____________ (signing ရက်စွဲ) | Agreement effective date |

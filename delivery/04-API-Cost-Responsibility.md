@@ -12,7 +12,7 @@ AI model API များ (LLM + embedding) ၏ cost ownership၊ funding respon
 
 | Cost item | Account owner | Funding responsibility |
 |---|---|---|
-| **OpenRouter (LLM — AI draft generation)** | **Client** (`<CLIENT_GMAIL>`) | Client (initial top-up by vendor) |
+| **OpenRouter (LLM — AI draft generation)** | **Client** (info@panellistmm.com) | Client (initial top-up by vendor) |
 | **Embedding** (`gemini-embedding-001` @1536) | လက်ရှိ Gemini → consolidating to OpenRouter | Client |
 | Supabase database | Client | Client (§ Document 02) |
 | n8n hosting + maintenance | Vendor server | Client လစဉ်ပေးချေ (§ Document 06) |
@@ -39,7 +39,7 @@ AI model API များ (LLM + embedding) ၏ cost ownership၊ funding respon
 
 ## 5. Client setup steps (OpenRouter)
 
-1. Client OpenRouter account (`<CLIENT_GMAIL>`) → **Credits** → balance top-up (card / supported payment)။
+1. Client OpenRouter account (info@panellistmm.com) → **Credits** → balance top-up (card / supported payment)။
 2. API key ဖန်တီး → vendor ကို secure channel မှတစ်ဆင့်ပေးအပ် (n8n credential အတွက် — § Document 05)။ ⚠️ Key ကို chat/email plain-text ဖြင့် မပို့ရ။
 3. Usage limit / spend cap (optional but recommended) — runaway cost ကာကွယ်ရန် monthly cap သတ်မှတ်ရန်။
 

@@ -7,7 +7,7 @@
 
 ## 1. Objective
 
-Vendor-controlled `Panellist` Supabase project (`apnvkmwcmfpkkifzmdfc`) မှ data + schema + RAG knowledge base အားလုံးကို **client ၏ကိုယ်ပိုင် Supabase account** (`<CLIENT_GMAIL>`) သို့ ownership အပြည့်ဖြင့် transfer လုပ်ရန်။ Transfer ပြီးနောက် client သည် database ကို 100% ပိုင်ဆိုင်သည်။
+Vendor-controlled `Panellist` Supabase project (`apnvkmwcmfpkkifzmdfc`) မှ data + schema + RAG knowledge base အားလုံးကို **client ၏ကိုယ်ပိုင် Supabase account** (info@panellistmm.com) သို့ ownership အပြည့်ဖြင့် transfer လုပ်ရန်။ Transfer ပြီးနောက် client သည် database ကို 100% ပိုင်ဆိုင်သည်။
 
 ## 2. Analysis — migration approach
 
@@ -23,7 +23,7 @@ Supabase project တစ်ခုကို account တစ်ခုမှ တစ�
 ## 3. Prerequisites
 
 - [ ] Final payment လက်ခံပြီး (gate)
-- [ ] Client Supabase account (`<CLIENT_GMAIL>`) active
+- [ ] Client Supabase account (info@panellistmm.com) active
 - [ ] Client Supabase organization ready (Free/Pro tier — pgvector support လိုအပ်)
 - [ ] Source project (`apnvkmwcmfpkkifzmdfc`) read access (vendor)
 - [ ] Maintenance window သဘောတူညီ (RAG read အနည်းငယ် downtime ဖြစ်နိုင်)

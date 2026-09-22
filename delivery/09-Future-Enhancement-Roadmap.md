@@ -67,4 +67,4 @@ n8n orchestration + Supabase data layer + RAG knowledge base သည် **front-e
 
 Delivered scope ပြင်ပ enhancement အားလုံးကို written change request + separate quotation ဖြင့်ဆောင်ရွက်သည် (§ Document 06 §9)။ Foundation architecture ကို vendor ရေးဆွဲ/တည်ဆောက်ထားသဖြင့် enhancement များကို efficient ဆောင်ရွက်နိုင်သည်။
 
-> **Contact** — enhancement / custom development discussion အတွက် — `<VENDOR_CONTACT>`。
+> **Contact** — enhancement / custom development discussion အတွက် — Moe Htet · 09-969222535。

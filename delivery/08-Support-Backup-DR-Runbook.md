@@ -12,11 +12,11 @@ Production support escalation, backup strategy နှင့် disaster-recovery
 
 | Tier | Issue type | Channel | Response target |
 |---|---|---|---|
-| **T1** | Question / how-to / minor config | `<VENDOR_CONTACT>` | `<e.g. 1 business day>` |
-| **T2** | Non-critical bug (fallback works) | `<VENDOR_CONTACT>` | `<e.g. 3–5 business days>` |
-| **T3** | Critical outage (no AI drafts / RAG down) | `<VENDOR_CONTACT>` (priority) | acknowledge `<e.g. same/next business day>` |
+| **T1** | Question / how-to / minor config | Moe Htet · 09-969222535 | 1 business day |
+| **T2** | Non-critical bug (fallback works) | Moe Htet · 09-969222535 | 3–5 business days |
+| **T3** | Critical outage (no AI drafts / RAG down) | Moe Htet · 09-969222535 (priority) | acknowledge same / next business day |
 
-**Escalation path** — Client HR/admin → Vendor support (`<VENDOR_CONTACT>`) → Vendor investigates n8n/Supabase/API → Fix or upstream provider escalation。
+**Escalation path** — Client HR/admin → Vendor support (Moe Htet · 09-969222535) → Vendor investigates n8n/Supabase/API → Fix or upstream provider escalation。
 
 > ⚠️ HITL fallback — AI draft generation ရပ်တန့်နေချိန်တွင်ပင် **consultant manual answer** ဖြင့် HR consultation ဆက်လက်ဆောင်ရွက်နိုင်သည် (business continuity)။
 
@@ -68,7 +68,7 @@ Production support escalation, backup strategy နှင့် disaster-recovery
 
 | Objective | Target | မှတ်ချက် |
 |---|---|---|
-| RTO (recovery time) | `<e.g. within 1 business day>` | Non-critical; HITL manual fallback available |
-| RPO (data loss window) | `<= backup interval>` | Supabase backup frequency အလိုက် |
+| RTO (recovery time) | within 1 business day | Non-critical; HITL manual fallback available |
+| RPO (data loss window) | ≤ 24 hours (daily backup) | Supabase backup frequency အလိုက် |
 
 > RTO/RPO target များကို client ၏ business criticality အလိုက် နှစ်ဖက်သဘောတူ၍ ဖြည့်ရန်။
