@@ -1,0 +1,134 @@
+<!DOCTYPE html><html lang="my"><head><meta charset="utf-8">
+<title>Panellist HR AI System — Client Preview</title>
+<style>
+@page { size: A4; margin: 20mm 18mm 20mm 18mm; }
+* { box-sizing: border-box; }
+body { font-family: 'Noto Sans Myanmar','Liberation Sans',sans-serif; font-size: 10.5pt; line-height: 1.55; color: #1a2230; }
+h1 { font-size: 19pt; color: #0f2a4a; border-bottom: 3px solid #0f2a4a; padding-bottom: 6px; page-break-before: always; margin-top: 0; }
+h2 { font-size: 14pt; color: #14396b; margin-top: 18px; border-bottom: 1px solid #d3dbe6; padding-bottom: 3px; }
+h3 { font-size: 12pt; color: #1b4a7a; margin-top: 14px; }
+h4 { font-size: 10.8pt; color: #33475b; }
+p { margin: 6px 0; }
+code { font-family: 'Liberation Mono',monospace; background: #eef2f7; padding: 1px 4px; border-radius: 3px; font-size: 9.2pt; color: #b5316a; }
+pre { background: #0f1b2d; color: #dfe8f3; padding: 10px 12px; border-radius: 6px; overflow-x: auto; font-size: 8.8pt; line-height: 1.4; }
+pre code { background: none; color: #dfe8f3; padding: 0; }
+blockquote { border-left: 4px solid #f0a500; background: #fff8e8; margin: 8px 0; padding: 6px 12px; color: #4a3d1a; }
+table { border-collapse: collapse; width: 100%; margin: 8px 0; font-size: 9.2pt; }
+th, td { border: 1px solid #c7d1de; padding: 5px 7px; text-align: left; vertical-align: top; }
+th { background: #14396b; color: #fff; font-weight: 600; }
+tr:nth-child(even) td { background: #f4f7fb; }
+ul, ol { margin: 6px 0; padding-left: 22px; }
+li { margin: 2px 0; }
+hr { border: none; border-top: 1px solid #d3dbe6; margin: 14px 0; }
+strong { color: #10233d; }
+a { color: #14396b; text-decoration: none; }
+.cover { page-break-after: always; text-align: center; padding-top: 90px; }
+.cover .kicker { letter-spacing: 3px; color: #14396b; font-size: 11pt; text-transform: uppercase; }
+.cover h1 { border: none; page-break-before: avoid; font-size: 30pt; color: #0f2a4a; margin: 18px 0 4px; }
+.cover .sub { font-size: 14pt; color: #33475b; margin-bottom: 40px; }
+.cover table { width: 70%; margin: 0 auto; font-size: 11pt; }
+.cover td { border: none; padding: 6px 10px; }
+.cover .label { color: #7a8aa0; text-align: right; width: 45%; }
+.cover .val { font-weight: 600; text-align: left; }
+.toc { page-break-after: always; }
+.toc h1 { page-break-before: avoid; }
+.toc li { margin: 6px 0; font-size: 11pt; }
+.confidential { margin-top: 60px; color: #7a8aa0; font-size: 9pt; }
+</style></head><body>
+<div class="cover">
+  <div class="kicker">Client Preview</div>
+  <h1>Panellist HR AI System</h1>
+  <div class="sub">System Overview &amp; Architecture (selected sections)</div>
+  <table>
+    <tr><td class="label">Prepared for</td><td class="val">Panellist Business Services</td></tr>
+    <tr><td class="label">Prepared by</td><td class="val">Moe Htet — AI Automation &amp; Systems Engineering</td></tr>
+    <tr><td class="label">Version</td><td class="val">1.0</td></tr>
+    <tr><td class="label">Date</td><td class="val">2026-09-22 (Asia/Yangon)</td></tr>
+    <tr><td class="label">Status</td><td class="val">Preview — full handover package follows on engagement</td></tr>
+  </table>
+  <div class="confidential">Confidential — prepared for the named client only.</div>
+</div>
+<section><h1>00 — Delivery Overview &amp; Handover Summary</h1>
+<blockquote>Panellist HR AI System · Client Delivery Package v1.0 · 2026-09-22</blockquote>
+<hr>
+<h2>1. Objective</h2>
+<p>ဤ document သည် Panellist Business Services အတွက် တည်ဆောက်ပြီးစီးသော <strong>Panellist HR AI System</strong> ကို handover လုပ်ရာတွင် ဘာတွေ deliver လုပ်သည်၊ မည်သူက ဘာတာဝန်ယူသည်၊ acceptance ကို မည်သို့ဆောင်ရွက်မည် ဆိုသည်ကို executive-level ဖြင့် အကျဉ်းချုပ်ဖော်ပြရန်ဖြစ်သည်။</p>
+<h2>2. What is being delivered</h2>
+<p>Panellist HR AI System သည် HR consultation များကို AI ဖြင့်အထောက်အကူပြုပြီး၊ <strong>human consultant တစ်ဦး၏ approve/edit မပါဘဲ client ထံ answer တစ်ခုမှ မရောက်စေရ</strong> (100% Human-in-the-Loop) ဟူသော production-safety principle ဖြင့်တည်ဆောက်ထားသည်။</p>
+<p>Deliver လုပ်သည့် capability များ —</p>
+<table><thead><tr><th>Capability</th><th>ဖော်ပြချက်</th><th>Status</th></tr></thead><tbody><tr><td><strong>HR Consultant AI (RAG-grounded)</strong></td><td>HR question များကို approved knowledge base (<code>hr_kb</code>) မှ retrieve လုပ်၍ grounded draft answer ထုတ်ပေး</td><td>✅ Tested (n8n)</td></tr><tr><td><strong>Human-in-the-Loop review</strong></td><td>Consultant က draft ကို approve/edit ပြီးမှသာ client မြင်ရ</td><td>✅ Contract enforced</td></tr><tr><td><strong>SOP &amp; Org Chart generation</strong></td><td>Business discovery မှ <code>.drawio</code> SOP / Organization Chart ထုတ်ပေး</td><td>✅ Tested (n8n)</td></tr><tr><td><strong>Glide front-end integration</strong></td><td>Glide (Pocket HR) app မှ ticket submit → n8n processing → consultant review</td><td>⏳ Glide ~90% (client-owned)</td></tr><tr><td><strong>Auditability &amp; fallbacks</strong></td><td>Deterministic routing, no-match/error/timeout fallback, session isolation</td><td>✅ Tested</td></tr></tbody></table>
+<h2>3. Delivery scope boundary</h2>
+<table><thead><tr><th>In scope (vendor delivers)</th><th>Out of scope</th></tr></thead><tbody><tr><td>n8n workflow orchestration (vendor-hosted)</td><td>Glide app UI development (client owns Glide account &amp; app)</td></tr><tr><td>Supabase schema + knowledge base + RAG retrieval</td><td>Multi-company / multi-tenant isolation (not required — see Requirements)</td></tr><tr><td>AI draft generation + HITL enforcement contract</td><td>Client&#x27;s own OpenRouter account funding (after initial top-up)</td></tr><tr><td>SOP / Org Chart <code>.drawio</code> generation</td><td>Autonomous production activation without owner approval</td></tr><tr><td>This delivery documentation set</td><td>Real HR PII processing before privacy posture sign-off (§ Document 05)</td></tr></tbody></table>
+<blockquote><strong>Glide note</strong>: Glide (Pocket HR) app သည် client ၏ ownership ဖြစ်ပြီး ဤ delivery ၏ scope ပြင်ပတွင်ရှိသည်။ Vendor သည် Glide ↔ n8n <strong>integration contract</strong> (field/status handoff) ကိုသာ deliver လုပ်သည် (§ Document 03)။</blockquote>
+<h2>4. Ownership &amp; hosting model (confirmed)</h2>
+<table><thead><tr><th>Component</th><th>Hosting / Owner</th><th>မှတ်ချက်</th></tr></thead><tbody><tr><td><strong>n8n orchestration</strong></td><td><strong>Vendor server</strong> (vendor-managed)</td><td>Managed-service model — vendor operates &amp; maintains</td></tr><tr><td><strong>Supabase database</strong></td><td><strong>Client account</strong> (info@panellistmm.com)</td><td>Handover target — client owns data</td></tr><tr><td><strong>OpenRouter (AI API)</strong></td><td><strong>Client account</strong></td><td>Client funds usage (initial top-up by vendor)</td></tr><tr><td><strong>Glide (Pocket HR) app</strong></td><td><strong>Client account</strong></td><td>Client-owned; out of delivery scope</td></tr></tbody></table>
+<p>ဤ split-ownership model ၏ engineering rationale — client ၏ HR data နှင့် AI spend ကို client ကိုယ်တိုင်ပိုင်ဆိုင်စေပြီး (data sovereignty + cost transparency)၊ orchestration operational burden ကိုမူ vendor ကထမ်းဆောင်သည် (reliability + maintenance)။</p>
+<h2>5. Responsibility (RACI summary)</h2>
+<table><thead><tr><th>Activity</th><th>Vendor</th><th>Client</th></tr></thead><tbody><tr><td>n8n workflow operation &amp; maintenance</td><td><strong>R/A</strong></td><td>I</td></tr><tr><td>Supabase database hosting &amp; data</td><td>S (runbook)</td><td><strong>R/A</strong></td></tr><tr><td>AI API funding (OpenRouter)</td><td>S (initial top-up)</td><td><strong>R/A</strong></td></tr><tr><td>Consultant review of AI drafts (HITL)</td><td>I</td><td><strong>R/A</strong></td></tr><tr><td>Glide app changes / UI</td><td>—</td><td><strong>R/A</strong></td></tr><tr><td>Monthly maintenance &amp; monitoring</td><td><strong>R/A</strong></td><td>I</td></tr><tr><td>Credential custody &amp; rotation</td><td><strong>R/A</strong></td><td>C</td></tr></tbody></table>
+<p><code>R</code> = Responsible · <code>A</code> = Accountable · <code>C</code> = Consulted · <code>S</code> = Supports · <code>I</code> = Informed</p>
+<h2>6. Delivery gates (important)</h2>
+<ol><li><strong>Final payment gate</strong> — Supabase database transfer နှင့် production handover ကို final payment (final pay) လက်ခံရရှိပြီးမှ execute မည် (§ Document 06 §4)။ လက်ရှိ transfer <strong>မဆောင်ရွက်ရသေးပါ</strong>။</li><li><strong>Privacy posture gate</strong> — Real HR PII ကို production တွင်စတင်အသုံးမပြုမီ data-privacy posture ကို client acknowledge လုပ်ရမည် (§ Document 05 §5)။</li><li><strong>Owner activation gate</strong> — Production publish/activation တိုင်းသည် owner approval လိုအပ်သည်။</li></ol>
+<h2>7. Acceptance path</h2>
+<p>Client acceptance ကို § Document 07 (UAT / Acceptance Checklist) အတိုင်း ဆောင်ရွက်သည် —</p>
+<pre><code>Package review  →  UAT walkthrough  →  Final payment  →  Supabase migration
+              →  Production activation (owner-gated)  →  Sign-off  →  Maintenance period start</code></pre>
+<h2>8. Next actions</h2>
+<table><thead><tr><th>#</th><th>Action</th><th>Owner</th><th>Trigger</th></tr></thead><tbody><tr><td>1</td><td>ဤ delivery package review</td><td>Client</td><td>Now</td></tr><tr><td>2</td><td>UAT walkthrough (§ Doc 07)</td><td>Vendor + Client</td><td>On request</td></tr><tr><td>3</td><td>Final payment</td><td>Client</td><td>After UAT</td></tr><tr><td>4</td><td>Supabase migration (§ Doc 02)</td><td>Vendor</td><td>After final payment</td></tr><tr><td>5</td><td>Production activation</td><td>Vendor (owner-gated)</td><td>After migration verify</td></tr><tr><td>6</td><td>Maintenance period start</td><td>Both</td><td>On sign-off</td></tr></tbody></table></section><section><h1>01 — System Architecture</h1>
+<blockquote>Panellist HR AI System · Client Delivery Package v1.0 · 2026-09-22</blockquote>
+<hr>
+<h2>1. Objective</h2>
+<p>System ၏ component များ၊ data flow နှင့် human-in-the-loop safety model ကို client နားလည်လွယ်အောင် ဖော်ပြရန်။ Technical helper တစ်ဦးအတွက် system boundary များကိုပါ ရှင်းလင်းစေရန်။</p>
+<h2>2. High-level topology</h2>
+<pre><code>        ┌─────────────────────────────────────────────────────────────┐
+        │                      CLIENT-OWNED                            │
+        │                                                              │
+        │   ┌──────────────┐                    ┌──────────────────┐   │
+        │   │  Glide app   │                    │    Supabase      │   │
+        │   │ (Pocket HR)  │                    │  (client acct)   │   │
+        │   │  HR staff /  │                    │  hr_kb (vector)  │   │
+        │   │  consultants │                    │  tickets/state   │   │
+        │   └──────┬───────┘                    └────────▲─────────┘   │
+        └──────────│──────────────────────────────────── │────────────┘
+                   │  (1) ticket submit / poll             │ (3) RAG read
+                   │      (4) write-back draft             │     + state write
+        ┌──────────▼───────────────────────────────────── │────────────┐
+        │                    VENDOR-HOSTED                 │            │
+        │                                                  │            │
+        │   ┌──────────────────────────────────────────────────────┐   │
+        │   │                     n8n                              │   │
+        │   │   • Glide poller (5-min)                             │   │
+        │   │   • HR Consultant Agent (RAG + deterministic router) │   │
+        │   │   • KB Search tool                                   │   │
+        │   │   • SOP / Org Chart (.drawio) generation             │   │
+        │   └───────────────────────────┬──────────────────────────┘   │
+        └───────────────────────────────│──────────────────────────────┘
+                                         │ (2) embedding + LLM
+                              ┌──────────▼──────────┐
+                              │   AI model APIs     │
+                              │  OpenRouter (LLM)   │   ← client-funded
+                              │  Gemini (embedding) │   → consolidating to OpenRouter
+                              └─────────────────────┘</code></pre>
+<h2>3. Data flow (HR consultation)</h2>
+<ol><li><strong>Submit</strong> — HR staff/user သည် Glide (Pocket HR) app တွင် ticket တစ်ခု create လုပ်သည် (<code>Ticket_Status = Submitted</code>)။</li><li><strong>Poll &amp; draft</strong> — n8n poller သည် ၅ မိနစ်တစ်ကြိမ် pending ticket များကို poll လုပ်၍ HR Consultant Agent သို့ပို့သည်။ Agent သည် Supabase <code>hr_kb</code> (RAG) မှ grounded context ကို retrieve လုပ်ပြီး AI <strong>draft</strong> တစ်ခုထုတ်သည်။</li><li><strong>Write-back (consultant-only)</strong> — AI draft ကို <code>Sheet_AI_Answer</code> field သို့သာရေးသည် — <strong>client မမြင်ရ</strong>။</li><li><strong>Human review (HITL)</strong> — Consultant သည် draft ကို Glide တွင် review လုပ်၍ <strong>Approve</strong> သို့ <strong>Edit</strong> လုပ်သည်။ ထိုအခါမှသာ <code>Final_Answer</code> populate ဖြစ်ပြီး client မြင်ရသည် (<code>Ticket_Status = Resolved</code>)။</li></ol>
+<h2>4. Human-in-the-Loop (HITL) safety model</h2>
+<blockquote><strong>Core invariant</strong> — <code>Final_Answer</code> သည် <code>Resolved</code> state တွင်သာ populate ဖြစ်ရမည်။ <code>Submitted</code> / <code>Pending_Review</code> state တွင် client သည် AI answer ကို <strong>လုံးဝမမြင်ရ</strong>။</blockquote>
+<pre><code>  [ Submitted ]
+       │  n8n → Sheet_AI_Answer (draft, consultant-only)
+       ▼
+  [ Pending_Review ]                consultant သာမြင်ရ
+       │
+       ├── Approve ─► [ Resolved ]  Final_Answer ← Sheet_AI_Answer
+       │
+       └── Edit → Done ─► [ Resolved ]  Final_Answer ← Consultant_Answer</code></pre>
+<p>Field / status contract (canonical) —</p>
+<table><thead><tr><th>Field</th><th>Writer</th><th>Client visibility</th></tr></thead><tbody><tr><td><code>Sheet_AI_Answer</code></td><td>n8n</td><td>❌ consultant-only</td></tr><tr><td><code>Consultant_Answer</code></td><td>Consultant</td><td>❌ consultant-only</td></tr><tr><td><code>Final_Answer</code></td><td>Consultant action</td><td>✅ only when <code>Resolved</code></td></tr><tr><td><code>Ticket_Status</code></td><td>Glide/consultant</td><td>✅</td></tr></tbody></table>
+<p>ဤ model ၏ engineering rationale — HR domain သည် policy-sensitive (termination, payroll, legal) ဖြစ်၍ AI hallucination risk ကို human gate ဖြင့် eliminate လုပ်ထားသည်။ AI သည် consultant ၏ productivity tool ဖြစ်ပြီး၊ decision authority မဟုတ်ပါ။</p>
+<h2>5. Retrieval quality controls (tested)</h2>
+<table><thead><tr><th>Control</th><th>Value</th><th>ရည်ရွယ်ချက်</th></tr></thead><tbody><tr><td>Minimum similarity threshold</td><td><code>0.63</code></td><td>Low-relevance match များကို reject</td></tr><tr><td>TicketQA near-top clarification delta</td><td><code>0.01</code></td><td>ambiguous match → clarify-first</td></tr><tr><td>Deterministic router</td><td><code>CLARIFY</code> / <code>KB_ANSWER</code> / <code>NO_MATCH</code> / <code>RETRIEVAL_ERROR</code></td><td>non-deterministic LLM routing ကိုရှောင်</td></tr><tr><td>High-risk handling</td><td>termination/payroll/legal → clarify-first</td><td>unsupported rule assertion ကာကွယ်</td></tr><tr><td>Fallbacks</td><td>invalid-input / no-match / retrieval-error</td><td>graceful degradation</td></tr></tbody></table>
+<h2>6. Components</h2>
+<table><thead><tr><th>Layer</th><th>Technology</th><th>Owner</th></tr></thead><tbody><tr><td>Front-end</td><td>Glide (Pocket HR)</td><td>Client</td></tr><tr><td>Orchestration</td><td>n8n</td><td>Vendor (hosted)</td></tr><tr><td>Database / state</td><td>Supabase Postgres</td><td>Client</td></tr><tr><td>Retrieval</td><td>Supabase <code>pgvector</code> (<code>hr_kb</code>, <code>vector(1536)</code>, cosine)</td><td>Client</td></tr><tr><td>Embedding model</td><td><code>gemini-embedding-001</code> @1536 → consolidating to OpenRouter</td><td>Client-funded</td></tr><tr><td>LLM (draft generation)</td><td>OpenRouter</td><td>Client-funded</td></tr><tr><td>Diagram output</td><td><code>.drawio</code> (SOP / Org Chart)</td><td>—</td></tr></tbody></table>
+<h2>7. Boundaries &amp; invariants</h2>
+<ul><li>n8n သည် orchestration layer ဖြစ်သည်။ Durable state အားလုံး Supabase တွင်သိမ်းသည်။</li><li>SOP / Org Chart ၏ <strong>canonical artifact သည် <code>.drawio</code></strong> ဖြစ်သည် (PNG သည် default production path မဟုတ်)။</li><li>Production agent များသည် scope / architecture ကို silent ပြောင်းလဲခွင့်မရှိ။</li><li>Multi-company / tenant isolation သည် လက်ရှိ requirement မဟုတ် — schema/RLS/retrieval ကို ထို့အတွက်မတိုးချဲ့ရ။</li></ul>
+<h2>8. Verified runtime references</h2>
+<table><thead><tr><th>Artifact</th><th>Identifier</th></tr></thead><tbody><tr><td>Supabase project</td><td><code>Panellist</code> (<code>apnvkmwcmfpkkifzmdfc</code>)</td></tr><tr><td>Knowledge table</td><td><code>public.hr_kb</code> (<code>vector(1536)</code>, cosine)</td></tr><tr><td>HR Consultant Agent (n8n)</td><td><code>oWB6VGMxXPT0uzI7</code></td></tr><tr><td>KB Search tool (n8n)</td><td><code>I2BXh1yN53KcwV0z</code></td></tr><tr><td>Glide poller (n8n)</td><td><code>I01u0vd30Db7xSfx</code></td></tr><tr><td>SOP/Org Document Architect (n8n)</td><td><code>gB6WtsJVibehCAot</code></td></tr></tbody></table>
+<blockquote>Runtime ground truth သည် n8n instance + Supabase ဖြစ်သည်။ ဤ document များသည် index / operating guide ဖြစ်သည်။</blockquote></section></body></html>
