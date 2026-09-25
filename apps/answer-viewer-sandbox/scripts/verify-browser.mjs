@@ -55,11 +55,14 @@ try {
     page.on('pageerror', error => pageErrors.push(String(error)));
     await installApiRoute(page);
 
+    const apiResponse = page.waitForResponse(response => response.url().includes('/api/answer-viewer/'));
     await page.goto(`${base}/answer/${token}`, { waitUntil: 'domcontentloaded' });
+    const intercepted = await apiResponse;
+    if (intercepted.status() !== 200) throw new Error(`mocked authorized API returned ${intercepted.status()} at ${viewport.name}`);
     await page.waitForFunction(() => !document.body.innerText.includes('Loading Answer'), null, { timeout: 5000 });
     await page.evaluate(() => document.fonts.ready);
     const bodyText = await page.locator('body').innerText();
-    if (!bodyText.includes("HR Consultant's Answer")) throw new Error(`resolved answer missing at ${viewport.name}`);
+    if (!bodyText.includes("HR Consultant's Answer")) throw new Error(`resolved answer missing at ${viewport.name}; DOM=${bodyText.slice(0,400)}`);
     if (!bodyText.includes('ဝန်ထမ်း၏ ခွင့်တောင်းဆိုမှု')) throw new Error(`Burmese content missing at ${viewport.name}`);
     if (bodyText.includes('Sheet_AI_Answer') || bodyText.includes('Consultant_Answer')) throw new Error('forbidden internal field leaked into DOM');
     if (await page.locator('a[href^="javascript:"]').count() > 0) throw new Error('javascript URL rendered');
@@ -72,7 +75,10 @@ try {
 
   const denied = await browser.newPage({ viewport: { width: 390, height: 844 } });
   await installApiRoute(denied, 'denied');
+  const deniedApiResponse = denied.waitForResponse(response => response.url().includes('/api/answer-viewer/'));
   await denied.goto(`${base}/answer/tampered-or-expired-token`, { waitUntil: 'domcontentloaded' });
+  const deniedIntercepted = await deniedApiResponse;
+  if (deniedIntercepted.status() !== 404) throw new Error(`mocked denied API returned ${deniedIntercepted.status()}`);
   await denied.waitForFunction(() => !document.body.innerText.includes('Loading Answer'), null, { timeout: 5000 });
   const deniedText = await denied.locator('body').innerText();
   if (!deniedText.includes('Answer Unavailable')) throw new Error('denied state missing');
