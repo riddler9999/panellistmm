@@ -4,10 +4,21 @@ import type { TicketRow } from './ticketRow';
 
 export type ClientVisibleHRAnswer = HRAnswer & { status: 'resolved'; finalAnswer: string };
 
-export function projectClientAnswer(row: TicketRow): ClientVisibleHRAnswer | null {
+export type ProjectionPolicy = {
+  clientVisibleStatus: string;
+};
+
+export const DEFAULT_PROJECTION_POLICY: ProjectionPolicy = {
+  clientVisibleStatus: 'Delivered',
+};
+
+export function projectClientAnswer(
+  row: TicketRow,
+  policy: ProjectionPolicy = DEFAULT_PROJECTION_POLICY,
+): ClientVisibleHRAnswer | null {
   const status = String(row.Ticket_Status ?? '').trim();
   const finalAnswer = typeof row.Final_Answer === 'string' ? row.Final_Answer.trim() : '';
-  if (status !== 'Resolved' || !finalAnswer) return null;
+  if (status !== policy.clientVisibleStatus || !finalAnswer) return null;
 
   const ticketId = String(row.Ticket_ID ?? row.Row_ID ?? '').trim();
   if (!ticketId) return null;
