@@ -1,5 +1,5 @@
-import {useEffect,useState} from 'react';
-import {useParams} from 'react-router-dom';
+import {useEffect,useMemo,useState} from 'react';
+import {useLocation} from 'react-router-dom';
 import type {HRAnswer} from '../domain/hrAnswer';
 import {canRenderFinalAnswer} from '../domain/hrAnswer';
 import {SafeAnswerContent} from '../components/SafeAnswerContent';
@@ -7,17 +7,26 @@ import {ArtifactCard} from '../components/ArtifactCard';
 import {AnswerRenderBoundary,AnswerUnavailableState} from '../components/AnswerRenderBoundary';
 import {fetchProductionAnswer} from '../data/productionAnswerClient';
 
+function readAccessToken(hash:string):string{
+  return new URLSearchParams(hash.replace(/^#/,'')).get('access')?.trim() ?? '';
+}
+
 export function AnswerPage(){
-  const {answerKey=''}=useParams();
+  const {hash}=useLocation();
+  const accessToken=useMemo(()=>readAccessToken(hash),[hash]);
   const [state,setState]=useState<{loading:boolean;answer:HRAnswer|null}>({loading:true,answer:null});
 
   useEffect(()=>{
     const controller=new AbortController();
-    fetchProductionAnswer(answerKey,controller.signal)
+    if(!accessToken){
+      queueMicrotask(()=>setState({loading:false,answer:null}));
+      return()=>controller.abort();
+    }
+    fetchProductionAnswer(accessToken,controller.signal)
       .then(answer=>setState({loading:false,answer}))
       .catch(()=>setState({loading:false,answer:null}));
     return()=>controller.abort();
-  },[answerKey]);
+  },[accessToken]);
 
   if(state.loading)return <Shell><section className="state-card"><strong>Loading Answer</strong><p>အတည်ပြုပြီးသော အဖြေကို ဖွင့်နေပါသည်။</p></section></Shell>;
   const answer=state.answer;
