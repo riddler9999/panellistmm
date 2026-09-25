@@ -8,9 +8,9 @@ Phase 1 sandbox viewer ကို production-safe presentation layer အဖြစ
 
 - Phase 1 PR #7 is merged to `main`; latest sandbox verification workflow passed, including tests, typecheck, lint, production build and Chromium verification.
 - Phase 1 public contract excludes `Sheet_AI_Answer` and raw AI draft; render gate is resolved + non-empty `finalAnswer`.
-- Current production delivery path is Glide/Google Sheet backed: n8n writes `Sheet_AI_Answer`; consultant actions write `Final_Answer` and `Ticket_Status`.
+- Current delivery path is Glide/Google Sheet backed, but live n8n inspection on 2026-09-25 found material drift: workflow `I01u0vd30Db7xSfx` is inactive, its current draft writes `AI_Answer`, emits `Awaiting Review`/`Failed`, and guards `Delivered`/`Failed`. This conflicts with older repo documentation that names `Sheet_AI_Answer` and `Resolved`. Phase 2 code must tolerate/document the live contract and production rollout is blocked until the canonical field/status contract is reconciled and re-verified.
 - Repository delivery docs contain drift: some diagrams describe Supabase as ticket/state storage, while runtime/HITL evidence shows Google Sheet + Glide is the authoritative delivery path. Phase 2 must correct that documentation drift.
-- Current canonical status contract in runtime evidence is `Submitted → Pending_Review → Resolved`. The production viewer shall treat only `Resolved` as client-visible.
+- Repository documentation describes `Submitted → Pending_Review → Resolved`, while live n8n currently emits `Awaiting Review` and treats `Delivered` as terminal. The production viewer must use an explicit configurable allowlist for the single approved client-visible terminal state selected during reconciliation; it must never infer visibility from `Final_Answer` alone.
 - Existing artifact runtime fields are not reliably documented in the repo. Artifact adapter code must use an explicit mapping boundary and keep production field names configurable until runtime field names are verified.
 
 ## Architecture decision
@@ -45,7 +45,7 @@ Validation order:
 2. verify HMAC signature with server-only secret;
 3. enforce expiry;
 4. load ticket by exact ticketId from the authoritative adapter;
-5. require current `Ticket_Status === "Resolved"`;
+5. require current `Ticket_Status` to equal the reconciled approved client-visible terminal status (currently live evidence indicates `Delivered`; legacy docs indicate `Resolved`);
 6. require current non-empty `Final_Answer`;
 7. project an allowlisted client contract;
 8. return with `Cache-Control: private, no-store`.
@@ -138,7 +138,7 @@ Add/reuse one canonical field: `Answer_Viewer_URL`.
 Glide does not construct tokens.
 
 Visibility:
-- `Ticket_Status = Resolved` and non-empty `Answer_Viewer_URL` → viewer embed may show.
+- reconciled approved terminal `Ticket_Status` and non-empty `Answer_Viewer_URL` → viewer embed may show.
 - all other states → viewer embed hidden.
 
 Existing `Final_Answer` presentation remains available during rollout as fallback. Consultant controls remain unchanged.
