@@ -5,7 +5,7 @@ import type { TicketRow } from './ticketRow';
 const base: TicketRow = {
   Ticket_ID: 'ticket-123',
   Ticket_Title: 'Leave request',
-  Ticket_Status: 'Resolved',
+  Ticket_Status: 'Delivered',
   Final_Answer: 'Approved final answer',
   Sheet_AI_Answer: 'SECRET AI DRAFT',
   Consultant_Answer: 'SECRET CONSULTANT DRAFT',
@@ -16,7 +16,7 @@ const base: TicketRow = {
 
 describe('projectClientAnswer', () => {
   it('returns null when ticket is not resolved', () => {
-    expect(projectClientAnswer({ ...base, Ticket_Status: 'Pending_Review' })).toBeNull();
+    expect(projectClientAnswer({ ...base, Ticket_Status: 'Awaiting Review' })).toBeNull();
   });
 
   it('returns null when Final_Answer is empty', () => {
