@@ -1,8 +1,19 @@
 import { cleanup, render, screen } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { AnswerPage } from './AnswerPage';
 import { FIXTURE_KEYS } from '../data/answerFixtures';
+
+vi.mock('../components/SafeAnswerContent', async importOriginal => {
+  const actual = await importOriginal<typeof import('../components/SafeAnswerContent')>();
+  return {
+    ...actual,
+    SafeAnswerContent: ({ content }: { content: string }) => {
+      if (content === '__THROW_RENDER__') throw new Error('synthetic renderer failure');
+      return <actual.SafeAnswerContent content={content} />;
+    },
+  };
+});
 
 afterEach(() => cleanup());
 
@@ -40,6 +51,11 @@ describe('AnswerPage HITL behavior', () => {
     expect(screen.getByText('Answer Unavailable', { selector: 'strong' })).toBeInTheDocument();
     expect(screen.queryByText('Expired', { selector: 'strong' })).not.toBeInTheDocument();
     expect(screen.queryByText("HR Consultant's Answer", { selector: '.eyebrow' })).not.toBeInTheDocument();
+  });
+
+  it('contains rich-renderer failures behind a safe state', () => {
+    expect(() => view(FIXTURE_KEYS.renderFailure)).not.toThrow();
+    expect(screen.getByText('Answer Unavailable', { selector: 'strong' })).toBeInTheDocument();
   });
 
   it('fails safely for invalid and unknown keys', () => {
