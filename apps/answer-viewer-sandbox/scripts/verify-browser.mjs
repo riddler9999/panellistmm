@@ -83,7 +83,7 @@ try {
   await denied.waitForFunction(() => !document.body.innerText.includes('Loading Answer'), null, { timeout: 5000 });
   const deniedText = await denied.locator('body').innerText();
   if (!deniedText.includes('Answer Unavailable')) throw new Error('denied state missing');
-  if (deniedText.includes('ticket-browser') || deniedText.includes('အတည်ပြုပြီးသော အဖြေ')) throw new Error('denied state leaked approved answer data');
+  if (deniedText.includes('ticket-browser') || deniedText.includes('အတည်ပြုပြီးသော HR အဖြေ')) throw new Error(`denied state leaked approved answer data; DOM=${deniedText.slice(0,400)}`);
   await denied.screenshot({ path: 'browser-evidence/denied-390.png', fullPage: true });
   await deniedContext.close();
 
