@@ -21,6 +21,7 @@ describe('viewer token', () => {
     expect(verifyViewerToken({ token: tampered, now: 1_700_000_010, secret })).toBeNull();
     expect(verifyViewerToken({ token, now: 1_700_000_010, secret: 'wrong-secret' })).toBeNull();
     expect(verifyViewerToken({ token: 'garbage', now: 1_700_000_010, secret })).toBeNull();
+    expect(verifyViewerToken({ token, now: 1_700_000_060, secret })).toBeNull();
     expect(verifyViewerToken({ token, now: 1_700_000_061, secret })).toBeNull();
   });
 });
