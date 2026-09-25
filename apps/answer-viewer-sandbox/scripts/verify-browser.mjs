@@ -62,7 +62,7 @@ try {
     await page.waitForFunction(() => !document.body.innerText.includes('Loading Answer'), null, { timeout: 5000 });
     await page.evaluate(() => document.fonts.ready);
     const bodyText = await page.locator('body').innerText();
-    if (!bodyText.includes("HR Consultant's Answer")) throw new Error(`resolved answer missing at ${viewport.name}; DOM=${bodyText.slice(0,400)}`);
+    if (await page.locator('.eyebrow').filter({ hasText: /HR Consultant's Answer/i }).count() !== 1) throw new Error(`resolved answer heading missing at ${viewport.name}; DOM=${bodyText.slice(0,400)}`);
     if (!bodyText.includes('ဝန်ထမ်း၏ ခွင့်တောင်းဆိုမှု')) throw new Error(`Burmese content missing at ${viewport.name}`);
     if (bodyText.includes('Sheet_AI_Answer') || bodyText.includes('Consultant_Answer')) throw new Error('forbidden internal field leaked into DOM');
     if (await page.locator('a[href^="javascript:"]').count() > 0) throw new Error('javascript URL rendered');
