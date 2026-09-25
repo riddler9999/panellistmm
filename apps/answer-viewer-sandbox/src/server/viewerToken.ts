@@ -23,7 +23,7 @@ export function verifyViewerToken(args: { token: string; now: number; secret: st
     const parsed = JSON.parse(decode(payload)) as Partial<Claims>;
     if (parsed.v !== 1 || typeof parsed.ticketId !== 'string' || !parsed.ticketId ||
         typeof parsed.issuedAt !== 'number' || typeof parsed.expiresAt !== 'number' ||
-        typeof parsed.nonce !== 'string' || !parsed.nonce || parsed.expiresAt < args.now) return null;
+        typeof parsed.nonce !== 'string' || !parsed.nonce || parsed.expiresAt <= args.now) return null;
     return { ticketId: parsed.ticketId, issuedAt: parsed.issuedAt, expiresAt: parsed.expiresAt, nonce: parsed.nonce };
   } catch {
     return null;
