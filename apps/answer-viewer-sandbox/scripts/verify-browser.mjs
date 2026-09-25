@@ -7,7 +7,9 @@ const keys = {
   multiple: 'phr_sbx_c62e9f85a0b341d2bc84e731',
   pending: 'phr_sbx_d73fa096b1c452e3cd95f842',
   expired: 'phr_sbx_e840b1a7c2d563f4de06a953',
+  structured: 'phr_sbx_f951c2b8d3e674a5ef17ba64',
   malicious: 'phr_sbx_0a62d3c9e4f785b6fa28cb75',
+  missingFinal: 'phr_sbx_1b73e4daf50696c70b39dc86',
   unknown: 'phr_sbx_000000000000000000000000',
 };
 const viewports = [
@@ -43,6 +45,11 @@ try {
 
   const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
 
+  await page.goto(`${base}/answer/${keys.structured}`, { waitUntil: 'networkidle' });
+  if (await page.locator('.table-scroll > table').count() !== 1) throw new Error('structured table is not wrapped for overflow safety');
+  if (await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)) throw new Error('structured page overflows at 390px');
+  await page.screenshot({ path: 'browser-evidence/structured-390.png', fullPage: true });
+
   await page.goto(`${base}/answer/${keys.multiple}`, { waitUntil: 'networkidle' });
   if (await page.locator('a.artifact-action').count() !== 3) throw new Error('multiple artifact actions did not render');
   if (await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)) throw new Error('multiple-artifact page overflows at 390px');
@@ -57,6 +64,11 @@ try {
   const expiredText = await page.locator('body').innerText();
   if (expiredText.includes('EXPIRED CONTENT MUST NEVER BE VISIBLE')) throw new Error('expired final answer leaked');
   if (!expiredText.includes('Expired')) throw new Error('expired state missing');
+
+  await page.goto(`${base}/answer/${keys.missingFinal}`, { waitUntil: 'networkidle' });
+  const missingFinalText = await page.locator('body').innerText();
+  if (!missingFinalText.includes('Answer Unavailable')) throw new Error('resolved answer with missing final content did not fail safely');
+  if (missingFinalText.includes('Expired')) throw new Error('resolved answer with missing final content was mislabeled Expired');
 
   await page.goto(`${base}/answer/${keys.unknown}`, { waitUntil: 'networkidle' });
   if (!(await page.locator('body').innerText()).includes('Answer Not Found')) throw new Error('unknown key did not render Not Found');
@@ -75,7 +87,7 @@ try {
   await page.screenshot({ path: 'browser-evidence/malicious-390.png', fullPage: true });
   await page.close();
 
-  console.log('Browser verification passed for 320, 390, 430, 768, 1280 widths and HITL/security states.');
+  console.log('Browser verification passed for responsive widths plus structured, HITL, rendering-failure, and security states.');
 } finally {
   await browser.close();
 }

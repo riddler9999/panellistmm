@@ -35,6 +35,13 @@ describe('AnswerPage HITL behavior', () => {
     expect(screen.getByText('Expired', { selector: 'strong' })).toBeInTheDocument();
   });
 
+  it('shows a rendering-failure state for resolved answers with no final content', () => {
+    view(FIXTURE_KEYS.missingFinal);
+    expect(screen.getByText('Answer Unavailable', { selector: 'strong' })).toBeInTheDocument();
+    expect(screen.queryByText('Expired', { selector: 'strong' })).not.toBeInTheDocument();
+    expect(screen.queryByText("HR Consultant's Answer", { selector: '.eyebrow' })).not.toBeInTheDocument();
+  });
+
   it('fails safely for invalid and unknown keys', () => {
     const invalid = view('1');
     expect(screen.getByText(/invalid answer link/i)).toBeInTheDocument();

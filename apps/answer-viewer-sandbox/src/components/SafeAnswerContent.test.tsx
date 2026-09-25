@@ -11,6 +11,15 @@ describe('SafeAnswerContent', () => {
     expect(screen.getByText('item')).toBeInTheDocument();
   });
 
+  it('wraps GFM tables in an overflow-safe container', () => {
+    const { container } = render(
+      <SafeAnswerContent content={'|A|B|\n|-|-|\n|1|2|'} />,
+    );
+    const wrapper = container.querySelector('.table-scroll');
+    expect(wrapper).not.toBeNull();
+    expect(wrapper?.querySelector('table')).not.toBeNull();
+  });
+
   it('does not create executable markup', () => {
     const { container } = render(
       <SafeAnswerContent content={'<script>alert(1)</script> <img src=x onerror=alert(1)> [bad](javascript:alert(1))'} />,
