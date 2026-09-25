@@ -29,7 +29,7 @@ await mkdir('browser-evidence', { recursive: true });
 const browser = await chromium.launch({ headless: true });
 
 async function installApiRoute(page, mode = 'success') {
-  await page.route('**/api/answer-viewer/**', async route => {
+  await page.route(/\/api\/answer-viewer\/.+$/, async route => {
     if (mode === 'success') {
       await route.fulfill({
         status: 200,
@@ -55,7 +55,8 @@ try {
     page.on('pageerror', error => pageErrors.push(String(error)));
     await installApiRoute(page);
 
-    await page.goto(`${base}/answer/${token}`, { waitUntil: 'networkidle' });
+    await page.goto(`${base}/answer/${token}`, { waitUntil: 'domcontentloaded' });
+    await page.waitForFunction(() => !document.body.innerText.includes('Loading Answer'), null, { timeout: 5000 });
     await page.evaluate(() => document.fonts.ready);
     const bodyText = await page.locator('body').innerText();
     if (!bodyText.includes("HR Consultant's Answer")) throw new Error(`resolved answer missing at ${viewport.name}`);
@@ -71,7 +72,8 @@ try {
 
   const denied = await browser.newPage({ viewport: { width: 390, height: 844 } });
   await installApiRoute(denied, 'denied');
-  await denied.goto(`${base}/answer/tampered-or-expired-token`, { waitUntil: 'networkidle' });
+  await denied.goto(`${base}/answer/tampered-or-expired-token`, { waitUntil: 'domcontentloaded' });
+  await denied.waitForFunction(() => !document.body.innerText.includes('Loading Answer'), null, { timeout: 5000 });
   const deniedText = await denied.locator('body').innerText();
   if (!deniedText.includes('Answer Unavailable')) throw new Error('denied state missing');
   if (deniedText.includes('ticket-browser') || deniedText.includes('အတည်ပြုပြီးသော အဖြေ')) throw new Error('denied state leaked approved answer data');
