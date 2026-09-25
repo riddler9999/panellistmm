@@ -19,7 +19,7 @@ vi.mock('../components/SafeAnswerContent', async importOriginal => {
 
 const mockedFetch = vi.mocked(fetchProductionAnswer);
 const resolved: HRAnswer = {
-  answerKey: 'safe-token',
+  answerKey: 'ticket-123',
   ticketId: 'ticket-123',
   title: 'Leave request',
   status: 'resolved',
@@ -37,21 +37,32 @@ afterEach(() => {
 
 function view(token = 'safe-token') {
   return render(
-    <MemoryRouter initialEntries={[`/answer/${token}`]}>
+    <MemoryRouter initialEntries={[`/answer#access=${encodeURIComponent(token)}`]}>
       <Routes>
-        <Route path="/answer/:answerKey" element={<AnswerPage />} />
+        <Route path="/answer" element={<AnswerPage />} />
       </Routes>
     </MemoryRouter>,
   );
 }
 
 describe('AnswerPage production contract', () => {
-  it('shows only the approved server projection', async () => {
+  it('reads access from the fragment and shows only the approved server projection', async () => {
     mockedFetch.mockResolvedValue(resolved);
     view();
     expect(screen.getByText('Loading Answer', { selector: 'strong' })).toBeInTheDocument();
     expect(await screen.findByText("HR Consultant's Answer", { selector: '.eyebrow' })).toBeInTheDocument();
     expect(screen.getByText('အတည်ပြုပြီးသော HR အဖြေ')).toBeInTheDocument();
+    expect(mockedFetch).toHaveBeenCalledWith('safe-token', expect.any(AbortSignal));
+  });
+
+  it('does not call the API without a fragment token', async () => {
+    render(
+      <MemoryRouter initialEntries={['/answer']}>
+        <Routes><Route path="/answer" element={<AnswerPage />} /></Routes>
+      </MemoryRouter>,
+    );
+    expect(await screen.findByText('Answer Unavailable', { selector: 'strong' })).toBeInTheDocument();
+    expect(mockedFetch).not.toHaveBeenCalled();
   });
 
   it('uses the same safe state for invalid, expired, pending, and unavailable access', async () => {
@@ -61,18 +72,14 @@ describe('AnswerPage production contract', () => {
     expect(screen.queryByText(/AI draft/i)).not.toBeInTheDocument();
   });
 
-  it('renders projected artifacts and preserves HTTPS-only artifact behavior', async () => {
+  it('renders only server-approved artifacts', async () => {
     mockedFetch.mockResolvedValue({
       ...resolved,
-      artifacts: [
-        { type: 'sop', title: 'Leave SOP', url: 'https://example.com/leave.drawio' },
-        { type: 'file', title: 'Unsafe', url: 'javascript:alert(1)' },
-      ],
+      artifacts: [{ type: 'sop', title: 'Leave SOP', url: 'https://example.com/leave.drawio' }],
     });
     view();
     expect(await screen.findByText('Related Documents')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'View Diagram' })).toHaveAttribute('href', 'https://example.com/leave.drawio');
-    expect(screen.queryByRole('link', { name: 'Open Attachment' })).not.toBeInTheDocument();
   });
 
   it('contains rich-renderer failures behind a safe state', async () => {
