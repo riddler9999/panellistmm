@@ -30,12 +30,15 @@ describe('projectArtifacts', () => {
     ]);
   });
 
-  it('ignores unsupported artifact types or missing URLs', () => {
+  it('omits unsupported, missing, malformed, non-HTTPS, and javascript URLs server-side', () => {
     expect(projectArtifacts({
       Ticket_ID: 't1',
       Artifacts: [
         { type: 'secret_internal', title: 'Internal', url: 'https://example.com/internal' },
         { type: 'file', title: 'Missing', url: '' },
+        { type: 'file', title: 'Bad', url: 'not-a-url' },
+        { type: 'file', title: 'HTTP', url: 'http://example.com/file.pdf' },
+        { type: 'file', title: 'JS', url: 'javascript:alert(1)' },
       ],
     })).toEqual([]);
   });
