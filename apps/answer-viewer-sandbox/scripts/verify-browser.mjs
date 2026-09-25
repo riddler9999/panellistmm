@@ -29,6 +29,9 @@ try {
 
     await page.goto(`${base}/answer/${keys.resolved}`, { waitUntil: 'networkidle' });
     const bodyText = await page.locator('body').innerText();
+    await page.evaluate(() => document.fonts.ready);
+    const myanmarFontLoaded = await page.evaluate(() => document.fonts.check('16px "Noto Sans Myanmar"'));
+    if (!myanmarFontLoaded) throw new Error(`Myanmar webfont not loaded at ${viewport.name}`);
     if (!bodyText.includes("HR Consultant's Answer")) throw new Error(`resolved answer missing at ${viewport.name}`);
     if (!bodyText.includes('ဝန်ထမ်း၏ ခွင့်တောင်းဆိုမှု')) throw new Error(`Burmese content missing at ${viewport.name}`);
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth);
