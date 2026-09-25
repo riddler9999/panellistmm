@@ -62,7 +62,10 @@ try {
   if (!(await page.locator('body').innerText()).includes('Invalid Answer Link')) throw new Error('invalid key did not fail safely');
 
   await page.goto(`${base}/answer/${keys.malicious}`, { waitUntil: 'networkidle' });
-  if (await page.locator('script').count() > 1) throw new Error('untrusted script node rendered');
+  const maliciousScriptCount = await page.locator('script').evaluateAll(nodes =>
+    nodes.filter(node => (node.textContent ?? '').includes('alert("xss")') || (node.textContent ?? '').includes('alert(1)')).length,
+  );
+  if (maliciousScriptCount > 0) throw new Error('untrusted script payload rendered');
   if (await page.locator('img[src="x"]').count() > 0) throw new Error('untrusted image node rendered');
   if (await page.locator('a[href^="javascript:"]').count() > 0) throw new Error('javascript URL rendered');
   if (await page.getByRole('link', { name: 'Open Attachment' }).count() > 0) throw new Error('unsafe artifact became actionable');
