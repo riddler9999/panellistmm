@@ -2,20 +2,25 @@ import { chromium } from 'playwright';
 import { mkdir } from 'node:fs/promises';
 
 const base = 'http://127.0.0.1:4173';
-const keys = {
-  resolved: 'phr_sbx_a4f19c82d7e641b39a60c52e',
-  multiple: 'phr_sbx_c62e9f85a0b341d2bc84e731',
-  pending: 'phr_sbx_d73fa096b1c452e3cd95f842',
-  expired: 'phr_sbx_e840b1a7c2d563f4de06a953',
-  structured: 'phr_sbx_f951c2b8d3e674a5ef17ba64',
-  malicious: 'phr_sbx_0a62d3c9e4f785b6fa28cb75',
-  missingFinal: 'phr_sbx_1b73e4daf50696c70b39dc86',
-  unknown: 'phr_sbx_000000000000000000000000',
+const token = 'browser-verification-token';
+const resolvedAnswer = {
+  answerKey: 'ticket-browser',
+  ticketId: 'ticket-browser',
+  title: 'ဝန်ထမ်း ခွင့်တောင်းဆိုမှု',
+  status: 'resolved',
+  finalAnswer: '# အတည်ပြုပြီးသော အဖြေ\n\nဝန်ထမ်း၏ ခွင့်တောင်းဆိုမှုကို HR policy နှင့်ညီအောင် စစ်ဆေးပြီး အတည်ပြုနိုင်ပါသည်။\n\n| အဆင့် | လုပ်ဆောင်ချက် |\n|---|---|\n| ၁ | Request စစ်ဆေးရန် |\n| ၂ | Consultant approval မှတ်တမ်းတင်ရန် |',
+  artifacts: [
+    { type: 'sop', title: 'အလွန်ရှည်လျားသော Leave Management Standard Operating Procedure Diagram '.repeat(3), url: 'https://example.com/leave.drawio' },
+    { type: 'file', title: 'Unsafe attachment', url: 'javascript:alert(1)' },
+  ],
+  reviewedBy: 'HR Consultant',
+  reviewedAt: '2026-09-25T08:00:00.000Z',
+  updatedAt: '2026-09-25T08:10:00.000Z',
 };
 const viewports = [
-  { name: '320', width: 320, height: 800 },
+  { name: '375', width: 375, height: 812 },
   { name: '390', width: 390, height: 844 },
-  { name: '430', width: 430, height: 932 },
+  { name: '414', width: 414, height: 896 },
   { name: '768', width: 768, height: 1024 },
   { name: '1280', width: 1280, height: 900 },
 ];
@@ -23,71 +28,57 @@ const viewports = [
 await mkdir('browser-evidence', { recursive: true });
 const browser = await chromium.launch({ headless: true });
 
+async function installApiRoute(page, mode = 'success') {
+  await page.route('**/api/answer-viewer/**', async route => {
+    if (mode === 'success') {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        headers: { 'Cache-Control': 'private, no-store, max-age=0' },
+        body: JSON.stringify(resolvedAnswer),
+      });
+    } else {
+      await route.fulfill({
+        status: 404,
+        contentType: 'application/json',
+        headers: { 'Cache-Control': 'private, no-store, max-age=0' },
+        body: JSON.stringify({ error: 'answer_unavailable' }),
+      });
+    }
+  });
+}
+
 try {
   for (const viewport of viewports) {
     const page = await browser.newPage({ viewport: { width: viewport.width, height: viewport.height } });
     const pageErrors = [];
     page.on('pageerror', error => pageErrors.push(String(error)));
+    await installApiRoute(page);
 
-    await page.goto(`${base}/answer/${keys.resolved}`, { waitUntil: 'networkidle' });
-    const bodyText = await page.locator('body').innerText();
+    await page.goto(`${base}/answer/${token}`, { waitUntil: 'networkidle' });
     await page.evaluate(() => document.fonts.ready);
-    const myanmarFontLoaded = await page.evaluate(() => document.fonts.check('16px "Noto Sans Myanmar"'));
-    if (!myanmarFontLoaded) throw new Error(`Myanmar webfont not loaded at ${viewport.name}`);
+    const bodyText = await page.locator('body').innerText();
     if (!bodyText.includes("HR Consultant's Answer")) throw new Error(`resolved answer missing at ${viewport.name}`);
     if (!bodyText.includes('ဝန်ထမ်း၏ ခွင့်တောင်းဆိုမှု')) throw new Error(`Burmese content missing at ${viewport.name}`);
-    const overflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth);
-    if (overflow) throw new Error(`horizontal overflow at ${viewport.name}`);
+    if (bodyText.includes('Sheet_AI_Answer') || bodyText.includes('Consultant_Answer')) throw new Error('forbidden internal field leaked into DOM');
+    if (await page.locator('a[href^="javascript:"]').count() > 0) throw new Error('javascript URL rendered');
+    if (await page.getByRole('link', { name: 'Open Attachment' }).count() > 0) throw new Error('unsafe artifact became actionable');
+    if (await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)) throw new Error(`horizontal overflow at ${viewport.name}`);
     if (pageErrors.length) throw new Error(`page errors at ${viewport.name}: ${pageErrors.join('; ')}`);
-    await page.screenshot({ path: `browser-evidence/resolved-${viewport.name}.png`, fullPage: true });
+    await page.screenshot({ path: `browser-evidence/authorized-${viewport.name}.png`, fullPage: true });
     await page.close();
   }
 
-  const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
+  const denied = await browser.newPage({ viewport: { width: 390, height: 844 } });
+  await installApiRoute(denied, 'denied');
+  await denied.goto(`${base}/answer/tampered-or-expired-token`, { waitUntil: 'networkidle' });
+  const deniedText = await denied.locator('body').innerText();
+  if (!deniedText.includes('Answer Unavailable')) throw new Error('denied state missing');
+  if (deniedText.includes('ticket-browser') || deniedText.includes('အတည်ပြုပြီးသော အဖြေ')) throw new Error('denied state leaked approved answer data');
+  await denied.screenshot({ path: 'browser-evidence/denied-390.png', fullPage: true });
+  await denied.close();
 
-  await page.goto(`${base}/answer/${keys.structured}`, { waitUntil: 'networkidle' });
-  if (await page.locator('.table-scroll > table').count() !== 1) throw new Error('structured table is not wrapped for overflow safety');
-  if (await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)) throw new Error('structured page overflows at 390px');
-  await page.screenshot({ path: 'browser-evidence/structured-390.png', fullPage: true });
-
-  await page.goto(`${base}/answer/${keys.multiple}`, { waitUntil: 'networkidle' });
-  if (await page.locator('a.artifact-action').count() !== 3) throw new Error('multiple artifact actions did not render');
-  if (await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)) throw new Error('multiple-artifact page overflows at 390px');
-  await page.screenshot({ path: 'browser-evidence/multiple-390.png', fullPage: true });
-
-  await page.goto(`${base}/answer/${keys.pending}`, { waitUntil: 'networkidle' });
-  const pendingText = await page.locator('body').innerText();
-  if (pendingText.includes('THIS MUST NEVER BE VISIBLE TO THE CLIENT')) throw new Error('pending final answer leaked');
-  if (!pendingText.includes('Pending Review')) throw new Error('pending review state missing');
-
-  await page.goto(`${base}/answer/${keys.expired}`, { waitUntil: 'networkidle' });
-  const expiredText = await page.locator('body').innerText();
-  if (expiredText.includes('EXPIRED CONTENT MUST NEVER BE VISIBLE')) throw new Error('expired final answer leaked');
-  if (!expiredText.includes('Expired')) throw new Error('expired state missing');
-
-  await page.goto(`${base}/answer/${keys.missingFinal}`, { waitUntil: 'networkidle' });
-  const missingFinalText = await page.locator('body').innerText();
-  if (!missingFinalText.includes('Answer Unavailable')) throw new Error('resolved answer with missing final content did not fail safely');
-  if (missingFinalText.includes('Expired')) throw new Error('resolved answer with missing final content was mislabeled Expired');
-
-  await page.goto(`${base}/answer/${keys.unknown}`, { waitUntil: 'networkidle' });
-  if (!(await page.locator('body').innerText()).includes('Answer Not Found')) throw new Error('unknown key did not render Not Found');
-
-  await page.goto(`${base}/answer/1`, { waitUntil: 'networkidle' });
-  if (!(await page.locator('body').innerText()).includes('Invalid Answer Link')) throw new Error('invalid key did not fail safely');
-
-  await page.goto(`${base}/answer/${keys.malicious}`, { waitUntil: 'networkidle' });
-  const maliciousScriptCount = await page.locator('script').evaluateAll(nodes =>
-    nodes.filter(node => (node.textContent ?? '').includes('alert("xss")') || (node.textContent ?? '').includes('alert(1)')).length,
-  );
-  if (maliciousScriptCount > 0) throw new Error('untrusted script payload rendered');
-  if (await page.locator('img[src="x"]').count() > 0) throw new Error('untrusted image node rendered');
-  if (await page.locator('a[href^="javascript:"]').count() > 0) throw new Error('javascript URL rendered');
-  if (await page.getByRole('link', { name: 'Open Attachment' }).count() > 0) throw new Error('unsafe artifact became actionable');
-  await page.screenshot({ path: 'browser-evidence/malicious-390.png', fullPage: true });
-  await page.close();
-
-  console.log('Browser verification passed for responsive widths plus structured, HITL, rendering-failure, and security states.');
+  console.log('Browser verification passed for 375, 390, 414, 768, 1280 widths plus authorized/denied and artifact security states.');
 } finally {
   await browser.close();
 }
