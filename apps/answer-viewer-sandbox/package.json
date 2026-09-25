@@ -18,7 +18,8 @@
     "react-dom": "latest",
     "react-router-dom": "latest",
     "react-markdown": "latest",
-    "remark-gfm": "latest"
+    "remark-gfm": "latest",
+    "@fontsource/noto-sans-myanmar": "latest"
   },
   "devDependencies": {
     "@eslint/js": "latest",
