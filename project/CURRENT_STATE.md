@@ -84,3 +84,26 @@ The direct-response test workflow must not be treated as the production interfac
 
 ## Last Verified
 2026-09-16 — canonical repo reconciled against newer n8n/Supabase HR Consultant runtime evidence. The Sep-15 credential/zero-row blocker is stale; hardened deterministic RAG has passed the recorded manual matrix, but production publication remains blocked by the 100% HITL architecture and owner approval gates.
+
+## Phase 2 Secure Answer Viewer update — 2026-09-25
+
+Phase 1 sandbox viewer is merged and verified. Phase 2 secure delivery work is on isolated branch `feat/secure-answer-viewer-production-integration` and PR #8, unmerged.
+
+Implemented in review branch:
+- explicit approved-only server projection;
+- HMAC-signed expiring viewer access;
+- current-state revalidation and cross-ticket isolation;
+- token transport via URL fragment + Authorization header to avoid raw token request-path logging;
+- private/no-store response contract;
+- server-side HTTPS artifact projection;
+- production ticket repository/transport boundary;
+- additive n8n/Glide integration contracts and rollback plan.
+
+Read-only live n8n inspection found material drift from older docs:
+- poller `I01u0vd30Db7xSfx` is inactive;
+- live draft field is `AI_Answer`;
+- review state is `Awaiting Review`;
+- terminal guard uses `Delivered` / `Failed`.
+
+Because of that drift, Phase 2 is **not production-ready** until the n8n + Sheet + Glide field/status contract is reconciled and actual Glide Web Embed UAT is completed. No production n8n, Google Sheet, Glide, Supabase, or ticket data mutation was made by the Phase 2 implementation work.
+
