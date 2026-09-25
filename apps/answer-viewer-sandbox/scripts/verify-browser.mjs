@@ -73,7 +73,8 @@ try {
     await page.close();
   }
 
-  const denied = await browser.newPage({ viewport: { width: 390, height: 844 } });
+  const deniedContext = await browser.newContext({ viewport: { width: 390, height: 844 } });
+  const denied = await deniedContext.newPage();
   await installApiRoute(denied, 'denied');
   const deniedApiResponse = denied.waitForResponse(response => response.url().includes('/api/answer-viewer/'));
   await denied.goto(`${base}/answer/tampered-or-expired-token`, { waitUntil: 'domcontentloaded' });
@@ -84,7 +85,7 @@ try {
   if (!deniedText.includes('Answer Unavailable')) throw new Error('denied state missing');
   if (deniedText.includes('ticket-browser') || deniedText.includes('အတည်ပြုပြီးသော အဖြေ')) throw new Error('denied state leaked approved answer data');
   await denied.screenshot({ path: 'browser-evidence/denied-390.png', fullPage: true });
-  await denied.close();
+  await deniedContext.close();
 
   console.log('Browser verification passed for 375, 390, 414, 768, 1280 widths plus authorized/denied and artifact security states.');
 } finally {
