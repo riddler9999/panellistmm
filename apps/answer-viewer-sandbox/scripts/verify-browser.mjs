@@ -29,7 +29,7 @@ await mkdir('browser-evidence', { recursive: true });
 const browser = await chromium.launch({ headless: true });
 
 async function installApiRoute(page, mode = 'success') {
-  await page.route(/\/api\/answer-viewer\/.+$/, async route => {
+  await page.route('**/api/answer-viewer', async route => {
     if (mode === 'success') {
       await route.fulfill({
         status: 200,
@@ -55,8 +55,8 @@ try {
     page.on('pageerror', error => pageErrors.push(String(error)));
     await installApiRoute(page);
 
-    const apiResponse = page.waitForResponse(response => response.url().includes('/api/answer-viewer/'));
-    await page.goto(`${base}/answer/${token}`, { waitUntil: 'domcontentloaded' });
+    const apiResponse = page.waitForResponse(response => response.url().endsWith('/api/answer-viewer'));
+    await page.goto(`${base}/answer#access=${encodeURIComponent(token)}`, { waitUntil: 'domcontentloaded' });
     const intercepted = await apiResponse;
     if (intercepted.status() !== 200) throw new Error(`mocked authorized API returned ${intercepted.status()} at ${viewport.name}`);
     await page.waitForFunction(() => !document.body.innerText.includes('Loading Answer'), null, { timeout: 5000 });
@@ -76,8 +76,8 @@ try {
   const deniedContext = await browser.newContext({ viewport: { width: 390, height: 844 } });
   const denied = await deniedContext.newPage();
   await installApiRoute(denied, 'denied');
-  const deniedApiResponse = denied.waitForResponse(response => response.url().includes('/api/answer-viewer/'));
-  await denied.goto(`${base}/answer/tampered-or-expired-token`, { waitUntil: 'domcontentloaded' });
+  const deniedApiResponse = denied.waitForResponse(response => response.url().endsWith('/api/answer-viewer'));
+  await denied.goto(`${base}/answer#access=${encodeURIComponent('tampered-or-expired-token')}`, { waitUntil: 'domcontentloaded' });
   const deniedIntercepted = await deniedApiResponse;
   if (deniedIntercepted.status() !== 404) throw new Error(`mocked denied API returned ${deniedIntercepted.status()}`);
   await denied.waitForFunction(() => !document.body.innerText.includes('Loading Answer'), null, { timeout: 5000 });
