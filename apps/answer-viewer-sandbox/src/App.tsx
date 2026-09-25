@@ -1,0 +1,1 @@
+import {Navigate,Route,Routes} from 'react-router-dom';import {AnswerPage} from './routes/AnswerPage';export function App(){return <Routes><Route path="/answer/:answerKey" element={<AnswerPage/>}/><Route path="*" element={<Navigate to="/answer/invalid" replace/>}/></Routes>}
