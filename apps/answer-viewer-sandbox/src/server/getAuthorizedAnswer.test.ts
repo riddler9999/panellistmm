@@ -8,7 +8,7 @@ const secret = 'test-secret-value-that-is-long-enough';
 const resolved: TicketRow = {
   Ticket_ID: 'ticket-123',
   Ticket_Title: 'Leave request',
-  Ticket_Status: 'Resolved',
+  Ticket_Status: 'Delivered',
   Final_Answer: 'Approved final answer',
   Sheet_AI_Answer: 'NEVER EXPOSE',
   Updated_At: '2026-09-25T08:10:00.000Z',
@@ -21,7 +21,7 @@ function repo(row: TicketRow | null): TicketRepository {
 describe('getAuthorizedAnswer', () => {
   it('denies pending review even when an AI draft exists', async () => {
     const token = createViewerToken({ ticketId: 'ticket-123', now: 1000, ttlSeconds: 60, secret, nonce: 'n' });
-    const result = await getAuthorizedAnswer({ token, now: 1010, secret, repository: repo({ ...resolved, Ticket_Status: 'Pending_Review', Final_Answer: null }) });
+    const result = await getAuthorizedAnswer({ token, now: 1010, secret, repository: repo({ ...resolved, Ticket_Status: 'Awaiting Review', Final_Answer: null }) });
     expect(result.ok).toBe(false);
     expect(JSON.stringify(result)).not.toContain('NEVER EXPOSE');
   });
@@ -49,6 +49,6 @@ describe('getAuthorizedAnswer', () => {
     expect((await getAuthorizedAnswer({ token: 'bad', now: 1010, secret, repository: repo(resolved) })).ok).toBe(false);
     expect((await getAuthorizedAnswer({ token: valid, now: 1061, secret, repository: repo(resolved) })).ok).toBe(false);
     expect((await getAuthorizedAnswer({ token: other, now: 1010, secret, repository: repo(resolved) })).ok).toBe(false);
-    expect((await getAuthorizedAnswer({ token: valid, now: 1010, secret, repository: repo({ ...resolved, Ticket_Status: 'Pending_Review' }) })).ok).toBe(false);
+    expect((await getAuthorizedAnswer({ token: valid, now: 1010, secret, repository: repo({ ...resolved, Ticket_Status: 'Awaiting Review' }) })).ok).toBe(false);
   });
 });
