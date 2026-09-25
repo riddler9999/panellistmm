@@ -13,7 +13,6 @@ export function AnswerPage(){
 
   useEffect(()=>{
     const controller=new AbortController();
-    setState({loading:true,answer:null});
     fetchProductionAnswer(answerKey,controller.signal)
       .then(answer=>setState({loading:false,answer}))
       .catch(()=>setState({loading:false,answer:null}));
