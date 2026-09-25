@@ -1,4 +1,4 @@
-import { Component, type ErrorInfo, type ReactNode } from 'react';
+import { Component, type ReactNode } from 'react';
 
 type Props = { children: ReactNode };
 type State = { failed: boolean };
@@ -10,7 +10,7 @@ export class AnswerRenderBoundary extends Component<Props, State> {
     return { failed: true };
   }
 
-  componentDidCatch(_error: Error, _info: ErrorInfo) {
+  componentDidCatch() {
     // Sandbox viewer intentionally renders a generic state without exposing error details.
   }
 
