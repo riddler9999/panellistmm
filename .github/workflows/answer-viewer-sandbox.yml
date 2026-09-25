@@ -37,6 +37,13 @@ jobs:
       - name: Production build
         run: npm run build
 
+      - name: Verify client bundle excludes internal answer fields
+        run: |
+          if grep -R -E "Sheet_AI_Answer|Consultant_Answer" dist; then
+            echo "Internal answer fields leaked into the client bundle"
+            exit 1
+          fi
+
       - name: Install Playwright for verification
         run: npm install --no-save playwright@1.55.0
 
@@ -48,7 +55,7 @@ jobs:
           npx vite preview --host 127.0.0.1 --port 4173 > /tmp/answer-viewer-vite.log 2>&1 &
           echo $! > /tmp/answer-viewer-vite.pid
           for i in {1..30}; do
-            if curl -fsS http://127.0.0.1:4173/answer/phr_sbx_a4f19c82d7e641b39a60c52e >/dev/null; then
+            if curl -fsS http://127.0.0.1:4173/answer >/dev/null; then
               exit 0
             fi
             sleep 1

@@ -85,3 +85,22 @@ Tested manual RAG matrix (recorded PASS) — generic HR grounding, TicketQA clar
 - Workflow အပြောင်းအလဲတိုင်း vendor က version-controlled ပုံစံဖြင့်ဆောင်ရွက်သည်။
 - Production publish/activation တိုင်း owner approval လိုအပ်သည်။
 - Destructive / scope-changing operation များကို explicit approval မရှိဘဲ မဆောင်ရွက်ရ။
+
+---
+
+## 7. Phase 2 runtime reconciliation note — 2026-09-25
+
+A read-only inspection of `Process pending Glide Panellist requests` (`I01u0vd30Db7xSfx`) found that this document's older field/status table is stale in material places:
+
+- workflow is currently **inactive**;
+- source is the Google Sheet bridge;
+- current draft write field is `AI_Answer`, while older docs name `Sheet_AI_Answer`;
+- current review state is `Awaiting Review`;
+- current terminal guards include `Delivered` and `Failed`;
+- artifact writes use `Artifact_Title`, `Artifact_URL`, and `Artifact_Status`;
+- legacy artifact download/editor fields remain in replay-protection logic.
+
+For the Phase 2 Answer Viewer, n8n remains presentation-agnostic. It must not generate HTML or place answer content in viewer URLs. A future additive approval-stage integration may write a complete `Answer_Viewer_URL` only after the approved `Final_Answer` and terminal client-visible state have been committed.
+
+Production publish/activation remains owner-gated. Before any writeback change, reconcile one canonical draft field and one canonical terminal approved status across n8n + Sheet + Glide, then rerun HITL regression/UAT.
+
