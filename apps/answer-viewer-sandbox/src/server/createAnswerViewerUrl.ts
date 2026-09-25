@@ -1,5 +1,16 @@
 import { createHash } from 'node:crypto';
-import { createViewerToken } from './viewerToken';
+import { createViewerToken, verifyViewerToken } from './viewerToken';
+
+function readExistingToken(existingUrl: string, expectedBase: URL): string | null {
+  try {
+    const existing = new URL(existingUrl);
+    if (existing.origin !== expectedBase.origin || existing.pathname !== '/answer') return null;
+    const params = new URLSearchParams(existing.hash.replace(/^#/, ''));
+    return params.get('access');
+  } catch {
+    return null;
+  }
+}
 
 export function createOrReuseAnswerViewerUrl(args: {
   ticketId: string;
@@ -10,15 +21,13 @@ export function createOrReuseAnswerViewerUrl(args: {
   existingUrl?: string | null;
 }): string {
   const normalizedBase = args.baseUrl.replace(/\/$/, '');
+  const base = new URL(normalizedBase);
+
   if (args.existingUrl) {
-    try {
-      const existing = new URL(args.existingUrl);
-      const base = new URL(normalizedBase);
-      if (existing.origin === base.origin && existing.pathname.startsWith('/answer/') && existing.pathname.length > '/answer/'.length) {
-        return existing.toString();
-      }
-    } catch {
-      // Invalid existing value falls through to safe regeneration.
+    const existingToken = readExistingToken(args.existingUrl, base);
+    if (existingToken) {
+      const claims = verifyViewerToken({ token: existingToken, now: args.now, secret: args.secret });
+      if (claims?.ticketId === args.ticketId) return args.existingUrl;
     }
   }
 
@@ -27,5 +36,5 @@ export function createOrReuseAnswerViewerUrl(args: {
     .digest('base64url')
     .slice(0, 22);
   const token = createViewerToken({ ...args, nonce });
-  return `${normalizedBase}/answer/${encodeURIComponent(token)}`;
+  return `${normalizedBase}/answer#access=${encodeURIComponent(token)}`;
 }
