@@ -35,13 +35,13 @@ Panellist HR AI System သည် HR consultation များကို AI ဖြ
 
 | Component | Owner / Hosting | Final handover posture |
 |---|---|---|
-| **n8n orchestration** | Vendor server | Vendor-operated managed service |
+| **n8n orchestration** | Vendor-owned VPS | Vendor hosts, operates, monitors and maintains n8n workflows; no VPS/workflow ownership transfer |
 | **Supabase database** | Client account target | Ownership handover now authorized by final payment |
 | **OpenRouter / AI API** | Client account | Client funds usage |
 | **Glide (Pocket HR)** | Client account | Client-owned |
 | **Repository / delivery docs** | Vendor GitHub repository | Client receives compiled delivery dossier / agreed materials |
 
-## 5. Final payment and handover state
+## 5. Monthly managed service\n\nThe current agreed charge is **100,000 MMK per month inclusive of vendor VPS hosting and maintenance**. This is a managed-service fee, not an infrastructure or workflow ownership transfer. Vendor retains VPS and n8n workflows. Client owns its business data and agreed client-side accounts. AI API usage and Supabase billing are separate as described in the service agreement; confirm any actual billing changes with both parties. Scope expansions require separate agreement.\n\n## 6. Final payment and handover state
 
 **Final payment has been received.** The commercial gate that previously blocked database ownership handover is now cleared.
 
