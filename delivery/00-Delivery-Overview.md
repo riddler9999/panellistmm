@@ -1,86 +1,88 @@
 # 00 — Delivery Overview & Handover Summary
 
-> Panellist HR AI System · Client Delivery Package v1.0 · 2026-09-22
+> Panellist HR AI System · Client Delivery Package v1.1 · 2026-10-03
 
 ---
 
 ## 1. Objective
 
-ဤ document သည် Panellist Business Services အတွက် တည်ဆောက်ပြီးစီးသော **Panellist HR AI System** ကို handover လုပ်ရာတွင် ဘာတွေ deliver လုပ်သည်၊ မည်သူက ဘာတာဝန်ယူသည်၊ acceptance ကို မည်သို့ဆောင်ရွက်မည် ဆိုသည်ကို executive-level ဖြင့် အကျဉ်းချုပ်ဖော်ပြရန်ဖြစ်သည်။
+ဤ document သည် Panellist Business Services အတွက် တည်ဆောက်ထားသော **Panellist HR AI System** ကို final handover လုပ်ရာတွင် deliver လုပ်သည့် scope, ownership, acceptance နှင့် post-delivery support boundary ကို executive-level ဖြင့် အကျဉ်းချုပ်ဖော်ပြရန်ဖြစ်သည်။
 
 ## 2. What is being delivered
 
 Panellist HR AI System သည် HR consultation များကို AI ဖြင့်အထောက်အကူပြုပြီး၊ **human consultant တစ်ဦး၏ approve/edit မပါဘဲ client ထံ answer တစ်ခုမှ မရောက်စေရ** (100% Human-in-the-Loop) ဟူသော production-safety principle ဖြင့်တည်ဆောက်ထားသည်။
 
-Deliver လုပ်သည့် capability များ —
-
-| Capability | ဖော်ပြချက် | Status |
+| Capability | ဖော်ပြချက် | Delivery status |
 |---|---|---|
-| **HR Consultant AI (RAG-grounded)** | HR question များကို approved knowledge base (`hr_kb`) မှ retrieve လုပ်၍ grounded draft answer ထုတ်ပေး | ✅ Tested (n8n) |
-| **Human-in-the-Loop review** | Consultant က draft ကို approve/edit ပြီးမှသာ client မြင်ရ | ✅ Contract enforced |
-| **SOP & Org Chart generation** | Business discovery မှ `.drawio` SOP / Organization Chart ထုတ်ပေး | ✅ Tested (n8n) |
-| **Glide front-end integration** | Glide (Pocket HR) app မှ ticket submit → n8n processing → consultant review | ⏳ Glide ~90% (client-owned) |
-| **Auditability & fallbacks** | Deterministic routing, no-match/error/timeout fallback, session isolation | ✅ Tested |
+| **HR Consultant AI (RAG-grounded)** | approved knowledge base (`hr_kb`) မှ retrieve လုပ်၍ grounded draft answer ထုတ်ပေး | ✅ Delivered |
+| **Human-in-the-Loop review** | Consultant approve/edit ပြီးမှသာ client-facing final answer ဖြစ်စေ | ✅ Delivered |
+| **SOP & Org Chart generation** | Business discovery မှ `.drawio` SOP / Organization Chart ထုတ်ပေး | ✅ Delivered |
+| **Glide integration contract** | Pocket HR ticket submit → n8n processing → consultant review → client final answer | ✅ Delivered integration contract |
+| **Auditability & fallbacks** | deterministic routing, no-match/error fallback, session isolation | ✅ Delivered |
+| **Secure Answer Viewer Phase 2** | signed viewer token + secure embed path | ⏳ Not part of final production handover; review branch / future rollout only |
 
 ## 3. Delivery scope boundary
 
-| In scope (vendor delivers) | Out of scope |
+| In scope | Out of scope / future work |
 |---|---|
-| n8n workflow orchestration (vendor-hosted) | Glide app UI development (client owns Glide account & app) |
-| Supabase schema + knowledge base + RAG retrieval | Multi-company / multi-tenant isolation (not required — see Requirements) |
-| AI draft generation + HITL enforcement contract | Client's own OpenRouter account funding (after initial top-up) |
-| SOP / Org Chart `.drawio` generation | Autonomous production activation without owner approval |
-| This delivery documentation set | Real HR PII processing before privacy posture sign-off (§ Document 05) |
+| n8n workflow orchestration (vendor-hosted) | New Glide UI redesign/features beyond current integration |
+| Supabase schema + knowledge base + RAG retrieval | Multi-company / multi-tenant redesign |
+| AI draft generation + HITL enforcement | New agents / integrations / analytics unless separately quoted |
+| SOP / Org Chart `.drawio` generation | Secure Answer Viewer Phase 2 production rollout until remaining UAT gates pass |
+| Client handover documentation + operating runbooks | Autonomous AI response without consultant approval |
 
-> **Glide note**: Glide (Pocket HR) app သည် client ၏ ownership ဖြစ်ပြီး ဤ delivery ၏ scope ပြင်ပတွင်ရှိသည်။ Vendor သည် Glide ↔ n8n **integration contract** (field/status handoff) ကိုသာ deliver လုပ်သည် (§ Document 03)။
+## 4. Ownership & hosting model
 
-## 4. Ownership & hosting model (confirmed)
-
-| Component | Hosting / Owner | မှတ်ချက် |
+| Component | Owner / Hosting | Final handover posture |
 |---|---|---|
-| **n8n orchestration** | **Vendor server** (vendor-managed) | Managed-service model — vendor operates & maintains |
-| **Supabase database** | **Client account** (info@panellistmm.com) | Handover target — client owns data |
-| **OpenRouter (AI API)** | **Client account** | Client funds usage (initial top-up by vendor) |
-| **Glide (Pocket HR) app** | **Client account** | Client-owned; out of delivery scope |
+| **n8n orchestration** | Vendor server | Vendor-operated managed service |
+| **Supabase database** | Client account target | Ownership handover now authorized by final payment |
+| **OpenRouter / AI API** | Client account | Client funds usage |
+| **Glide (Pocket HR)** | Client account | Client-owned |
+| **Repository / delivery docs** | Vendor GitHub repository | Client receives compiled delivery dossier / agreed materials |
 
-ဤ split-ownership model ၏ engineering rationale — client ၏ HR data နှင့် AI spend ကို client ကိုယ်တိုင်ပိုင်ဆိုင်စေပြီး (data sovereignty + cost transparency)၊ orchestration operational burden ကိုမူ vendor ကထမ်းဆောင်သည် (reliability + maintenance)။
+## 5. Final payment and handover state
 
-## 5. Responsibility (RACI summary)
+**Final payment has been received.** The commercial gate that previously blocked database ownership handover is now cleared.
 
-| Activity | Vendor | Client |
-|---|---|---|
-| n8n workflow operation & maintenance | **R/A** | I |
-| Supabase database hosting & data | S (runbook) | **R/A** |
-| AI API funding (OpenRouter) | S (initial top-up) | **R/A** |
-| Consultant review of AI drafts (HITL) | I | **R/A** |
-| Glide app changes / UI | — | **R/A** |
-| Monthly maintenance & monitoring | **R/A** | I |
-| Credential custody & rotation | **R/A** | C |
+Remaining handover work is operational, not commercial:
 
-`R` = Responsible · `A` = Accountable · `C` = Consulted · `S` = Supports · `I` = Informed
+1. Execute/confirm client-owned Supabase migration or transfer.
+2. Re-point n8n credentials to the client-owned database.
+3. Run migration verification and end-to-end RAG/HITL checks.
+4. Complete client acceptance/sign-off.
+5. Start the monthly maintenance period under Document 06, if the maintenance service is continuing.
 
-## 6. Delivery gates (important)
+## 6. Production boundary
 
-1. **Final payment gate** — Supabase database transfer နှင့် production handover ကို final payment (final pay) လက်ခံရရှိပြီးမှ execute မည် (§ Document 06 §4)။ လက်ရှိ transfer **မဆောင်ရွက်ရသေးပါ**။
-2. **Privacy posture gate** — Real HR PII ကို production တွင်စတင်အသုံးမပြုမီ data-privacy posture ကို client acknowledge လုပ်ရမည် (§ Document 05 §5)။
-3. **Owner activation gate** — Production publish/activation တိုင်းသည် owner approval လိုအပ်သည်။
+The final delivered production path remains the existing approved-answer / HITL flow.
+
+The separate Secure Answer Viewer Phase 2 work in PR #8 is **not included as a production-ready delivered feature** at this handover checkpoint. It remains blocked on contract reconciliation, real ticket-source configuration, Glide embed verification and user UAT. This prevents unfinished review work from being represented as completed delivery.
 
 ## 7. Acceptance path
 
-Client acceptance ကို § Document 07 (UAT / Acceptance Checklist) အတိုင်း ဆောင်ရွက်သည် —
-
 ```
-Package review  →  UAT walkthrough  →  Final payment  →  Supabase migration
-              →  Production activation (owner-gated)  →  Sign-off  →  Maintenance period start
+Final payment received
+        ↓
+Supabase ownership handover / migration
+        ↓
+Credential cutover + RAG verification
+        ↓
+End-to-end HITL/UAT verification
+        ↓
+Client sign-off
+        ↓
+Maintenance period / operational support
 ```
 
-## 8. Next actions
+## 8. Handover completion criteria
 
-| # | Action | Owner | Trigger |
-|---|--------|-------|---------|
-| 1 | ဤ delivery package review | Client | Now |
-| 2 | UAT walkthrough (§ Doc 07) | Vendor + Client | On request |
-| 3 | Final payment | Client | After UAT |
-| 4 | Supabase migration (§ Doc 02) | Vendor | After final payment |
-| 5 | Production activation | Vendor (owner-gated) | After migration verify |
-| 6 | Maintenance period start | Both | On sign-off |
+- [x] Final payment received
+- [ ] Client Supabase ownership/migration completed
+- [ ] n8n repointed to client database and verified
+- [ ] RAG row/vector integrity verified
+- [ ] Approve/Edit → Final Answer flow smoke-tested after cutover
+- [ ] SOP / Org Chart artifact links smoke-tested
+- [ ] Security/privacy acknowledgment completed
+- [ ] Client sign-off completed
+- [ ] Maintenance effective date recorded
