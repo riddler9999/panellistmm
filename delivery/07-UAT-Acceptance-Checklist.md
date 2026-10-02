@@ -1,74 +1,85 @@
-# 07 — UAT / Acceptance Checklist
+# 07 — Final Handover / UAT Acceptance Checklist
 
-> Panellist HR AI System · Client Delivery Package v1.0 · 2026-09-22
+> Panellist HR AI System · Client Delivery Package v1.1 · 2026-10-03
 
 ---
 
 ## 1. Objective
 
-Client acceptance sign-off အတွက် တိကျသော verification checklist ပေးရန်။ ဤ checklist အားလုံး PASS ဖြစ်ပြီးမှ production activation + maintenance period စတင်သည်။
+Final payment အပြီး project ကို client ထံ operationally close လုပ်ရန် acceptance checklist ဖြစ်သည်။ Checklist သည် current production-delivered HITL flow ကို verify လုပ်ရန်ဖြစ်ပြီး Secure Answer Viewer Phase 2 ကို production acceptance scope ထဲ မထည့်ထားပါ။
 
-## 2. Acceptance flow
+## 2. Commercial gate
 
-```
-Package review → UAT walkthrough → Checklist sign-off → Final payment
-   → Supabase migration → Production activation (owner-gated) → Go-live
-```
+- [x] Final payment received
 
-## 3. UAT test cases — HR consultation (HITL)
+## 3. HR consultation / HITL smoke tests
 
-| # | Test case | Expected | Pass |
+| # | Test | Expected | Pass |
 |---|---|---|---|
-| 1 | HR staff submits a normal HR question (ticket) | Ticket created, `Ticket_Status = Submitted` | ☐ |
-| 2 | Wait for poller (≤5 min) | AI draft appears in `Sheet_AI_Answer` (consultant view only) | ☐ |
-| 3 | Log in as **normal user** during Pending_Review | AI draft **NOT visible**; `Final_Answer` empty | ☐ |
-| 4 | Consultant **Approve** | `Final_Answer` = draft (non-empty), `Ticket_Status = Resolved` | ☐ |
-| 5 | Consultant **Edit → Done** on another ticket | `Final_Answer` = edited text, `Resolved` | ☐ |
-| 6 | Client views a Resolved ticket | `Final_Answer` visible; consultant fields hidden | ☐ |
-| 7 | Ambiguous / high-risk question (termination/payroll) | Clarify-first behavior (not an unsupported assertion) | ☐ |
-| 8 | Non-HR / out-of-scope question | Graceful no-match fallback | ☐ |
-| 9 | Blank / invalid input | Invalid-input fallback | ☐ |
+| 1 | Normal HR question submit | Ticket created / processing starts | ☐ |
+| 2 | AI draft generated | Draft consultant/admin side only | ☐ |
+| 3 | Normal user before approval | Draft not visible | ☐ |
+| 4 | Consultant Approve | Approved final answer becomes client-visible | ☐ |
+| 5 | Consultant Edit → Done | Edited answer becomes client-visible | ☐ |
+| 6 | Closed/delivered ticket reopen/non-visible case | Draft/final visibility follows current approved contract | ☐ |
+| 7 | Invalid / out-of-scope input | Safe fallback | ☐ |
 
-## 4. UAT test cases — SOP / Org Chart
+> Use the **actual live field/status names** during UAT. Older documentation may contain `Sheet_AI_Answer` / `Resolved`, while later runtime evidence recorded `AI_Answer` / `Awaiting Review` / `Delivered`. Acceptance must follow the live canonical integration contract, not stale labels.
 
-| # | Test case | Expected | Pass |
+## 4. SOP / Org Chart artifact checks
+
+| # | Test | Expected | Pass |
 |---|---|---|---|
-| 10 | Business discovery → SOP request | `.drawio` SOP artifact generated + download link | ☐ |
-| 11 | Org Chart request | `.drawio` Org Chart artifact | ☐ |
-| 12 | Artifact download via link | Correct `.drawio` file downloads | ☐ |
+| 8 | SOP request | `.drawio` artifact generated | ☐ |
+| 9 | Org Chart request | `.drawio` artifact generated | ☐ |
+| 10 | Viewer/editor link | Opens expected artifact | ☐ |
+| 11 | Download link | Downloads expected artifact | ☐ |
 
-## 5. Migration acceptance (post-final-payment)
+## 5. Supabase handover checks
 
-| # | Test case | Expected | Pass |
+| # | Test | Expected | Pass |
 |---|---|---|---|
-| 13 | Client Supabase `hr_kb` row count | = source row count | ☐ |
-| 14 | Vector dimension integrity | `vector_dims` mismatch = 0 | ☐ |
-| 15 | Live RAG retrieval on client DB | Grounded answer returned, row count > 0 | ☐ |
-| 16 | End-to-end consultation on client DB | Full HITL flow PASS | ☐ |
+| 12 | Client ownership confirmed | Client controls project/org | ☐ |
+| 13 | `hr_kb` row-count parity | target = source | ☐ |
+| 14 | Vector integrity | dimension mismatch = 0 | ☐ |
+| 15 | Retrieval RPC / RAG sanity | Relevant KB result returned | ☐ |
+| 16 | n8n using client-owned DB | Production credential points to client DB | ☐ |
+| 17 | End-to-end HR test after cutover | Full HITL flow passes | ☐ |
 
-## 6. Security & privacy acceptance
-
-| # | Item | Expected | Pass |
-|---|---|---|---|
-| 17 | Consultant fields not synced to normal-user device | Row-owner/role-restricted (Glide) | ☐ |
-| 18 | Service key not in client-side code | Server-side only | ☐ |
-| 19 | PII posture acknowledgment | Client sign-off (§ Document 05 §5) | ☐ |
-
-## 7. Documentation & handover acceptance
+## 6. Security & privacy
 
 | # | Item | Pass |
 |---|---|---|
-| 20 | Delivery package (Documents 00–09) received & reviewed | ☐ |
-| 21 | Service & Maintenance Agreement reviewed (§ Document 06) | ☐ |
-| 22 | Support channel + escalation confirmed (§ Document 08) | ☐ |
+| 18 | Service-role key remains server-side only | ☐ |
+| 19 | Normal users cannot access AI/consultant draft fields | ☐ |
+| 20 | Client acknowledges AI-provider/PII data flow | ☐ |
+| 21 | Credential rotation / revocation ownership understood | ☐ |
 
-## 8. Sign-off
+## 7. Documentation / operations
 
-ဤ checklist ၏ item အားလုံး (migration items သည် final payment နောက်) PASS ဖြစ်ကြောင်း အတည်ပြုပါသည် —
+| # | Item | Pass |
+|---|---|---|
+| 22 | Delivery dossier received | ☐ |
+| 23 | Support & escalation path confirmed | ☐ |
+| 24 | Maintenance scope / fee confirmed | ☐ |
+| 25 | Backup / rollback procedure reviewed | ☐ |
+| 26 | Future work boundary understood | ☐ |
+
+## 8. Explicit exclusion from current production acceptance
+
+Secure Answer Viewer Phase 2 (PR #8) is excluded from this final-delivery acceptance until its separate rollout gates are completed:
+- canonical n8n/Sheet/Glide contract reconciliation
+- real server ticket-source configuration
+- isolated Glide Web Embed verification
+- consultant/admin UAT
+- normal-user UAT
+- explicit rollout approval
+
+## 9. Sign-off
 
 | Party | Name | Signature | Date |
 |---|---|---|---|
-| Client (acceptance) | Panellist Business Services | __________ | ______ |
-| Vendor (delivery) | Moe Htet | __________ | ______ |
+| Client | Panellist Business Services | __________ | ______ |
+| Vendor | Moe Htet | __________ | ______ |
 
-> Sign-off ပြီးမှ § Document 06 ၏ maintenance period စတင်သည်။
+Maintenance/support effective date: __________

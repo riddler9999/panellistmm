@@ -1,110 +1,119 @@
 # 02 — Supabase Migration & Ownership Runbook
 
-> Panellist HR AI System · Client Delivery Package v1.0 · 2026-09-22
-> **Gate**: ဤ migration ကို **final payment လက်ခံရရှိပြီးမှ** execute မည် (§ Document 06 §4)။ လက်ရှိ transfer **မဆောင်ရွက်ရသေးပါ**။
+> Panellist HR AI System · Client Delivery Package v1.1 · 2026-10-03
+> **Gate status**: ✅ Final payment received. Migration / ownership handover is now authorized for execution.
 
 ---
 
 ## 1. Objective
 
-Vendor-controlled `Panellist` Supabase project (`apnvkmwcmfpkkifzmdfc`) မှ data + schema + RAG knowledge base အားလုံးကို **client ၏ကိုယ်ပိုင် Supabase account** (info@panellistmm.com) သို့ ownership အပြည့်ဖြင့် transfer လုပ်ရန်။ Transfer ပြီးနောက် client သည် database ကို 100% ပိုင်ဆိုင်သည်။
+Vendor-controlled Panellist Supabase project မှ data + schema + RAG knowledge base ကို **client ၏ကိုယ်ပိုင် Supabase account** သို့ ownership အပြည့်ဖြင့် handover လုပ်ရန်။ Transfer ပြီးနောက် client သည် database နှင့် billing ကိုပိုင်ဆိုင်ပြီး vendor သည် managed-service operation အတွက်လိုအပ်သည့် server-side credential ကိုသာ ဆက်သုံးမည်။
 
-## 2. Analysis — migration approach
-
-Supabase project တစ်ခုကို account တစ်ခုမှ တစ်ခုသို့ ရွှေ့ရန် နည်းလမ်း ၂ မျိုးရှိသည် —
+## 2. Preferred migration approach
 
 | Option | ဖော်ပြချက် | Recommendation |
 |---|---|---|
-| **A. Project transfer** | Supabase organization transfer feature — project ID/URL/key မပြောင်း | ⚠️ Paid-org ↔ personal org constraint ရှိ; downtime နည်း |
-| **B. Fresh project + schema/data restore** | Client account တွင် project အသစ်ဆောက်၍ schema + data ကို `pg_dump`/restore | ✅ **Recommended** — clean ownership boundary, project အသစ်၏ credential အသစ် |
+| **A. Project transfer** | Existing Supabase project ကို client organization သို့ transfer | Transfer eligibility / org constraints ကို confirm နိုင်လျှင် အကောင်းဆုံး |
+| **B. Fresh client project + restore** | Client project အသစ်သို့ schema + data restore | Transfer မရလျှင် fallback |
 
-**Recommendation: Option B**။ Client account တွင် project အသစ်တစ်ခုကို client ကိုယ်တိုင်ဖန်တီးစေခြင်းဖြင့် ownership boundary ရှင်းသည်၊ credential အသစ်များ client ပိုင်ဆိုင်သည်၊ vendor ၏ organization နှင့် billing ကွဲသွားသည်။
+**Execution rule**: Existing project transfer support ရှိ/မရှိကို အရင် confirm လုပ်ပြီး, transfer မဖြစ်နိုင်မှ Option B ကိုသုံးရန်။ Production credential churn နှင့် risk ကို အနည်းဆုံးထားရမည်။
 
 ## 3. Prerequisites
 
-- [ ] Final payment လက်ခံပြီး (gate)
-- [ ] Client Supabase account (info@panellistmm.com) active
-- [ ] Client Supabase organization ready (Free/Pro tier — pgvector support လိုအပ်)
-- [ ] Source project (`apnvkmwcmfpkkifzmdfc`) read access (vendor)
-- [ ] Maintenance window သဘောတူညီ (RAG read အနည်းငယ် downtime ဖြစ်နိုင်)
+- [x] Final payment received
+- [ ] Client Supabase account active
+- [ ] Client organization/project destination confirmed
+- [ ] Maintenance window confirmed
+- [ ] Source project backup/export captured before cutover
+- [ ] Current `hr_kb` row count and vector integrity recorded
 
-## 4. Migration runbook (Option B)
+## 4. Pre-cutover verification
 
-### Step 1 — Client project ဖန်တီးခြင်း
-1. Client Supabase account → **New project** (region: `ap-southeast-*` recommend)။
-2. Project name: `panellist` (သို့ client ရွေးချယ်သည့်အမည်)။
-3. Database password ကို client သာသိမ်းသည် (vendor ကို secure channel မှတစ်ဆင့်ပေးအပ် — § Document 05)။
+အောက်ပါ checks မလုပ်ဘဲ migration မစရ:
 
-### Step 2 — Extensions
-Client project SQL editor တွင် —
 ```sql
-create extension if not exists vector;
-```
-> `hr_kb` သည် `vector(1536)` သုံးသဖြင့် `pgvector` extension မဖြစ်မနေလိုသည်။
-
-### Step 3 — Schema migrate
-Source project မှ schema (tables, constraints, functions, RLS policies) ကို export/apply —
-```bash
-# Source (vendor)
-pg_dump \
-  --schema-only --no-owner --no-privileges \
-  -h db.apnvkmwcmfpkkifzmdfc.supabase.co -U postgres -d postgres \
-  -f panellist_schema.sql
-
-# Target (client) — review ပြီးမှ apply
-psql -h db.<CLIENT_PROJECT_REF>.supabase.co -U postgres -d postgres -f panellist_schema.sql
-```
-> `hr_kb_source_type_check`, `hr_kb_source_id_matches_type` constraint များ + HITL learning-loop migrations + SOP source-type support အားလုံး schema dump တွင်ပါဝင်စေရမည်။
-
-### Step 4 — Data migrate
-```bash
-# Source (vendor)
-pg_dump \
-  --data-only --no-owner --no-privileges \
-  -h db.apnvkmwcmfpkkifzmdfc.supabase.co -U postgres -d postgres \
-  -f panellist_data.sql
-
-# Target (client)
-psql -h db.<CLIENT_PROJECT_REF>.supabase.co -U postgres -d postgres -f panellist_data.sql
-```
-> `hr_kb` embedding vector များ (`vector(1536)`) ကို data dump တွင်ထည့်ရန်။ Row count ကို source နှင့်တိုက်စစ်ရမည် (§ Step 6)။
-
-### Step 5 — Client credentials ထုတ်ယူခြင်း
-Client project → Settings → API / Database မှ —
-- Project URL (`SUPABASE_URL`)
-- Service role key (`SUPABASE_SERVICE_ROLE_KEY`) — **server-side only**
-- Database connection string (pooler host, port `6543` pooler / `5432` direct)
-
-### Step 6 — Verification (mandatory)
-```sql
--- Row count parity
 select count(*) from public.hr_kb;
--- Vector integrity (dimension check)
-select count(*) from public.hr_kb where vector_dims(embedding) <> 1536;   -- expect 0
--- Sample retrieval sanity
+select count(*) from public.hr_kb where vector_dims(embedding) <> 1536;
+```
+
+Record:
+- source `hr_kb` row count
+- vector dimension mismatch count (expect 0)
+- required extensions
+- required functions/indexes
+- current RLS policies
+
+## 5. Option A — Supabase project transfer
+
+If Supabase permits direct project transfer:
+
+1. Client organization/project ownership target confirm.
+2. Full backup/export capture.
+3. Transfer project to client organization.
+4. Client confirms owner/admin access.
+5. Billing ownership confirmed.
+6. Existing project URL/keys behavior verified.
+7. Rotate privileged credentials if required.
+8. Re-test n8n database connectivity and RAG.
+
+## 6. Option B — Fresh client project + restore
+
+### Step 1 — Create client project
+- Region should remain suitable for current latency / residency requirements.
+- Enable `vector` extension.
+
+### Step 2 — Schema restore
+Use reviewed schema export preserving:
+- `hr_kb`
+- indexes / HNSW
+- RLS policies
+- functions such as retrieval RPCs
+- constraints and source-type validation
+
+### Step 3 — Data restore
+Restore all required knowledge and feedback data, including vector embeddings.
+
+### Step 4 — Verification
+```sql
+select count(*) from public.hr_kb;
+select count(*) from public.hr_kb where vector_dims(embedding) <> 1536;
 select id, source_id, source_type from public.hr_kb limit 5;
 ```
-- [ ] `hr_kb` row count = source row count
-- [ ] `vector_dims` mismatch = 0
-- [ ] Extensions present (`vector`)
-- [ ] Constraints present (`hr_kb_source_type_check`, `hr_kb_source_id_matches_type`)
-- [ ] RLS policies present
 
-### Step 7 — n8n re-point (vendor)
-n8n ၏ Supabase / Postgres credential များကို client project ၏ connection string သို့ update လုပ်သည် (vendor-managed — § Document 05)။ ⚠️ **Post-cutover verification**: RAG retrieval workflow ကို live test လုပ်ပြီး `hr_kb` row count > 0 ကို execution status မဟုတ်ဘဲ တကယ်စစ်ရမည်။
+Mandatory:
+- [ ] target row count = source row count
+- [ ] vector mismatch = 0
+- [ ] vector extension active
+- [ ] indexes/functions present
+- [ ] RLS/policies present
+- [ ] sample retrieval passes
 
-### Step 8 — Cutover & decommission
-- [ ] Client project တွင် end-to-end HR consultation test PASS
-- [ ] Vendor source project ကို read-only mark (grace period 14–30 ရက်)
-- [ ] Grace period ပြီးမှ source project pause/decommission (client approve)
+## 7. n8n cutover
 
-## 5. Rollback
+After client DB verification:
 
-Cutover verification (Step 6–7) မအောင်မြင်ပါက n8n credential ကို source project သို့ ပြန် point လုပ်၍ rollback လုပ်နိုင်သည် (source project ကို grace period အတွင်း မ decommission ရသေးသဖြင့်)။
+1. Update n8n Supabase/Postgres credentials to client-owned destination.
+2. Run a focused RAG retrieval test.
+3. Run an HR consultation ticket through the full HITL flow.
+4. Verify draft stays consultant-only.
+5. Verify Approve/Edit results in the final client-visible answer.
+6. Verify no unexpected field/status drift was introduced by the cutover.
 
-## 6. Post-migration ownership
+## 8. Rollback
 
-Migration ပြီးနောက် —
-- Client သည် Supabase project + data ကို 100% ပိုင်ဆိုင်သည်။
-- Vendor သည် operational access (n8n credential) ကိုသာ maintenance အတွက်ဆက်လက်ကိုင်ဆောင်သည် (§ Document 05)။
-- Supabase billing သည် client account သို့ရွှေ့သည်။
+Keep the source project available during a grace period. If cutover verification fails:
+
+1. Restore previous n8n credential.
+2. Return traffic to the source project.
+3. Diagnose target mismatch.
+4. Retry only after row/vector/function parity is established.
+
+Do not decommission the source until client-side end-to-end verification passes.
+
+## 9. Post-migration ownership
+
+After successful handover:
+- Client owns Supabase project, data and billing.
+- Vendor retains only operational access required for the agreed managed service.
+- Client may revoke vendor access at any time by rotating credentials.
+- Any future schema expansion outside delivered scope requires a separate change request.

@@ -1,57 +1,47 @@
 # Panellist HR AI System — Client Delivery Package
 
-> **Prepared for**: Panellist Business Services (Panellist)
+> **Prepared for**: Panellist Business Services
 > **Prepared by**: Moe Htet — AI Automation & Systems Engineering
-> **Version**: 1.0 · **Date**: 2026-09-22 (Asia/Yangon)
-> **Status**: Delivery dossier — migration/handover execution gated on final payment (§ Document 06)
+> **Version**: 1.1 · **Date**: 2026-10-03 (Asia/Yangon)
+> **Status**: Final payment received — operational handover / client acceptance in progress
 
-ဤ package သည် Panellist HR AI System ကို client ထံ professional အဆင့် handover လုပ်ရန်အတွက် တရားဝင် delivery documentation set ဖြစ်သည်။ Document အားလုံးကို မြန်မာဘာသာဖြင့်ရေးထားပြီး၊ code / API / table / command / identifier များကို precision အတွက် English အတိုင်းထားသည်။
-
----
+ဤ package သည် Panellist HR AI System ၏ final client handover documentation set ဖြစ်သည်။ Final payment gate သည် cleared ဖြစ်ပြီး၊ လက်ကျန်အလုပ်များသည် Supabase ownership handover, credential cutover verification, UAT/sign-off နှင့် maintenance activation ဖြစ်သည်။
 
 ## Document Set
 
-| # | Document | ရည်ရွယ်ချက် | Audience |
-|---|----------|-------------|----------|
-| 00 | [Delivery Overview & Handover Summary](00-Delivery-Overview.md) | ဘာတွေ deliver လုပ်သည်၊ တာဝန်ခွဲဝေ, acceptance path | Business owner |
-| 01 | [System Architecture](01-System-Architecture.md) | System topology, data flow, components, HITL model | Business + technical helper |
-| 02 | [Supabase Migration & Ownership Runbook](02-Supabase-Migration-Runbook.md) | Client Supabase သို့ database transfer + verify | Technical helper / vendor |
-| 03 | [n8n Workflow Operations Guide](03-n8n-Operations-Guide.md) | Vendor-hosted workflow inventory, HITL flow, monitoring | Business + ops |
-| 04 | [API & Cost Responsibility](04-API-Cost-Responsibility.md) | OpenRouter / model billing ownership, top-up | Business owner |
-| 05 | [Security & Credentials Handover](05-Security-Credentials-Handover.md) | Key custody, rotation, PII / data-privacy posture | Business + technical helper |
-| 06 | [Service & Maintenance Agreement](06-Service-Maintenance-Agreement.md) | လစဉ် maintenance scope, SLA, exclusions, billing | Business owner |
-| 07 | [UAT / Acceptance Checklist](07-UAT-Acceptance-Checklist.md) | Client sign-off checklist | Business owner |
-| 08 | [Support, Backup & DR Runbook](08-Support-Backup-DR-Runbook.md) | Escalation, backup, recovery | Business + ops |
-| 09 | [Future Enhancement & Custom Development Roadmap](09-Future-Enhancement-Roadmap.md) | Scale-up options, custom app path | Business owner |
+| # | Document | ရည်ရွယ်ချက် |
+|---|---|---|
+| 00 | Delivery Overview & Handover Summary | scope, ownership, final-payment state, completion criteria |
+| 01 | System Architecture | topology, data flow, HITL model |
+| 02 | Supabase Migration & Ownership Runbook | client DB ownership transfer / restore + verification |
+| 03 | n8n Workflow Operations Guide | workflow operation and integration contract |
+| 04 | API & Cost Responsibility | AI API billing / responsibility |
+| 05 | Security & Credentials Handover | key custody, rotation, privacy posture |
+| 06 | Service & Maintenance Agreement | monthly support scope / SLA |
+| 07 | Final Handover / UAT Acceptance Checklist | closeout acceptance |
+| 08 | Support, Backup & DR Runbook | incident / backup / recovery |
+| 09 | Future Enhancement Roadmap | future separately-quoted work |
 
----
+## Current handover state
 
-## How to read this package
+- ✅ Final payment received
+- ✅ Delivery dossier exists
+- ⏳ Client Supabase ownership/migration to complete/confirm
+- ⏳ n8n credential cutover + RAG verification
+- ⏳ Final end-to-end HITL/UAT
+- ⏳ Client sign-off
+- ⏳ Maintenance effective date
 
-- **Business owner** → Document 00 → 04 → 06 → 07 (ဤ ၄ ခုက commercial + acceptance အတွက်လုံလောက်သည်)။
-- **Technical helper / future developer** → Document 01 → 02 → 03 → 05 → 08 (operational depth)။
-- **Future custom-work planning** → Document 09။
+## Important production boundary
+
+PR #8 (Secure Answer Viewer Phase 2) is **not part of the production-ready final handover scope at this checkpoint**. Its code/CI has separate verification, but production rollout remains gated by live integration reconciliation and Glide/UAT checks. The final delivered production system continues to use the existing approved-answer HITL path until that separate rollout is explicitly completed.
 
 ## Compiled deliverables
 
-Document set တစ်ခုလုံးကို client ပို့ရန် consolidated format ဖြင့် `delivery/artifacts/` တွင် compile လုပ်ထားသည် —
+`delivery/artifacts/` contains:
+- `Panellist-HR-AI-Delivery-Dossier.pdf`
+- `Panellist-HR-AI-Delivery-Dossier.docx`
+- `Panellist-HR-AI-Delivery-Dossier.html`
+- client preview artifacts
 
-| File | Use |
-|---|---|
-| `Panellist-HR-AI-Delivery-Dossier.pdf` | Client ပို့ရန် primary deliverable (fixed rendering, Myanmar font embedded) |
-| `Panellist-HR-AI-Delivery-Dossier.docx` | Editable version (placeholder ဖြည့်ရန် / client-side edit) |
-| `Panellist-HR-AI-Delivery-Dossier.html` | Source render (re-generate အတွက်) |
-
-> Markdown source (00–09) သည် source of truth ဖြစ်သည်။ Placeholder ဖြည့်/ပြင်ဆင်ပြီးနောက် artifacts ကို re-compile လုပ်နိုင်သည်။
-
-## Fill-in placeholders
-
-Handover မတိုင်မီ အောက်ပါ placeholder များကို ဖြည့်ရန် —
-
-| Placeholder | ဆိုလိုရင်း |
-|---|---|
-| Moe Htet | Developer / vendor legal or trading name |
-| Panellist Business Services | Client / organization name |
-| info@panellistmm.com | Client Supabase / OpenRouter account email (Gmail) |
-| Moe Htet · 09-969222535 | Support contact (phone / email / Telegram) |
-| ____________ (signing ရက်စွဲ) | Agreement effective date |
+The compiled artifacts were generated from the earlier v1.0 source and should be regenerated after this v1.1 closeout update before sending the final signed delivery package.
