@@ -27,3 +27,23 @@ Discovery Agent သည် specialized domain output ကိုကိုယ်တ�
 - Platform operational knowledge ကို `platforms/` အောက်တွင်ထားမည်။ Executable source ကို native source directory တွင်ထားမည်။
 - Material architecture decision များကို `.ai-architect/decisions/` တွင် ADR အဖြစ်မှတ်တမ်းတင်မည်။
 - SOP / Org Chart canonical diagram artifact သည် `.drawio` ဖြစ်သည်။ PNG generation သည် default production path မဟုတ်ရ။
+
+## Secure Answer Viewer Boundary — 2026-09-25
+
+The current Panellist delivery path is more specific than the older generic "Data / state: Supabase Postgres" description above. Runtime evidence shows the Glide/Google Sheet ticket row is the current HITL delivery-state source for ticket identity, status, approved answer, and artifact metadata. Supabase remains the RAG/knowledge store unless a later explicit architecture decision changes that.
+
+Answer Viewer architecture:
+
+`Glide/Sheet authoritative ticket state → server authorization/current-state check → explicit client-safe projection → viewer → Glide Web Embed`
+
+Security invariants:
+- no raw ticket row is serialized to the browser;
+- draft/working fields are excluded server-side;
+- signed access token contains no HR answer content;
+- token is carried in URL fragment and API Authorization header, not request-path/query logging;
+- current terminal status is rechecked on each read;
+- protected answer responses are private/no-store;
+- existing Glide `Final_Answer` presentation remains rollback fallback during staged rollout.
+
+Current runtime drift (`AI_Answer` vs `Sheet_AI_Answer`, `Delivered` vs older `Resolved`) must be reconciled before production rollout.
+

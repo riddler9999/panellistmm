@@ -116,3 +116,27 @@ Field / status contract (canonical) —
 | SOP/Org Document Architect (n8n) | `gB6WtsJVibehCAot` |
 
 > Runtime ground truth သည် n8n instance + Supabase ဖြစ်သည်။ ဤ document များသည် index / operating guide ဖြစ်သည်။
+
+---
+
+## 9. Phase 2 Answer Viewer integration note — 2026-09-25
+
+Read-only runtime inspection found that the delivery-state contract has drifted from sections above. The live n8n poller currently uses the Google Sheet bridge as the ticket delivery store, writes `AI_Answer`, emits `Awaiting Review`, and treats `Delivered` / `Failed` as terminal guards. Therefore the older `Sheet_AI_Answer` / `Resolved` wording above must not be treated as production truth without reconciliation.
+
+For the secure Answer Viewer integration, responsibility is:
+
+```
+n8n = orchestration / AI draft generation
+Google Sheet + Glide ticket row = current HITL delivery state
+Answer Viewer server = authorization + current-state validation + approved-only projection
+Answer Viewer client = presentation only
+Glide = portal / request workflow / Web Embed host
+Supabase = RAG / knowledge state (not a duplicated viewer ticket table)
+```
+
+The viewer only exposes an allowlisted projection after the authoritative terminal client-visible status and non-empty `Final_Answer` are both present. Current live evidence points to `Delivered` as the terminal status. `AI_Answer`, `Sheet_AI_Answer`, and `Consultant_Answer` are never part of the browser contract.
+
+The signed viewer credential is placed in the URL fragment (`/answer#access=...`), so the token is not sent in the initial HTTP request URL or ordinary access-log path. The client exchanges it through the `Authorization` header against a protected no-store API, which rechecks current ticket state on every access.
+
+No production n8n/Glide/Sheet mutation is authorized by this documentation update. Contract reconciliation and Glide UAT remain rollout gates.
+
