@@ -24,3 +24,6 @@ Stop and request human approval before:
 
 ## Completion
 A task is complete only when its acceptance criteria are satisfied and verification evidence exists.
+
+## Consultation-specific gate
+Before consultation implementation, distinguish owner-approved requirements from verified repository implementation and independently observed runtime. Check the October 13 baseline, the actual approval/delivery contract, consultant-all-ticket and user-own-ticket authorization, and multi-round clarification tests. A local test report or GitHub merge does not prove Glide/n8n publication or security enforcement.
