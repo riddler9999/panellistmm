@@ -13,6 +13,6 @@ describe('Glide dashboard scaffold', () => {
     vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, json: async () => ({role:'User',tickets:[{ticketId:'test',title:'My HR Request',status:'Resolved',history:[]}]}) })));
     render(<ConsultationDashboard />);
     expect(await screen.findByText('My HR Request')).toBeInTheDocument();
-    expect(screen.getByText(/Read-only/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /New Request/i })).toBeDisabled();
   });
 });
