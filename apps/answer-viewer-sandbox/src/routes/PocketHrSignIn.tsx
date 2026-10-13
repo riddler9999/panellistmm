@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import type { FormEvent } from 'react';
 
 const AUTH_URL = 'https://apnvkmwcmfpkkifzmdfc.supabase.co';
 const PUBLIC_KEY = 'sb_publishable_M2bmH5okBKt0oOSxlurIDA_IW40ak80';
@@ -39,7 +40,7 @@ export function PocketHrSignIn({ onSuccess }: { onSuccess: () => void }) {
     if (!res.ok) throw new Error(res.status === 503 ? 'Authentication Service မရရှိနိုင်ပါ။' : 'PIN သို့မဟုတ် Account Access မမှန်ပါ။');
     setAccessToken(''); setPin(''); onSuccess();
   }
-  async function submit(event: React.FormEvent<HTMLFormElement>) {
+  async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault(); setBusy(true); setMessage('');
     try {
       if (stage === 'email') await sendOtp();
