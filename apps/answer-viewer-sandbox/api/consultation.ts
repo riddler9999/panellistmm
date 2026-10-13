@@ -18,8 +18,11 @@ export default async function handler(req:Req,res:Res) {
   for(const row of rows) {
    const projected=projectConsultationTicket(principal,row);
    if(!projected)continue;
+   // A current Sheet edit after approval is not independently revisioned.
+   // Only release when the live content still equals the approved snapshot.
    const {approval,delivery}=await readProof(projected.ticketId);
-   const answer=releasedAnswer(principal,row,approval,delivery);
+   const unchanged=approval && typeof row.Final_Answer==='string' && row.Final_Answer.trim()===approval.approvedContent;
+   const answer=unchanged?releasedAnswer(principal,row,approval,delivery):null;
    if(answer!==null)projected.finalAnswer=answer;
    tickets.push(projected);
   }
