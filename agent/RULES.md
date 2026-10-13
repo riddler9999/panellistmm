@@ -23,3 +23,6 @@
 - Record only observed failures.
 - Verify root cause before recording a lesson.
 - Prefer regression tests or enforceable checks over adding more prose rules.
+
+## Consultation invariants
+Every `ASK_CLARIFICATION` or `PROVIDE_ADVICE` assessment requires consultant approve/edit/reject before any user-visible content. Approved clarification may repeat with accumulated context; final advice also requires approval. Resolved tickets are read-only. Consultant access is all-ticket, user access own-ticket only; verify server/data-level enforcement, not UI hiding. Never silently rename live fields or infer deployment from documentation.
