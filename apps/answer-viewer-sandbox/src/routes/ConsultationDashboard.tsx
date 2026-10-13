@@ -33,8 +33,6 @@ export function ConsultationDashboard() {
     return () => controller.abort();
   }, [authenticated]);
 
-  if (loadingSession) return <main className="viewer-shell" role="status">Checking session…</main>;
-  if (!authenticated) return <PocketHrSignIn onSuccess={() => { setError(false); setAuthenticated(true); }} />;
 
   const tickets = data?.tickets ?? [];
   const visible = useMemo(() => tickets.filter(ticket =>
@@ -43,6 +41,9 @@ export function ConsultationDashboard() {
   ), [tickets, filter, search]);
   const active = tickets.find(ticket => ticket.ticketId === selected);
   const filters = Array.from(new Set<string>([...statuses, ...tickets.map(ticket => ticket.status).filter(Boolean)]));
+
+  if (loadingSession) return <main className="viewer-shell" role="status">Checking session…</main>;
+  if (!authenticated) return <PocketHrSignIn onSuccess={() => { setError(false); setAuthenticated(true); }} />;
 
   return <main className="viewer-shell consultation-dashboard">
     {error ? <section className="state-card" role="alert"><strong>Access Denied</strong><p>အကောင့်ကို Backend က အတည်မပြုနိုင်သေးပါ။ လုံခြုံရေးအတွက် Request တွေကို မပြထားပါ။</p></section>
