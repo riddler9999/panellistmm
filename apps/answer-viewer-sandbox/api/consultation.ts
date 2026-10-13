@@ -1,19 +1,28 @@
-import { resolvePrincipal, projectTicketList } from '../src/server/consultationAccess';
-import type { TicketRow } from '../src/server/ticketRow';
-
-type RequestLike = { method?: string; headers: Record<string, string | string[] | undefined> };
-type ResponseLike = { status(code: number): ResponseLike; setHeader(name: string, value: string): void; json(body: unknown): void };
-
-// Security gate: no verified Glide session adapter is configured yet. Never trust URL email or role.
-export default async function handler(req: RequestLike, res: ResponseLike) {
-  res.setHeader('Cache-Control', 'private, no-store, max-age=0');
-  res.setHeader('X-Content-Type-Options', 'nosniff');
-  if (req.method !== 'GET') return res.status(405).json({ error: 'method_not_allowed' });
-  const identity: { email?: string; verified: boolean } = { verified: false };
-  const users: Array<{ email: string; role: string }> = [];
-  const principal = resolvePrincipal(identity, users);
-  if (!principal) return res.status(403).json({ error: 'access_denied' });
-  // Remains unreachable until independently verified session + trusted Sheet source are wired.
-  const rows: TicketRow[] = [];
-  return res.status(200).json({ role: principal.role, tickets: projectTicketList(principal, rows) });
+import { authenticatedSession,parseSessionCookie } from '../src/server/pocketHrAuth';
+import { projectConsultationTicket } from '../src/server/consultationAccess';
+import { releasedAnswer } from '../src/server/deliveryPolicy';
+import { readTickets,readProof } from '../src/server/pocketHrData';
+type Req={method?:string;headers:Record<string,string|string[]|undefined>};
+type Res={status(n:number):Res;setHeader(k:string,v:string):void;json(v:unknown):void};
+export default async function handler(req:Req,res:Res) {
+ res.setHeader('Cache-Control','private, no-store, max-age=0');
+ res.setHeader('X-Content-Type-Options','nosniff');
+ if(req.method!=='GET')return res.status(405).json({error:'method_not_allowed'});
+ try {
+  const raw=req.headers.cookie;
+  const session=await authenticatedSession(parseSessionCookie(typeof raw==='string'?raw:undefined));
+  if(!session)return res.status(403).json({error:'access_denied'});
+  const principal={email:session.email,role:session.role};
+  const rows=await readTickets();
+  const tickets=[];
+  for(const row of rows) {
+   const projected=projectConsultationTicket(principal,row);
+   if(!projected)continue;
+   const {approval,delivery}=await readProof(projected.ticketId);
+   const answer=releasedAnswer(principal,row,approval,delivery);
+   if(answer!==null)projected.finalAnswer=answer;
+   tickets.push(projected);
+  }
+  return res.status(200).json({role:session.role,tickets});
+ } catch {return res.status(503).json({error:'consultation_unavailable'});}
 }
