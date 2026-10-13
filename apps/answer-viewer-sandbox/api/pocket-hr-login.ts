@@ -7,7 +7,10 @@ export default async function handler(req: Req, res: Res) {
   const origin = req.headers.origin;
   // The bearer token must come from a Supabase-authenticated, email-confirmed user.
   // CORS is not enabled; browser clients must use the same-origin API.
-  if (Array.isArray(origin)) return res.status(403).json({error:'access_denied'});
+  const host = req.headers.host;
+  if (typeof origin !== 'string' || typeof host !== 'string') return res.status(403).json({error:'access_denied'});
+  try { if (new URL(origin).host !== host) return res.status(403).json({error:'access_denied'}); }
+  catch { return res.status(403).json({error:'access_denied'}); }
   const auth = req.headers.authorization;
   const bearer = typeof auth === 'string' && auth.startsWith('Bearer ') ? auth.slice(7) : '';
   const body = req.body as { pin?: unknown } | undefined;
