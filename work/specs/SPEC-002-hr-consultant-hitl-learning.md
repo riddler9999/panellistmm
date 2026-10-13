@@ -1,5 +1,7 @@
 # SPEC-002 — HR Consultant Agent နှင့် HITL Learning Loop
 
+> **CURRENT STATUS: historical proposal.** See the mandatory October 13 supersession notice at the end of this document before using any state machine, schema or acceptance criteria.
+
 ## ရည်ရွယ်ချက်
 Client request တစ်ခုအတွက် HR Consultant Agent မှ RAG-grounded draft answer ထုတ်ပေးပြီး၊ consultant က review လုပ်ကာ approve သို့မဟုတ် edit လုပ်၍ client ထံပို့နိုင်သော loop တည်ဆောက်ရန်။ Consultant ပြင်ပေးသည့် correction တိုင်းကို knowledge base ထဲပြန်သွင်းပြီး agent ၏ အမှားကို အချိန်နှင့်အမျှ လျှော့ချရန်။
 
@@ -230,3 +232,7 @@ Acceptance criteria တိုင်းအတွက် observable evidence လိ
 5. **`scope` CHECK ကို `'company'` အထိ ချဲ့မလား** — လက်ရှိ `'generic'` သာ။ ချဲ့ပါက `company_id` column + RLS policy လိုအပ်မည်။ မချဲ့ပါက company-specific correction များကို **ingest မလုပ်ဘဲထားရမည်** (consultant ဖြေပေးရုံသာ၊ learn မလုပ်)。 လုံခြုံမှုအရ ရိုးရှင်းသော်လည်း learning coverage ကျဉ်းမြောင်းသည်。
 6. **`is_active` / `superseded_by` / `created_by` column များ ထပ်ဖြည့်ရန်** — conflict handling (§Learning Ingestion Rules #3) နှင့် audit အတွက် လိုအပ်သည်။
 7. `hr_kb` ၏ RLS policy ၀ ခုဖြစ်နေခြင်းကို **intentional အဖြစ်အတည်ပြုရန်** — လက်ရှိတွင် service_role သာဝင်နိုင်သည် (KB အတွက် မှန်ကန်သော default)。 n8n က service_role ဖြင့်ဝင်မည်ဖြစ်၍ အဆင်ပြေသော်လည်း documented ဖြစ်သင့်သည်。
+
+
+## October 13, 2026 supersession notice — mandatory
+**Historical design material below, not a current implementation contract.** Its single-pass `Submitted → AI Drafting → Pending Review → Sent` diagram, `ai_draft_answer`/`review_state`/`final_answer` proposed columns, `knowledge_entries` and `company_policy` schema ideas, and acceptance checklist do not establish current runtime fields, approved migrations or current consultation states. The October 13 owner-approved behavior in `project/POCKET_HR_CONTEXT_2026-10-13.md` and `project/REQUIREMENTS.md` takes precedence: AI assessment returns `ASK_CLARIFICATION` or `PROVIDE_ADVICE`, both require consultant review (approve/edit/reject), approved clarification can cycle through user answers and contextual reassessment multiple times, final advice requires approval, and resolved tickets are read-only. Consultant sees all tickets; user sees only own tickets, pending actual security verification. Treat all historical checklist items as unverified unless separately supported by dated evidence; do not implement speculative schema or company isolation from this spec. Existing RAG and SOP/Org Chart contracts remain unchanged.
