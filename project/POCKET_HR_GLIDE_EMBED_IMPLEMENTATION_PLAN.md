@@ -15,14 +15,23 @@ Method: Superpowers-style Plan → Implement → Test → Review; Ponytail minim
 - AI chooses `ASK_CLARIFICATION` or `PROVIDE_ADVICE`. Both remain consultant-only drafts until approved. Approved clarification responses can trigger repeated reassessment without a fixed round limit. Final advice is delivered only after approval.
 - Resolved tickets read-only. New issue requires a new request.
 
+## Execution policy — implementation-first (owner update 2026-10-14)
+- **Do not restart Phase 1 audits or repeat previously completed verification.** Reuse prior chat evidence, merged repository decisions and existing tests.
+- Start implementing the existing React/Vite + Glide Embed integration now. Inspect only the exact files/fields required to make the current change; avoid broad read-only audit phases.
+- Tasks 1–3 are **not separate lengthy audit milestones**: Task 1 is a brief evidence handoff; Task 2 and the secure identity-handoff feasibility check happen alongside implementation.
+- Keep one mandatory security gate: backend must verify the logged-in principal independently before any user-specific Sheet data is returned. Never accept an editable email/role URL parameter as proof. If Glide cannot provide a verifiable handoff, stop **only the protected data-access/release path**, report the precise blocker and viable options; continue independent safe UI work.
+- Implement tasks 4–7 using the existing code and workflows, with minimal targeted tests while coding. No new framework/database or unnecessary redesign.
+- Consolidate tasks 8–9 into **one final end-to-end UAT**: User A cannot see User B data through UI or API, Admin sees all tickets, consultant approval and clarification work, no unapproved draft leaks, and mobile Glide Embed works.
+- Do not claim implementation or security verified without observed test evidence. Production deployment remains separately owner-gated.
+
 ## Implementation tasks and acceptance gates
 
-### 1. Existing-system verification (read-only)
-Inspect current React/Vite app, Glide embed configuration, Sheet field names, active/published n8n flows and repository contracts. Record actual evidence and reuse existing capabilities. **Do not edit production.**
+### 1. Existing evidence handoff (no repeat audit)
+Reuse prior verification and inspect only the specific code/fields required for implementation. **Do not edit production.**
 
-**Gate:** exact field/status/identity contract documented; discrepancies listed, notably `AI_Answer` vs `Sheet_AI_Answer`, `Awaiting Review` vs `Pending_Review`, and `Delivered` vs `Resolved`.
+**Implementation note:** reconcile only blocking field/status mismatches when encountered, notably `AI_Answer` vs `Sheet_AI_Answer`, `Awaiting Review` vs `Pending_Review`, and `Delivered` vs `Resolved`.
 
-### 2. Glide embed proof of concept
+### 2. Glide embed implementation
 Use existing embed component to render the existing web app on mobile and desktop. Verify that the URL source can be produced as required. `User Profile → Email` being selectable as source does **not** prove URL composition or authentication.
 
 **Gate:** real embed loads correctly; any cross-origin/cookie/storage limitations recorded.
@@ -52,12 +61,12 @@ Keep existing workflows. Reconcile field names and statuses rather than rebuildi
 
 **Gate:** exact state transitions and no duplicate approval/delivery in tests.
 
-### 8. Security and end-to-end tests
+### 8. Final consolidated security and end-to-end tests
 Use isolated test users (two normal users, one Admin, one denied role). Test API tampering, detail/history leakage, consultant actions, clarification loop, stale revision, retries, and delivery.
 
 **Gate:** all critical tests pass with observable evidence, not just local unit tests.
 
-### 9. Glide UAT and release
+### 9. Glide UAT and release (same final test cycle)
 Verify mobile/desktop embedded behavior, load state, logout/session expiry, navigation and access denial. Deploy only after owner approval and rollback plan.
 
 **Gate:** demonstrated E2E acceptance; production activation separately authorized.
