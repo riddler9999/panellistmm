@@ -29,6 +29,16 @@ describe('consultation access boundary', () => {
     const a = resolvePrincipal({email:'a@example.com',verified:true},users)!;
     expect(projectConsultationTicket(a,{...tickets[0],Ticket_Status:'Delivered',Final_Answer:'UNAPPROVED'})).not.toHaveProperty('finalAnswer');
   });
+  it('withholds user-facing answers until separate delivery proof exists', () => {
+    const user = resolvePrincipal({email:'b@example.com',verified:true},users)!;
+    const candidate = { ...tickets[1], Review_Status:'Approved', Approval_Status:'Approved',
+      Approved_Question:'INTERNAL QUESTION', Final_Answer:'INTERNAL FINAL', Ticket_Status:'Delivered' };
+    const response = projectConsultationTicket(user,candidate)!;
+    expect(response).not.toHaveProperty('approvedQuestion');
+    expect(response).not.toHaveProperty('finalAnswer');
+    expect(JSON.stringify(response)).not.toContain('INTERNAL FINAL');
+    expect(JSON.stringify(response)).not.toContain('INTERNAL QUESTION');
+  });
   it('does not mistake missing owner for public data', () => {
     const a = resolvePrincipal({email:'a@example.com',verified:true},users)!;
     expect(projectConsultationTicket(a,{ 'Row ID':'orphan', Ticket_Title:'Orphan' })).toBeNull();
