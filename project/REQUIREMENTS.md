@@ -20,3 +20,14 @@
 - Secrets များကို committed documentation/source ထဲမထည့်ရ။
 - Production-impacting change များသည် explicit approval နှင့် verification လိုအပ်သည်။
 - Completion claim မပြုမီ test သို့မဟုတ် observable verification evidence ရှိရမည်။
+
+## Pocket HR consultation requirements — owner update 2026-10-13
+ဒီ section သည် consultation-specific functional requirements အတွက် အပေါ်က generic wording ထက် ဦးစားပေးရမည်။ Canonical detail: `project/POCKET_HR_CONTEXT_2026-10-13.md`.
+- AI assessment result: `ASK_CLARIFICATION` သို့မဟုတ် `PROVIDE_ADVICE`.
+- AI question/advice draft နှစ်မျိုးလုံး consultant approve/edit/reject မဖြတ်မီ user မမြင်ရ။
+- Approved clarification question ကို user ဖြေနိုင်ရမည်။ Context/history ထိန်းပြီး AI reassessment လုပ်ရမည်။ Multiple rounds support လုပ်ရမည်။
+- Final advice သည် consultant approval ရပြီးမှ user ထံ deliver လုပ်ရမည်။ Approval နှင့် delivery status ကို ခွဲမှတ်ရမည်။
+- Resolved ticket သည် read-only; နောက်ထပ် request အသစ်တင်ရမည်။
+- Consultant က ticket အားလုံးကြည့်ခွင့်ရှိသည်။ Normal user က မိမိ ticket များသာကြည့်ခွင့်ရှိသည်။ Actual security enforcement သီးခြား verify လုပ်ရမည်။
+- Round history, stale-approval protection, idempotent reassessment/delivery နှင့် failure recovery ကို acceptance tests ဖြင့်အတည်ပြုရမည်။
+- Existing company-specific KB/tenant expansion restriction ကို အလိုအလျောက် မပြောင်းပါ။
