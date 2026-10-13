@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { ConsultationTicket } from '../server/consultationAccess';
+import { PocketHrSignIn } from './PocketHrSignIn';
 
 type DashboardResponse = { role: 'Admin' | 'User'; tickets: ConsultationTicket[] };
 const statuses = ['All', 'Submitted', 'Awaiting Review', 'Editing', 'Approved', 'Failed'] as const;
@@ -7,6 +8,8 @@ const statuses = ['All', 'Submitted', 'Awaiting Review', 'Editing', 'Approved', 
 export function ConsultationDashboard() {
   const [data, setData] = useState<DashboardResponse | null>(null);
   const [error, setError] = useState(false);
+  const [authenticated, setAuthenticated] = useState(false);
+  const [loadingSession, setLoadingSession] = useState(true);
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<string>('All');
   const [selected, setSelected] = useState<string | null>(null);
@@ -14,11 +17,24 @@ export function ConsultationDashboard() {
 
   useEffect(() => {
     const controller = new AbortController();
+    fetch('/api/pocket-hr-session', { credentials: 'include', cache: 'no-store', signal: controller.signal })
+      .then(res => { if (!res.ok) throw new Error('session unavailable'); setAuthenticated(true); })
+      .catch(() => { if (!controller.signal.aborted) setAuthenticated(false); })
+      .finally(() => { if (!controller.signal.aborted) setLoadingSession(false); });
+    return () => controller.abort();
+  }, []);
+
+  useEffect(() => {
+    if (!authenticated) return;
+    const controller = new AbortController();
     fetch('/api/consultation', { credentials: 'include', cache: 'no-store', signal: controller.signal })
       .then(async response => { if (!response.ok) throw new Error('access denied'); return response.json() as Promise<DashboardResponse>; })
       .then(setData).catch(() => { if (!controller.signal.aborted) setError(true); });
     return () => controller.abort();
-  }, []);
+  }, [authenticated]);
+
+  if (loadingSession) return <main className="viewer-shell" role="status">Checking session…</main>;
+  if (!authenticated) return <PocketHrSignIn onSuccess={() => { setError(false); setAuthenticated(true); }} />;
 
   const tickets = data?.tickets ?? [];
   const visible = useMemo(() => tickets.filter(ticket =>
