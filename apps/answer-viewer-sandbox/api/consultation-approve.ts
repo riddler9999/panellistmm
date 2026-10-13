@@ -6,7 +6,9 @@ export default async function handler(req:Req,res:Res) {
  res.setHeader('Cache-Control','private, no-store');res.setHeader('X-Content-Type-Options','nosniff');
  if(req.method!=='POST')return res.status(405).json({error:'method_not_allowed'});
  const origin=req.headers.origin,host=req.headers.host;
- if(typeof origin!=='string'||typeof host!=='string'||new URL(origin).host!==host)return res.status(403).json({error:'origin_denied'});
+ let sameOrigin=false;
+ try {sameOrigin=typeof origin==='string'&&typeof host==='string'&&new URL(origin).host===host;} catch { /* malformed Origin is denied */ }
+ if(!sameOrigin)return res.status(403).json({error:'origin_denied'});
  try {
   const raw=req.headers.cookie;
   const session=await authenticatedSession(parseSessionCookie(typeof raw==='string'?raw:undefined));
@@ -22,6 +24,7 @@ export default async function handler(req:Req,res:Res) {
   if(existing.approval) {
    if(existing.approval.revision!==revision||existing.approval.approvedContent!==content)return res.status(409).json({error:'revision_conflict'});
   } else {
+   // The workbook has no authoritative version column; only the first revision is safe.
    if(revision!==1)return res.status(409).json({error:'revision_conflict'});
    try {await db('pocket_hr_approvals','POST',{request_id:requestId,revision,approved_content:content,approved_by_account_id:session.accountId});}
    catch(error){if((error as {status?:number}).status===409)return res.status(409).json({error:'concurrent_approval'});throw error;}
