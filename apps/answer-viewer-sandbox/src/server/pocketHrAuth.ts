@@ -35,8 +35,6 @@ export async function authenticatePin(bearer: string, pin: unknown): Promise<str
   const rows = await api('pocket_hr_accounts?select=*&identity_provider=eq.verified_admin_provisioning&external_subject=eq.' + queryValue(identity.id) + '&limit=2') as Account[];
   if (rows.length !== 1 || rows[0].email !== identity.email || rows[0].disabled_at || !rows[0].pin_hash) return null;
   const account = rows[0];
-  const now = Date.now();
-  if (account.locked_until && Date.parse(account.locked_until) > now) return null;
   const valid = isValidPin(pin) && await verifyPin(pin, account.pin_hash!, config().pepper);
   // The database function serializes attempt counters and rejects concurrent lockout bypass.
   const attempt = await api('rpc/pocket_hr_record_pin_attempt', 'POST', { p_account_id: account.id, p_success: valid });
