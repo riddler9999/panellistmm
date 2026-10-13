@@ -25,6 +25,15 @@ describe('consultant approval API',()=>{
   const b=mock();await handler(req({requestId:'r-1',revision:1},{origin:'https://evil.example',host:'app.example.com'}),b.res);expect(b.result().status).toBe(403);
   expect(db).not.toHaveBeenCalled();
  });
+ it('rejects malformed Origin without throwing',async()=>{
+  const m=mock();await handler(req({requestId:'r-1',revision:1},{origin:'not a url',host:'app.example.com'}),m.res);
+  expect(m.result().status).toBe(403);
+ });
+ it('rejects revision 2 without an authoritative revision source',async()=>{
+  const m=mock();await handler(req({requestId:'r-1',revision:2}),m.res);
+  expect(m.result().status).toBe(409);
+  expect(db).not.toHaveBeenCalled();
+ });
  it('creates immutable approval then acknowledges delivery',async()=>{
   const m=mock();await handler(req({requestId:'r-1',revision:1}),m.res);
   expect(m.result().status).toBe(200);
