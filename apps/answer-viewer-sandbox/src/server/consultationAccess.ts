@@ -1,12 +1,9 @@
 import type { TicketRow } from './ticketRow';
 
 export type Principal = { email: string; role: 'Admin' | 'User' };
-export type ConsultationTicket = Pick<TicketRow, 'Ticket_ID' | 'Row_ID' | 'Ticket_Title' | 'Ticket_Status'> & {
-  ticketId: string; title: string; status: string; finalAnswer?: string;
-  approvedQuestion?: string; history: Array<{ type: 'QUESTION' | 'ANSWER' | 'ADVICE'; content: string; round: number }>;
-};
-
+export type ConsultationTicket = { ticketId: string; title: string; status: string; finalAnswer?: string; approvedQuestion?: string; history: Array<{ type: 'QUESTION' | 'ANSWER' | 'ADVICE'; content: string; round: number }> };
 const validEmail = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+const string = (value: unknown) => typeof value === 'string' ? value.trim() : '';
 
 export function resolvePrincipal(identity: { email?: unknown; verified?: boolean }, users: Array<{ email: string; role: string }>): Principal | null {
   if (identity.verified !== true || typeof identity.email !== 'string') return null;
@@ -19,30 +16,31 @@ export function resolvePrincipal(identity: { email?: unknown; verified?: boolean
 
 export function canAccessTicket(principal: Principal, ticket: TicketRow): boolean {
   if (principal.role === 'Admin') return true;
-  const owner = String(ticket.Owner_Email ?? '').trim().toLowerCase();
+  const owner = string(ticket.Owner_Email).toLowerCase();
   return !!owner && owner === principal.email;
 }
 
 export function projectConsultationTicket(principal: Principal, ticket: TicketRow): ConsultationTicket | null {
   if (!canAccessTicket(principal, ticket)) return null;
-  const ticketId = String(ticket.Ticket_ID ?? ticket.Row_ID ?? '').trim();
+  // Google Sheets actual canonical key: Sheet1['Row ID']; Glide Tickets['🔒 Row ID'].
+  const ticketId = string(ticket['Row ID'] ?? ticket.Row_ID ?? ticket.Ticket_ID);
   if (!ticketId) return null;
-  const status = String(ticket.Ticket_Status ?? '').trim();
+  const status = string(ticket.Ticket_Status);
   const projection: ConsultationTicket = {
-    ticketId, title: String(ticket.Ticket_Title ?? 'HR Consultation'), status,
-    Ticket_ID: ticket.Ticket_ID, Row_ID: ticket.Row_ID,
-    Ticket_Title: ticket.Ticket_Title, Ticket_Status: ticket.Ticket_Status,
-    history: [],
+    ticketId, title: string(ticket.Ticket_Title) || 'HR Consultation', status, history: [],
   };
-  // Only independently approved fields may enter a normal user's response.
+  // AI_Answer is an unapproved draft in the currently running n8n integration.
+  // It is never included in a User response. Consultant receives it only after server authorization.
   if (principal.role === 'Admin') {
-    const draft = String(ticket.AI_Answer ?? ticket.Sheet_AI_Answer ?? '').trim();
+    const draft = string(ticket.AI_Answer ?? ticket.Sheet_AI_Answer);
     if (draft) projection.history.push({ type: 'ADVICE', content: draft, round: 0 });
   }
-  if (String(ticket.Approval_Status ?? '').trim() === 'Approved') {
-    const question = String(ticket.Approved_Question ?? '').trim();
+  // Sheet1 currently has no Approval_Status/Approved_Question columns. Never infer
+  // approval from Ticket_Status or the presence of Final_Answer alone.
+  if (string(ticket.Approval_Status) === 'Approved') {
+    const question = string(ticket.Approved_Question);
     if (question) projection.approvedQuestion = question;
-    const answer = String(ticket.Final_Answer ?? '').trim();
+    const answer = string(ticket.Final_Answer);
     if (answer && ['Delivered', 'Resolved'].includes(status)) projection.finalAnswer = answer;
   }
   return projection;

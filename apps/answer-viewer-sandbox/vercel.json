@@ -1,6 +1,10 @@
 {
   "rewrites": [
     {
+      "source": "/answer",
+      "destination": "/index.html"
+    },
+    {
       "source": "/answer/(.*)",
       "destination": "/index.html"
     },
@@ -15,7 +19,24 @@
   ],
   "headers": [
     {
-      "source": "/(answer|consultation)(.*)",
+      "source": "/answer/(.*)",
+      "headers": [
+        {
+          "key": "Content-Security-Policy",
+          "value": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self'; font-src 'self' data:; frame-ancestors https:; base-uri 'none'; object-src 'none'; form-action 'none'"
+        },
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "no-referrer"
+        }
+      ]
+    },
+    {
+      "source": "/consultation(.*)",
       "headers": [
         {
           "key": "Content-Security-Policy",

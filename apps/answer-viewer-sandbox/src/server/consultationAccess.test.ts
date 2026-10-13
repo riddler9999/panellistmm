@@ -1,15 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { resolvePrincipal, projectTicketList, projectConsultationTicket } from './consultationAccess';
 import type { TicketRow } from './ticketRow';
-const users = [
-  { email: 'a@example.com', role: 'User' },
-  { email: 'b@example.com', role: 'User' },
-  { email: 'admin@example.com', role: 'Admin' },
-  { email: 'assistant@example.com', role: 'Assistant' },
-];
+const users = [{ email: 'a@example.com', role: 'User' },{ email: 'b@example.com', role: 'User' },{ email: 'admin@example.com', role: 'Admin' },{ email: 'assistant@example.com', role: 'Assistant' }];
 const tickets: TicketRow[] = [
-  { Ticket_ID: 'a', Owner_Email: 'a@example.com', Ticket_Title: 'A', Ticket_Status: 'Awaiting Review', AI_Answer: 'SECRET DRAFT' },
-  { Ticket_ID: 'b', Owner_Email: 'b@example.com', Ticket_Title: 'B', Ticket_Status: 'Delivered', Final_Answer: 'PUBLIC APPROVED', Approval_Status: 'Approved' },
+  { 'Row ID': 'a', Owner_Email: 'a@example.com', Ticket_Title: 'A', Ticket_Status: 'Awaiting Review', AI_Answer: 'SECRET DRAFT' },
+  { 'Row ID': 'b', Owner_Email: 'b@example.com', Ticket_Title: 'B', Ticket_Status: 'Delivered', Final_Answer: 'PUBLIC APPROVED', Approval_Status: 'Approved' },
 ];
 describe('consultation access boundary', () => {
   it('requires verified identity, never editable email or role alone', () => {
@@ -19,7 +14,7 @@ describe('consultation access boundary', () => {
     expect(resolvePrincipal({email:'unknown@example.com',verified:true}, users)).toBeNull();
     expect(resolvePrincipal({email:'a@example.com',verified:true}, users)).toEqual({email:'a@example.com',role:'User'});
   });
-  it('isolates ticket lists, direct IDs, and drafts', () => {
+  it('isolates ticket lists, direct IDs, and drafts using actual Sheet1 Row ID', () => {
     const a = resolvePrincipal({email:'a@example.com',verified:true},users)!;
     expect(projectTicketList(a,tickets).map(t=>t.ticketId)).toEqual(['a']);
     expect(projectConsultationTicket(a,tickets[1])).toBeNull();
@@ -33,5 +28,9 @@ describe('consultation access boundary', () => {
   it('never exposes unapproved final advice, even with delivered status', () => {
     const a = resolvePrincipal({email:'a@example.com',verified:true},users)!;
     expect(projectConsultationTicket(a,{...tickets[0],Ticket_Status:'Delivered',Final_Answer:'UNAPPROVED'})).not.toHaveProperty('finalAnswer');
+  });
+  it('does not mistake missing owner for public data', () => {
+    const a = resolvePrincipal({email:'a@example.com',verified:true},users)!;
+    expect(projectConsultationTicket(a,{ 'Row ID':'orphan', Ticket_Title:'Orphan' })).toBeNull();
   });
 });

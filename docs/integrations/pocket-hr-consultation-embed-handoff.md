@@ -1,9 +1,20 @@
-# Glide Consultation Embed — implementation boundary (2026-10-14)
+# Pocket HR Consultation Embed — implementation evidence 2026-10-14
 
-- App route: `/consultation`; normal route returns only server-projected ticket fields.
-- Current `/api/consultation` is **deliberately fail closed (403)**: no trusted identity handoff has been established. Never substitute `?email=`, `?role=`, Glide visibility, or an arbitrary client header for verification.
-- The pure `resolvePrincipal` function accepts only a *server-verified* identity plus a server-trusted Users role lookup. The owner must match `Owner_Email` exactly for User. Role Assistant/unknown denied.
-- Any future integration must independently authenticate the principal (using a verifiable provider session, signed trusted assertion, or approved one-time handoff), then load roles and tickets through a server-only trusted transport. Request IDs must be authorized **before** history/detail lookup/projection.
-- This PR does not claim functional Glide login SSO, sheet-backed listing, approval, edit, reject, clarification, reassessment, retries or live delivery. These remain incomplete and need the approved identity bridge and actual field write contract.
-- The existing approved-answer viewer remains separate. No n8n workflow, Glide configuration, production Sheet, database, or credentials were changed.
-- Do not enable mutations or remove the deny guard until security and idempotency end-to-end UAT can run with isolated users.
+## Actual Google Sheet contract
+Drive spreadsheet: `Panellist HR Tickets Bridge`, spreadsheet ID `1B6Mo7NU6E1erFosckf8KZv1sz2SZeSJdVwq7BhS1-qQ`.
+Live `Sheet1!A1:AH1` header confirms:
+`Row ID`, `Ticket_Title`, `Ticket_Status`, `Ticket_Category`, `Request_Text`, `AI_Answer`, `Consultant_Answer`, `Final_Answer`, `Review_Status`, `Owner_Email`, `Admin_Role`, `🔒 Row ID` and other existing columns.
+No `Approval_Status`, `Approved_Question`, `round_id`, `revision`, or history persistence columns exist in the current bridge. Do not invent them in a production write.
+
+## n8n contract and constraints
+Active `Panellist Unified Orchestrator` (`97Hrjp3aKOLIR4wJ`) updates Sheet1 by matching `Row ID`, writes `AI_Answer` and `Ticket_Status='Awaiting Review'`.
+`Guard Existing Human Review` prevents some replays, explicitly states its Sheet read/update is **not atomic**.
+Active `Panellist HR Consultant Internal API` (`kZVxvax5MG7BIClj`) emits `ASK_CLARIFICATION` / `PROVIDE_ADVICE` and validates bounded clarification history, but no persistence/approval callback has been established here.
+The existing n8n integration is **not** a secure User/Consultant read API. Do not expose it directly in the browser.
+
+## Security and release
+`/consultation` is a mobile/desktop-responsive React/Vite UI draft.
+`/api/consultation` must return 403 until a trusted Glide identity bridge and trusted Sheet Users/role lookup are implemented and deployed. Neither URL email nor role fields prove identity.
+`Owner_Email` in the Sheet alone is not evidence of row-level authorization.
+No production n8n/Glide/Sheet writes or publication authorized.
+Live approval/edit/reject, persisted clarification rounds, duplicate-safe delivery and isolated multi-account Glide UAT remain open.
