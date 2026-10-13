@@ -37,12 +37,10 @@ export function projectConsultationTicket(principal: Principal, ticket: TicketRo
   }
   // Sheet1 currently has no Approval_Status/Approved_Question columns. Never infer
   // approval from Ticket_Status or the presence of Final_Answer alone.
-  if (string(ticket.Approval_Status) === 'Approved') {
-    const question = string(ticket.Approved_Question);
-    if (question) projection.approvedQuestion = question;
-    const answer = string(ticket.Final_Answer);
-    if (answer && ['Delivered', 'Resolved'].includes(status)) projection.finalAnswer = answer;
-  }
+  // The production bridge has Review_Status, but no independently verified
+  // release/delivery acknowledgement contract. Never infer publication from
+  // a reviewed status or from a populated Final_Answer cell.
+  // User-facing content remains withheld until that contract is implemented.
   return projection;
 }
 
