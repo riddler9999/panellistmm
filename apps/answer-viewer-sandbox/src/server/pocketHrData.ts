@@ -192,3 +192,43 @@ export async function writePasscodeAccount(action:'create'|'reset'|'disable', em
  // Revoke sessions when status or PIN is changed.
  if(action!=='create') await db('pocket_hr_sessions?sheet_email=eq.'+encodeURIComponent(email)+'&revoked_at=is.null','PATCH',{revoked_at:new Date().toISOString()});
 }
+
+/** Append a new request to the existing Sheet1 bridge. Owner is derived from session. */
+export async function createSheetRequest(ownerEmail:string,title:string,category:string,description:string):Promise<string>{
+ const id=process.env.POCKET_HR_SHEET_ID;
+ if(!id) throw new Error('sheet_not_configured');
+ const requestId=crypto.randomUUID();
+ const rows=await readTickets();
+ if(rows.some(row=>row['Row ID']===requestId)) throw new Error('request_id_collision');
+ const values=Array(34).fill('');
+ values[0]=requestId;values[1]=title;values[2]='Submitted';values[3]=category;
+ values[4]=description;values[8]=new Date().toISOString();values[31]=ownerEmail;
+ values[33]=requestId;
+ const token=await googleAccessToken();
+ const url='https://sheets.googleapis.com/v4/spreadsheets/'+encodeURIComponent(id)+'/values/'+encodeURIComponent('Sheet1!A:AH')+':append?valueInputOption=RAW&insertDataOption=INSERT_ROWS';
+ const response=await fetch(url,{method:'POST',headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify({values:[values]}),cache:'no-store'});
+ if(!response.ok) throw new Error('sheet_append_failed');
+ return requestId;
+}
+/** Map named canonical columns to Sheet coordinates, never caller-provided coordinates. */
+export async function updateSheetRequest(requestId:string,values:Record<string,string>):Promise<void>{
+ const allowed=['Ticket_Status','Review_Status','Consultant_Answer','Clarification_Question','Needs_Clarification','Final_Answer'];
+ const rows=await readTickets();
+ const row=rows.find(item=>String(item['Row ID'])===requestId);
+ if(!row || !Number.isSafeInteger(row.__sheetRow)) throw new Error('ticket_not_found');
+ const id=process.env.POCKET_HR_SHEET_ID;
+ if(!id) throw new Error('sheet_not_configured');
+ const headers=['Row ID','Ticket_Title','Ticket_Status','Ticket_Category','Request_Text','AI_Answer','Consultant_Answer','Final_Answer','Created_At','Subject','HR Issue','Description','File','Unified_Status','Requested_Capabilities','Needs_Clarification','Clarification_Question','Artifact_Type','Artifact_File_Name','Artifact_Download_URL','Artifact_Editor_URL','Unified_Reason_Code','Sheet_AI_Answer','AI_Draft','Review_Status','Processing_Status','Artifact_Title','Artifact_URL','Artifact_Format','Artifact_Status','Processing_Error','Owner_Email','Admin_Role','🔒 Row ID'];
+ const data=Object.entries(values).map(([name,value])=>{
+  if(!allowed.includes(name)) throw new Error('invalid_column');
+  const index=headers.indexOf(name);
+  const column=String.fromCharCode(65+index);
+  return {range:'Sheet1!'+column+row.__sheetRow,values:[[value]]};
+ });
+ const token=await googleAccessToken();
+ const response=await fetch('https://sheets.googleapis.com/v4/spreadsheets/'+encodeURIComponent(id)+'/values:batchUpdate',{
+  method:'POST',headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},
+  body:JSON.stringify({valueInputOption:'RAW',data}),cache:'no-store'
+ });
+ if(!response.ok) throw new Error('sheet_write_failed');
+}
