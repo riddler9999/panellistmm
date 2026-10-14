@@ -40,7 +40,7 @@ export function ConsultationDashboard() {
     if(loggingIn) return;
     setLoggingIn(true);setLoginError('');
     try {
-      const response=await fetch('/api/pocket-hr-login',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:loginEmail,passcode})});
+      const response=await fetch('/api/pocket-hr-login',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify({passcode})});
       if(!response.ok){setLoginError(response.status===401?'Passcode is incorrect.':'Login unavailable.');return;}
       const ticketsResponse=await fetch('/api/consultation',{credentials:'include',cache:'no-store'});
       if(!ticketsResponse.ok){setLoginError('Could not load requests.');return;}

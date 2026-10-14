@@ -5,9 +5,9 @@ export default async function handler(req:Req,res:Res) {
  res.setHeader('Cache-Control','no-store');
  if(req.method!=='POST') return res.status(405).json({error:'method_not_allowed'});
  const body = req.body && typeof req.body==='object' ? req.body as Record<string,unknown> : {};
- if(typeof body.email!=='string'||typeof body.passcode!=='string') return res.status(400).json({error:'invalid_input'});
+ if(typeof body.passcode!=='string') return res.status(400).json({error:'invalid_input'});
  try {
-  const token = await authenticate(body.email,body.passcode);
+  const token = await authenticate(body.passcode);
   if(!token) return res.status(401).json({error:'invalid_credentials'});
   res.setHeader('Set-Cookie',sessionCookie(token));
   return res.status(200).json({ok:true});

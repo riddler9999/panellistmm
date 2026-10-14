@@ -1,5 +1,5 @@
 import { randomBytes, scryptSync, timingSafeEqual, createHash } from 'node:crypto';
-import { db } from './pocketHrData.js';
+import { db, readPasscodeAccounts } from './pocketHrData.js';
 import type { Principal } from './consultationAccess.js';
 
 type Account = { id: string; email: string; role: 'Admin'|'User'; pin_hash: string; disabled_at: string|null; failed_attempts: number; locked_until: string|null };
@@ -27,23 +27,24 @@ export function cookieToken(headers: Record<string,string|string[]|undefined>): 
  const token = raw.match(/(?:^|;\s*)pocket_hr_session=([0-9a-f]{64})(?:;|$)/)?.[1];
  return token ?? null;
 }
-export async function authenticate(email: string, pin: string): Promise<string|null> {
- const normalized = email.trim().toLowerCase();
- if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized) || !/^\d{4}$/.test(pin)) return null;
- const permitted = await db<boolean>('rpc/pocket_hr_allow_login_attempt','POST',{p_email_digest:digest(normalized)});
+export async function authenticate(pin: string): Promise<string|null> {
+ if (!/^\d{4}$/.test(pin)) return null;
+ // Fail closed: 4-digit PIN has only 10,000 possibilities. Throttle globally across functions.
+ const permitted = await db<boolean>('rpc/pocket_hr_allow_login_attempt','POST',{p_email_digest:digest('pocket-hr-pin-only-global-v1')});
  if (permitted !== true) return null;
- const rows = await db<Account[]>('pocket_hr_accounts?select=*&email=eq.' + enc(normalized) + '&limit=2');
+ const entries = await readPasscodeAccounts();
+ const matching = entries.filter(entry => /^\d{4}$/.test(entry.passcode) && timingSafeEqual(Buffer.from(pin),Buffer.from(entry.passcode)));
+ if (matching.length !== 1) return null;
+ const identity = matching[0];
+ if (identity.status !== 'Active' || !['Admin','User'].includes(identity.role)) return null;
+ const rows = await db<Account[]>('pocket_hr_accounts?select=*&email=eq.' + enc(identity.email) + '&limit=2');
  if (rows.length !== 1) return null;
  const account = rows[0];
- if (account.disabled_at || (account.locked_until && Date.parse(account.locked_until) > Date.now())) return null;
- if (!verifyPasscode(pin, account.pin_hash)) {
-  await db('rpc/pocket_hr_record_pin_attempt','POST',{p_account_id:account.id,p_success:false});
-  return null;
- }
+ if (account.disabled_at || account.role !== identity.role || (account.locked_until && Date.parse(account.locked_until) > Date.now())) return null;
  const accepted = await db<boolean>('rpc/pocket_hr_record_pin_attempt','POST',{p_account_id:account.id,p_success:true});
  if (!accepted) return null;
  const token = randomBytes(32).toString('hex');
- await db('pocket_hr_sessions', 'POST', { token_digest: digest(token), account_id: account.id, expires_at: new Date(Date.now()+86400000).toISOString() });
+ await db('pocket_hr_sessions', 'POST', {token_digest:digest(token),account_id:account.id,expires_at:new Date(Date.now()+86400000).toISOString()});
  return token;
 }
 export async function authenticatedPrincipal(headers: Record<string,string|string[]|undefined>): Promise<Principal|null> {

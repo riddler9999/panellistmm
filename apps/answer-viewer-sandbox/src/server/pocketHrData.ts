@@ -50,6 +50,24 @@ async function googleAccessToken(): Promise<string> {
   if (!result.access_token) throw new Error('sheet_token_missing');
   return result.access_token;
 }
+/** Admin-managed PIN register. Never expose its rows to the browser. */
+export async function readPasscodeAccounts(): Promise<Array<{email:string;role:string;passcode:string;status:string}>> {
+ const id = process.env.POCKET_HR_SHEET_ID;
+ if (!id) throw new Error('sheet_not_configured');
+ const token = await googleAccessToken();
+ const url = 'https://sheets.googleapis.com/v4/spreadsheets/' + encodeURIComponent(id)
+  + '/values/' + encodeURIComponent("'Pocket HR PINs'!A1:D1001");
+ const response = await fetch(url,{headers:{Authorization:'Bearer '+token},cache:'no-store'});
+ if (!response.ok) throw new Error('pin_sheet_unavailable');
+ const values = (await response.json() as {values?:unknown[][]}).values ?? [];
+ const [header,...rows] = values;
+ if (!header || ['Email','Role','Passcode','Status'].some((v,i)=>header[i]!==v)) throw new Error('pin_sheet_headers_invalid');
+ return rows.map(row=>({
+  email:String(row[0]??'').trim().toLowerCase(),role:String(row[1]??'').trim(),
+  passcode:String(row[2]??'').trim(),status:String(row[3]??'').trim(),
+ })).filter(row=>row.email.length>0);
+}
+
 export async function readTickets(): Promise<TicketRow[]> {
   const id = process.env.POCKET_HR_SHEET_ID;
   if (!id) throw new Error('sheet_not_configured');
