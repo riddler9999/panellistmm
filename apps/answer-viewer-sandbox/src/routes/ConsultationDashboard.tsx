@@ -3,7 +3,6 @@ import type { ConsultationTicket } from '../server/consultationAccess';
 
 
 type DashboardResponse = { role: 'Admin' | 'User'; tickets: ConsultationTicket[] };
-const statuses = ['All', 'Submitted', 'Awaiting Review', 'Editing', 'Approved', 'Failed'] as const;
 const demoTickets: ConsultationTicket[] = [
  {ticketId:'DEMO-001',title:'Leave Policy Consultation',status:'Awaiting Review',history:[{type:'QUESTION',content:'Could you clarify the leave approval process?',round:1},{type:'ADVICE',content:'Review the policy and confirm the applicable approval steps.',round:1}]},
  {ticketId:'DEMO-002',title:'Employee Handbook Review',status:'Approved',history:[{type:'QUESTION',content:'Please review the employee handbook.',round:1}],finalAnswer:'The handbook review is complete.'},
@@ -52,7 +51,8 @@ export function ConsultationDashboard() {
     [ticket.ticketId, ticket.title].some(value => value.toLocaleLowerCase().includes(search.trim().toLocaleLowerCase()))
   ), [tickets, filter, search]);
   const active = tickets.find(ticket => ticket.ticketId === selected);
-  const filters = Array.from(new Set<string>([...statuses, ...tickets.map(ticket => ticket.status).filter(Boolean)]));
+  // Derive filter labels from actual ticket statuses; never invent workflow states.
+  const filters = ['All', ...Array.from(new Set(tickets.map(ticket => ticket.status).filter(Boolean)))];
 
   if (loadingSession) return <main className="viewer-shell" role="status">Checking session…</main>;
   if (!authenticated && !demoMode) return <main className="viewer-shell consultation-dashboard"><section className="consult-welcome"><div className="consult-welcome-mark">P</div><h1>Pocket HR</h1><p>Glide မှာ Login ဝင်ပြီး သင့် Requests ကို ကြည့်ပါ။ Web App က Glide Identity ကို အတည်မပြုနိုင်သေးတဲ့အတွက် Private Data ကို မပြထားပါ။</p><button type="button" className="consult-new" onClick={() => setDemoMode(true)}>Preview Reference UI</button><small>Design preview only · Sample data · No real HR records</small></section></main>;
