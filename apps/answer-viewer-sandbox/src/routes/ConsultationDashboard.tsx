@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { ConsultationTicket } from '../server/consultationAccess';
 
 
@@ -17,12 +17,48 @@ export function ConsultationDashboard() {
   const [filter, setFilter] = useState<string>('All');
   const [selected, setSelected] = useState<string | null>(null);
   const [demoMode, setDemoMode] = useState(false);
+  const [session, setSession] = useState<{role:'Admin'|'User';tickets:ConsultationTicket[]}|null>(null);
+  const [checking, setChecking] = useState(true);
+  const [loginEmail, setLoginEmail] = useState('');
+  const [passcode, setPasscode] = useState('');
+  const [loginError, setLoginError] = useState('');
+  const [loggingIn, setLoggingIn] = useState(false);
+  useEffect(() => {
+    let active = true;
+    fetch('/api/consultation', {credentials:'include',cache:'no-store'})
+      .then(async response => {
+        if (!response.ok) return null;
+        return await response.json() as {role:'Admin'|'User';tickets:ConsultationTicket[]};
+      })
+      .then(data => {if(active) setSession(data);})
+      .catch(() => {if(active) setLoginError('Service unavailable. Please try again.');})
+      .finally(() => {if(active) setChecking(false);});
+    return () => {active=false;};
+  },[]);
+  async function login(event: React.FormEvent) {
+    event.preventDefault();
+    if(loggingIn) return;
+    setLoggingIn(true);setLoginError('');
+    try {
+      const response=await fetch('/api/pocket-hr-login',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:loginEmail,passcode})});
+      if(!response.ok){setLoginError(response.status===401?'Email or passcode is incorrect.':'Login unavailable.');return;}
+      const ticketsResponse=await fetch('/api/consultation',{credentials:'include',cache:'no-store'});
+      if(!ticketsResponse.ok){setLoginError('Could not load requests.');return;}
+      setSession(await ticketsResponse.json() as {role:'Admin'|'User';tickets:ConsultationTicket[]});
+      setPasscode('');setDemoMode(false);
+    }catch{setLoginError('Network error. Try again.');}
+    finally{setLoggingIn(false);}
+  }
+  async function logout() {
+    try {await fetch('/api/pocket-hr-session',{method:'POST',credentials:'include'});} catch { /* clear local UI even if offline */ }
+    setSession(null);setDemoMode(false);setSelected(null);setPasscode('');
+  }
   const [tab, setTab] = useState<'Conversation' | 'Details' | 'Files'>('Conversation');
   const [actionDraft, setActionDraft] = useState('');
   const [actionMode, setActionMode] = useState<'approve' | 'edit' | 'request_clarification' | 'reject' | null>(null);
 
-  const tickets = demoTickets;
-  const role = 'Admin';
+  const tickets = demoMode ? demoTickets : (session?.tickets ?? []);
+  const role = demoMode ? 'Admin' : (session?.role ?? 'User');
   const visible = useMemo(() => tickets.filter(ticket =>
     (filter === 'All' || ticket.status === filter) &&
     [ticket.ticketId, ticket.title].some(value => value.toLocaleLowerCase().includes(search.trim().toLocaleLowerCase()))
@@ -31,10 +67,22 @@ export function ConsultationDashboard() {
   // Derive filter labels from actual ticket statuses; never invent workflow states.
   const filters = ['All', ...Array.from(new Set(tickets.map(ticket => ticket.status).filter(Boolean)))];
 
-  if (!demoMode) return <main className="viewer-shell consultation-dashboard"><section className="consult-welcome"><div className="consult-welcome-mark">P</div><h1>Pocket HR</h1><p>Glide မှာ Login ဝင်ပြီး သင့် Requests ကို ကြည့်ပါ။ Web App က Glide Identity ကို အတည်မပြုနိုင်သေးတဲ့အတွက် Private Data ကို မပြထားပါ။</p><button type="button" className="consult-new" onClick={() => setDemoMode(true)}>Preview Reference UI</button><small>Design preview only · Sample data · No real HR records</small></section></main>;
+  if (!session && !demoMode) return <main className="viewer-shell consultation-dashboard"><section className="consult-welcome"><div className="consult-welcome-mark">P</div><h1>Pocket HR</h1>
+    {checking ? <p>Loading...</p> : <form onSubmit={login} className="pocket-hr-pin-form">
+      <p>Enter the passcode provided by your administrator.</p>
+      <label htmlFor="pocket-hr-email">Account Email</label>
+      <input id="pocket-hr-email" type="email" autoComplete="username" required value={loginEmail} onChange={event=>setLoginEmail(event.target.value)}/>
+      <label htmlFor="pocket-hr-pin">4-Digit Passcode</label>
+      <input id="pocket-hr-pin" type="password" inputMode="numeric" pattern="[0-9]{4}" maxLength={4} autoComplete="current-password" required value={passcode} onChange={event=>setPasscode(event.target.value.replace(/\\D/g,'').slice(0,4))}/>
+      {loginError && <p role="alert">{loginError}</p>}
+      <button type="submit" className="consult-new" disabled={loggingIn}>{loggingIn?'Signing in...':'Open Dashboard'}</button>
+    </form>}
+    <button type="button" onClick={()=>setDemoMode(true)}>Preview Reference UI</button><small>Preview uses sample data only.</small>
+    </section></main>;
 
   return <main className="viewer-shell consultation-dashboard">
     
+    {session && !demoMode && <div className="consult-preview-banner"><span>{role === 'Admin' ? 'Consultant Dashboard' : 'My Requests'}</span><button type="button" onClick={logout}>Log out</button></div>}
     {demoMode && <div className="consult-preview-banner"><span>DESIGN PREVIEW · SAMPLE DATA</span><button type="button" onClick={() => {setDemoMode(false);setSelected(null);}}>Exit Preview</button></div>}
     {active ? <>
         <button type="button" className="consult-back" onClick={() => setSelected(null)} aria-label="Back to requests">‹</button>
