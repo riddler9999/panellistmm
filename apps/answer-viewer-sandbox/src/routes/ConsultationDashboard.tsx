@@ -2,12 +2,6 @@ import { useEffect, useMemo, useState } from 'react';
 import type { ConsultationTicket } from '../server/consultationAccess';
 
 
-const demoTickets: ConsultationTicket[] = [
- {ticketId:'DEMO-001',title:'Leave Policy Consultation',status:'Awaiting Review',history:[{type:'QUESTION',content:'Could you clarify the leave approval process?',round:1},{type:'ADVICE',content:'Review the policy and confirm the applicable approval steps.',round:1}]},
- {ticketId:'DEMO-002',title:'Employee Handbook Review',status:'Approved',history:[{type:'QUESTION',content:'Please review the employee handbook.',round:1}],finalAnswer:'The handbook review is complete.'},
- {ticketId:'DEMO-003',title:'Attendance Policy Update',status:'ဖောင်ပို့ပြီး (Submitted)',history:[{type:'QUESTION',content:'We need to update the attendance policy.',round:1}]},
- {ticketId:'DEMO-004',title:'New Hire Onboarding',status:'Submitted',history:[]}
-];
 const statusClass = (status: string) => status.toLowerCase().replace(/[^a-z]+/g, '-').replace(/^-|-$/g, '');
 const ticketIcons: Record<string, string> = { Submitted: '▤', 'ဖောင်ပို့ပြီး (Submitted)': '▤', 'Awaiting Review': '▧', Approved: '✓', Failed: '!' };
 const ticketIcon = (status: string) => ticketIcons[status] ?? '▣';
@@ -16,7 +10,6 @@ export function ConsultationDashboard() {
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<string>('All');
   const [selected, setSelected] = useState<string | null>(null);
-  const [demoMode, setDemoMode] = useState(false);
   const [session, setSession] = useState<{role:'Admin'|'User';tickets:ConsultationTicket[]}|null>(null);
   const [checking, setChecking] = useState(true);
   const [passcode, setPasscode] = useState('');
@@ -44,20 +37,21 @@ export function ConsultationDashboard() {
       const ticketsResponse=await fetch('/api/consultation',{credentials:'include',cache:'no-store'});
       if(!ticketsResponse.ok){setLoginError('Could not load requests.');return;}
       setSession(await ticketsResponse.json() as {role:'Admin'|'User';tickets:ConsultationTicket[]});
-      setPasscode('');setDemoMode(false);
+      setPasscode('');
     }catch{setLoginError('Network error. Try again.');}
     finally{setLoggingIn(false);}
   }
   async function logout() {
     try {await fetch('/api/pocket-hr-session',{method:'POST',credentials:'include'});} catch { /* clear local UI even if offline */ }
-    setSession(null);setDemoMode(false);setSelected(null);setPasscode('');
+    setSession(null);setSelected(null);setPasscode('');
   }
   const [tab, setTab] = useState<'Conversation' | 'Details' | 'Files'>('Conversation');
   const [actionDraft, setActionDraft] = useState('');
-  const [actionMode, setActionMode] = useState<'approve' | 'edit' | 'request_clarification' | 'reject' | null>(null);
+  const [actionError, setActionError] = useState('');
+  const [actionSubmitting, setActionSubmitting] = useState(false);
 
-  const tickets = useMemo(() => demoMode ? demoTickets : (session?.tickets ?? []), [demoMode, session]);
-  const role = demoMode ? 'Admin' : (session?.role ?? 'User');
+  const tickets = useMemo(() => session?.tickets ?? [], [session]);
+  const role = session?.role ?? 'User';
   const visible = useMemo(() => tickets.filter(ticket =>
     (filter === 'All' || ticket.status === filter) &&
     [ticket.ticketId, ticket.title].some(value => value.toLocaleLowerCase().includes(search.trim().toLocaleLowerCase()))
@@ -66,7 +60,24 @@ export function ConsultationDashboard() {
   // Derive filter labels from actual ticket statuses; never invent workflow states.
   const filters = ['All', ...Array.from(new Set(tickets.map(ticket => ticket.status).filter(Boolean)))];
 
-  if (!session && !demoMode) return <main className="viewer-shell consultation-dashboard"><section className="consult-welcome"><div className="consult-welcome-mark">P</div><h1>Pocket HR</h1>
+  async function approveTicket() {
+    if (!active || actionSubmitting || role !== 'Admin') return;
+    setActionSubmitting(true); setActionError('');
+    try {
+      const response = await fetch('/api/consultation-approve', {
+        method:'POST',credentials:'include',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({action:'approve',requestId:active.ticketId,expectedRevision:active.revision ?? 0,content:actionDraft})
+      });
+      if (!response.ok) { setActionError(response.status===409?'This request changed. Reload and review again.':'Approval was not published. Retry after checking the request.'); return; }
+      const refreshed = await fetch('/api/consultation',{credentials:'include',cache:'no-store'});
+      if (!refreshed.ok) throw new Error('refresh_failed');
+      setSession(await refreshed.json() as {role:'Admin'|'User';tickets:ConsultationTicket[]});
+      setActionDraft('');
+    } catch { setActionError('Could not refresh the approved request.'); }
+    finally { setActionSubmitting(false); }
+  }
+
+  if (!session) return <main className="viewer-shell consultation-dashboard"><section className="consult-welcome"><div className="consult-welcome-mark">P</div><h1>Pocket HR</h1>
     {checking ? <p>Loading...</p> : <form onSubmit={login} className="pocket-hr-pin-form">
       <p>Enter the passcode provided by your administrator.</p>
       <label htmlFor="pocket-hr-pin">4-Digit Passcode</label>
@@ -74,13 +85,11 @@ export function ConsultationDashboard() {
       {loginError && <p role="alert">{loginError}</p>}
       <button type="submit" className="consult-new" disabled={loggingIn}>{loggingIn?'Signing in...':'Open Dashboard'}</button>
     </form>}
-    <button type="button" className="pocket-hr-preview" onClick={()=>setDemoMode(true)}>Preview Reference UI</button><small>Preview uses sample data only.</small>
     </section></main>;
 
   return <main className="viewer-shell consultation-dashboard">
     
-    {session && !demoMode && <div className="consult-preview-banner"><span>{role === 'Admin' ? 'Consultant Dashboard' : 'My Requests'}</span><button type="button" onClick={logout}>Log out</button></div>}
-    {demoMode && <div className="consult-preview-banner"><span>DESIGN PREVIEW · SAMPLE DATA</span><button type="button" onClick={() => {setDemoMode(false);setSelected(null);}}>Exit Preview</button></div>}
+    {session && <div className="consult-preview-banner"><span>{role === 'Admin' ? 'Consultant Dashboard' : 'My Requests'}</span><button type="button" onClick={logout}>Log out</button></div>}
     {active ? <>
         <button type="button" className="consult-back" onClick={() => setSelected(null)} aria-label="Back to requests">‹</button>
         <section className="consult-detail-head">
@@ -101,18 +110,11 @@ export function ConsultationDashboard() {
           {active.finalAnswer && <article className="consult-message consult-final"><strong>Final Answer</strong><p>{active.finalAnswer}</p></article>}
         </section>}
         {role === 'Admin' && <section className="state-card consult-actions" aria-label="Consultant actions">
-          <h2>Consultant Actions</h2>
-          <p>Approval, editing and delivery are unavailable until a verified consultant identity and publication backend are connected.</p>
-          <div className="consult-filters">
-            {(['approve', 'edit', 'request_clarification', 'reject'] as const).map(action =>
-              <button key={action} type="button" aria-pressed={actionMode === action} onClick={() => {setActionMode(action);setActionDraft('');}}>
-                {action === 'request_clarification' ? 'Ask Clarification' : action[0].toUpperCase() + action.slice(1)}
-              </button>)}
-          </div>
-          {actionMode && <div><label htmlFor="consult-action-draft">Consultant {actionMode.replace('_', ' ')} draft</label>
-            <textarea id="consult-action-draft" value={actionDraft} onChange={event => setActionDraft(event.target.value)} placeholder="Draft for consultant review" />
-            <button type="button" disabled title="Verified consultant authorization and delivery contract required">Submit {actionMode.replace('_', ' ')}</button>
-          </div>}
+          <h2>Consultant Approval</h2>
+          <label htmlFor="consult-action-draft">Approved answer</label>
+          <textarea id="consult-action-draft" value={actionDraft} onChange={event=>setActionDraft(event.target.value)} placeholder="Review and enter the answer to publish" />
+          {actionError && <p role="alert">{actionError}</p>}
+          <button type="button" disabled={actionSubmitting || !actionDraft.trim()} onClick={approveTicket}>{actionSubmitting?'Publishing...':'Approve & Publish'}</button>
         </section>}
         {tab === 'Details' && <section className="state-card consult-details"><h2>Request Details</h2><dl><div><dt>Request ID</dt><dd>{active.ticketId}</dd></div><div><dt>Subject</dt><dd>{active.title}</dd></div><div><dt>Status</dt><dd><span className={`consult-badge tone-${statusClass(active.status)}`}>{active.status}</span></dd></div>{active.category && <div><dt>Category</dt><dd>{active.category}</dd></div>}{active.createdAt && <div><dt>Created</dt><dd>{active.createdAt}</dd></div>}{active.description && <div><dt>Description</dt><dd>{active.description}</dd></div>}{role === 'Admin' && active.reviewStatus && <div><dt>Review Status</dt><dd>{active.reviewStatus}</dd></div>}{role === 'Admin' && active.processingStatus && <div><dt>Processing Status</dt><dd>{active.processingStatus}</dd></div>}{role === 'Admin' && active.artifact?.status && <div><dt>Artifact Status</dt><dd>{active.artifact.status}</dd></div>}</dl></section>}
         {tab === 'Files' && <section className="state-card consult-files"><div className="consult-file-icon">▤</div>{role === 'Admin' && active.artifact?.title ? <><h2>{active.artifact.title}</h2><p>{[active.artifact.type, active.artifact.format, active.artifact.status].filter(Boolean).join(' · ')}</p></> : <><h2>No files available</h2><p>Only verified, authorized attachments will appear here.</p></>}</section>}
