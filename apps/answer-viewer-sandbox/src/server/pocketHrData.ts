@@ -74,15 +74,8 @@ export async function readTickets(): Promise<TicketRow[]> {
     });
 }
 export async function readProof(requestId: string): Promise<{ approval: ApprovalProof | null; delivery: DeliveryProof | null }> {
-  const filter = 'request_id=eq.' + query(requestId) + '&order=revision.desc&limit=1';
-  const approvals = await db('pocket_hr_approvals?select=*&' + filter);
-  if (approvals.length !== 1) return { approval: null, delivery: null };
-  const a = approvals[0];
-  const deliveries = await db('pocket_hr_deliveries?select=*&request_id=eq.' + query(requestId) + '&revision=eq.' + a.revision + '&limit=1');
-  return {
-    approval: { requestId: a.request_id, revision: a.revision, approvedContent: a.approved_content, approvedByAccountId: a.approved_by_account_id, approvedAt: a.approved_at },
-    delivery: deliveries.length === 1 ? { requestId: deliveries[0].request_id, revision: deliveries[0].revision, result: deliveries[0].result, deliveredAt: deliveries[0].delivered_at } : null,
-  };
+  const proofs = await readProofs([requestId]);
+  return proofs.get(requestId) ?? { approval: null, delivery: null };
 }
 export async function acknowledgeDelivery(requestId: string, revision: number): Promise<boolean> {
   // Durable publication acknowledgement, NOT proof that the user opened the page.
