@@ -18,6 +18,8 @@ export function ConsultationDashboard() {
   const [selected, setSelected] = useState<string | null>(null);
   const [demoMode, setDemoMode] = useState(false);
   const [tab, setTab] = useState<'Conversation' | 'Details' | 'Files'>('Conversation');
+  const [actionDraft, setActionDraft] = useState('');
+  const [actionMode, setActionMode] = useState<'approve' | 'edit' | 'request_clarification' | 'reject' | null>(null);
 
   const tickets = demoTickets;
   const role = 'Admin';
@@ -53,6 +55,20 @@ export function ConsultationDashboard() {
           {active.description && <article className="consult-message"><div className="consult-message-author"><span className="consult-avatar">U</span><strong>Request</strong></div><p>{active.description}</p></article>}
           {active.approvedQuestion && <article className="consult-message"><strong>Consultant · Clarification</strong><p>{active.approvedQuestion}</p></article>}
           {active.finalAnswer && <article className="consult-message consult-final"><strong>Final Answer</strong><p>{active.finalAnswer}</p></article>}
+        </section>}
+        {role === 'Admin' && <section className="state-card consult-actions" aria-label="Consultant actions">
+          <h2>Consultant Actions</h2>
+          <p>Approval, editing and delivery are unavailable until a verified consultant identity and publication backend are connected.</p>
+          <div className="consult-filters">
+            {(['approve', 'edit', 'request_clarification', 'reject'] as const).map(action =>
+              <button key={action} type="button" aria-pressed={actionMode === action} onClick={() => {setActionMode(action);setActionDraft('');}}>
+                {action === 'request_clarification' ? 'Ask Clarification' : action[0].toUpperCase() + action.slice(1)}
+              </button>)}
+          </div>
+          {actionMode && <div><label htmlFor="consult-action-draft">Consultant {actionMode.replace('_', ' ')} draft</label>
+            <textarea id="consult-action-draft" value={actionDraft} onChange={event => setActionDraft(event.target.value)} placeholder="Draft for consultant review" />
+            <button type="button" disabled title="Verified consultant authorization and delivery contract required">Submit {actionMode.replace('_', ' ')}</button>
+          </div>}
         </section>}
         {tab === 'Details' && <section className="state-card consult-details"><h2>Request Details</h2><dl><div><dt>Request ID</dt><dd>{active.ticketId}</dd></div><div><dt>Subject</dt><dd>{active.title}</dd></div><div><dt>Status</dt><dd><span className={`consult-badge tone-${statusClass(active.status)}`}>{active.status}</span></dd></div>{active.category && <div><dt>Category</dt><dd>{active.category}</dd></div>}{active.createdAt && <div><dt>Created</dt><dd>{active.createdAt}</dd></div>}{active.description && <div><dt>Description</dt><dd>{active.description}</dd></div>}{role === 'Admin' && active.reviewStatus && <div><dt>Review Status</dt><dd>{active.reviewStatus}</dd></div>}{role === 'Admin' && active.processingStatus && <div><dt>Processing Status</dt><dd>{active.processingStatus}</dd></div>}{role === 'Admin' && active.artifact?.status && <div><dt>Artifact Status</dt><dd>{active.artifact.status}</dd></div></dl></section>}
         {tab === 'Files' && <section className="state-card consult-files"><div className="consult-file-icon">▤</div>{role === 'Admin' && active.artifact?.title ? <><h2>{active.artifact.title}</h2><p>{[active.artifact.type, active.artifact.format, active.artifact.status].filter(Boolean).join(' · ')}</p></> : <><h2>No files available</h2><p>Only verified, authorized attachments will appear here.</p></>}</section>}
