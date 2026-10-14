@@ -19,7 +19,7 @@ export function ConsultationDashboard() {
   const [demoMode, setDemoMode] = useState(false);
   const [session, setSession] = useState<{role:'Admin'|'User';tickets:ConsultationTicket[]}|null>(null);
   const [checking, setChecking] = useState(true);
-  const [loginEmail, setLoginEmail] = useState('');
+  const loginEmail = 'moehtetofficial1@gmail.com'; // Temporary admin-only login until Glide identity handoff is available.
   const [passcode, setPasscode] = useState('');
   const [loginError, setLoginError] = useState('');
   const [loggingIn, setLoggingIn] = useState(false);
@@ -41,7 +41,7 @@ export function ConsultationDashboard() {
     setLoggingIn(true);setLoginError('');
     try {
       const response=await fetch('/api/pocket-hr-login',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:loginEmail,passcode})});
-      if(!response.ok){setLoginError(response.status===401?'Email or passcode is incorrect.':'Login unavailable.');return;}
+      if(!response.ok){setLoginError(response.status===401?'Passcode is incorrect.':'Login unavailable.');return;}
       const ticketsResponse=await fetch('/api/consultation',{credentials:'include',cache:'no-store'});
       if(!ticketsResponse.ok){setLoginError('Could not load requests.');return;}
       setSession(await ticketsResponse.json() as {role:'Admin'|'User';tickets:ConsultationTicket[]});
@@ -70,8 +70,6 @@ export function ConsultationDashboard() {
   if (!session && !demoMode) return <main className="viewer-shell consultation-dashboard"><section className="consult-welcome"><div className="consult-welcome-mark">P</div><h1>Pocket HR</h1>
     {checking ? <p>Loading...</p> : <form onSubmit={login} className="pocket-hr-pin-form">
       <p>Enter the passcode provided by your administrator.</p>
-      <label htmlFor="pocket-hr-email">Account Email</label>
-      <input id="pocket-hr-email" type="email" autoComplete="username" required value={loginEmail} onChange={event=>setLoginEmail(event.target.value)}/>
       <label htmlFor="pocket-hr-pin">4-Digit Passcode</label>
       <input id="pocket-hr-pin" type="password" inputMode="numeric" pattern="[0-9]{4}" maxLength={4} autoComplete="current-password" required value={passcode} onChange={event=>setPasscode(event.target.value.replace(/\D/g,'').slice(0,4))}/>
       {loginError && <p role="alert">{loginError}</p>}
