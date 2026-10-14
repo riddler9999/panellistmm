@@ -1,5 +1,5 @@
 import { randomBytes, scryptSync, timingSafeEqual, createHash } from 'node:crypto';
-import { db, readPasscodeAccounts } from './pocketHrData.js';
+import { db } from './pocketHrData.js';
 import type { Principal } from './consultationAccess.js';
 
 type Account = { id: string; email: string; role: 'Admin'|'User'; pin_hash: string; disabled_at: string|null; failed_attempts: number; locked_until: string|null };
@@ -32,17 +32,18 @@ export async function authenticate(pin: string): Promise<string|null> {
  // Fail closed: 4-digit PIN has only 10,000 possibilities. Throttle globally across functions.
  const permitted = await db<boolean>('rpc/pocket_hr_allow_login_attempt','POST',{p_email_digest:digest('pocket-hr-pin-only-global-v1')});
  if (permitted !== true) return null;
- const entries = await readPasscodeAccounts();
- const matching = entries.filter(entry => /^\d{4}$/.test(entry.passcode) && timingSafeEqual(Buffer.from(pin),Buffer.from(entry.passcode)));
+ // Verify the stored scrypt hashes directly; do not depend on a separate
+ // plaintext Google Sheets PIN registry during login.
+ const accounts = await db<Account[]>('pocket_hr_accounts?select=id,email,role,pin_hash,disabled_at,failed_attempts,locked_until&limit=1001');
+ if (accounts.length > 1000) throw new Error('account_limit_exceeded');
+ const matching = accounts.filter(account => account.pin_hash && verifyPasscode(pin, account.pin_hash));
+ // PIN-only login must never select an arbitrary account when PINs collide.
  if (matching.length !== 1) return null;
- const identity = matching[0];
- if (identity.status !== 'Active' || !['Admin','User'].includes(identity.role)) return null;
- const rows = await db<Account[]>('pocket_hr_accounts?select=*&email=eq.' + enc(identity.email) + '&limit=2');
- if (rows.length !== 1) return null;
- const account = rows[0];
- if (account.disabled_at || account.role !== identity.role || (account.locked_until && Date.parse(account.locked_until) > Date.now())) return null;
+ const account = matching[0];
+ if (account.disabled_at || !['Admin','User'].includes(account.role) ||
+     (account.locked_until && Date.parse(account.locked_until) > Date.now())) return null;
  const accepted = await db<boolean>('rpc/pocket_hr_record_pin_attempt','POST',{p_account_id:account.id,p_success:true});
- if (!accepted) return null;
+ if (accepted !== true) return null;
  const token = randomBytes(32).toString('hex');
  await db('pocket_hr_sessions', 'POST', {token_digest:digest(token),account_id:account.id,expires_at:new Date(Date.now()+86400000).toISOString()});
  return token;
