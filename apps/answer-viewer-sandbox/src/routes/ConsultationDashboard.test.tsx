@@ -6,8 +6,8 @@ describe('Glide dashboard scaffold', () => {
   it('fails closed when secure handoff is unavailable', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => ({ ok: false, status: 403 })));
     render(<ConsultationDashboard />);
-    expect(await screen.findByText('Account Verification')).toBeInTheDocument();
-    expect(screen.queryByText('All Tickets')).not.toBeInTheDocument();
+    expect(await screen.findByText('Pocket HR')).toBeInTheDocument();
+    expect(screen.queryByText('All Requests')).not.toBeInTheDocument();
   });
   it('renders responsive ticket cards from server projection', async () => {
     vi.stubGlobal('fetch', vi.fn(async (url: string) => url.includes('pocket-hr-session') ? ({ ok: true, json: async () => ({ email: 'a@example.com', role: 'User' }) }) : ({ ok: true, json: async () => ({role:'User',tickets:[{ticketId:'test',title:'My HR Request',status:'Resolved',history:[]}]}) })));
