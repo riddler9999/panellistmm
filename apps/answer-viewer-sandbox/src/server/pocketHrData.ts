@@ -25,7 +25,7 @@ export async function db<T>(path: string, method = 'GET', body?: unknown): Promi
 }
 const query = (s: string) => encodeURIComponent(s);
 const base64url = (input: string | Buffer) => Buffer.from(input).toString('base64url');
-async function googleAccessToken(): Promise<string> {
+export async function googleAccessToken(): Promise<string> {
   const email = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
   const privateKey = process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY?.replace(/\\n/g, '\n');
   if (!email || !privateKey) throw new Error('sheet_identity_not_configured');
@@ -51,7 +51,7 @@ async function googleAccessToken(): Promise<string> {
   return result.access_token;
 }
 /** Admin-managed PIN register. Never expose its rows to the browser. */
-export async function readPasscodeAccounts(): Promise<Array<{email:string;role:string;passcode:string;status:string}>> {
+export async function readPasscodeAccounts(): Promise<Array<{email:string;role:string;passcode:string;status:string;sheetRow:number}>> {
  const id = process.env.POCKET_HR_SHEET_ID;
  if (!id) throw new Error('sheet_not_configured');
  const token = await googleAccessToken();
@@ -62,7 +62,7 @@ export async function readPasscodeAccounts(): Promise<Array<{email:string;role:s
  const values = (await response.json() as {values?:unknown[][]}).values ?? [];
  const [header,...rows] = values;
  if (!header || ['Email','Role','Passcode','Status'].some((v,i)=>header[i]!==v)) throw new Error('pin_sheet_headers_invalid');
- return rows.map(row=>({
+ return rows.map((row,index)=>({sheetRow:index+2,
   email:String(row[0]??'').trim().toLowerCase(),role:String(row[1]??'').trim(),
   passcode:String(row[2]??'').trim(),status:String(row[3]??'').trim(),
  })).filter(row=>row.email.length>0);
@@ -157,4 +157,38 @@ export async function writeTicketPublication(requestId: string, updates: Record<
   body:JSON.stringify({valueInputOption:'RAW',data}),cache:'no-store'
  });
  if(!response.ok) throw new Error('sheet_write_failed');
+}
+
+/** Manage exactly the four verified PIN registry columns; never expose rows to clients. */
+export async function writePasscodeAccount(action:'create'|'reset'|'disable', email:string, pin?:string, role?:string):Promise<void> {
+ const id=process.env.POCKET_HR_SHEET_ID;
+ if(!id) throw new Error('sheet_not_configured');
+ const accounts=await readPasscodeAccounts();
+ const matched=accounts.filter(a=>a.email===email);
+ if(matched.length>1) throw new Error('duplicate_account');
+ if(action==='create' && matched.length) throw new Error('account_exists');
+ if(action!=='create' && matched.length!==1) throw new Error('account_not_found');
+ if(action!=='disable') {
+  if(!pin || !/^\\d{4}$/.test(pin)) throw new Error('invalid_pin');
+  if(accounts.some(a=>a.passcode===pin && a.email!==email)) throw new Error('pin_collision');
+ }
+ const token=await googleAccessToken();
+ const base='https://sheets.googleapis.com/v4/spreadsheets/'+encodeURIComponent(id)+'/values/';
+ let url:string;let body:unknown;
+ if(action==='create') {
+  url=base+encodeURIComponent("'Pocket HR PINs'!A:D")+':append?valueInputOption=RAW&insertDataOption=INSERT_ROWS';
+  body={values:[[email,role,pin,'Active']]};
+ } else {
+  const cell=(action==='disable'?'D':'C')+matched[0].sheetRow;
+  url=base+encodeURIComponent("'Pocket HR PINs'!"+cell)+'?valueInputOption=RAW';
+  body={values:[[action==='disable'?'Disabled':pin]]};
+ }
+ const response=await fetch(url,{
+  method:action==='create'?'POST':'PUT',
+  headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},
+  body:JSON.stringify(body),cache:'no-store'
+ });
+ if(!response.ok) throw new Error('pin_sheet_write_failed');
+ // Revoke sessions when status or PIN is changed.
+ if(action!=='create') await db('pocket_hr_sessions?sheet_email=eq.'+encodeURIComponent(email)+'&revoked_at=is.null','PATCH',{revoked_at:new Date().toISOString()});
 }
