@@ -9,7 +9,7 @@ export async function loadLiveConsultations(principal: Principal): Promise<Consu
   }
   const rows = (await readTickets()).filter(row => canAccessTicket(principal, row));
   const ids = rows.map(row => String(row['Row ID'] ?? '').trim());
-  const proofs = new Map<string, Awaited<ReturnType<typeof readProofs>> extends Map<string, infer T> ? T : never>();
+  const proofs: Awaited<ReturnType<typeof readProofs>> = new Map();
   for (let i = 0; i < ids.length; i += 200) {
     const batch = await readProofs(ids.slice(i, i + 200));
     for (const [id, proof] of batch) proofs.set(id, proof);
