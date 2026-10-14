@@ -8,7 +8,7 @@ const config = () => {
   if (!url || !key) throw new Error('storage_not_configured');
   return { url: url.replace(/\/$/, ''), key };
 };
-export async function db(path: string, method = 'GET', body?: unknown): Promise<any> {
+export async function db<T>(path: string, method = 'GET', body?: unknown): Promise<T> {
   const { url, key } = config();
   const response = await fetch(url + '/rest/v1/' + path, {
     method,
@@ -99,7 +99,10 @@ export async function readProofs(requestIds: string[]): Promise<Map<string, { ap
   const proofs = new Map<string, { approval: ApprovalProof | null; delivery: DeliveryProof | null }>();
   if (ids.length === 0) return proofs;
   const inFilter = ids.map(id => '"' + id.replace(/\\/g, '\\\\').replace(/"/g, '\\"') + '"').join(',');
-  const approvals = await db('pocket_hr_approvals?select=*&request_id=in.(' + query(inFilter) + ')&order=revision.desc&limit=10000');
+  const approvals = await db<Array<{
+    request_id: string; revision: number; approved_content: string;
+    approved_by_account_id: string; approved_at: string;
+  }>>('pocket_hr_approvals?select=*&request_id=in.(' + query(inFilter) + ')&order=revision.desc&limit=10000');
   for (const a of approvals) {
     if (!ids.includes(a.request_id) || proofs.has(a.request_id)) continue;
     proofs.set(a.request_id, {
@@ -108,7 +111,9 @@ export async function readProofs(requestIds: string[]): Promise<Map<string, { ap
     });
   }
   if (proofs.size === 0) return proofs;
-  const deliveries = await db('pocket_hr_deliveries?select=*&request_id=in.(' + query(inFilter) + ')&limit=10000');
+  const deliveries = await db<Array<{
+    request_id: string; revision: number; result: DeliveryProof['result']; delivered_at: string | null;
+  }>>('pocket_hr_deliveries?select=*&request_id=in.(' + query(inFilter) + ')&limit=10000');
   for (const d of deliveries) {
     const proof = proofs.get(d.request_id);
     if (!proof || proof.approval?.revision !== d.revision) continue;

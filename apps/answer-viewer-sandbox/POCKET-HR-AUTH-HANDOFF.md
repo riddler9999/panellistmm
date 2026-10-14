@@ -1,5 +1,7 @@
 # Pocket HR — Glide Native Login & Row Owners (approved 2026-10-14)
 
+လက်ရှိ architecture comparison၊ verified limitations နှင့် minimum-change options: [ADR-003](../../.ai-architect/decisions/ADR-003-pocket-hr-authentication-resolution.md)။ Existing guard သည် production identity integration ပြီးကြောင်း မဆိုလို။
+
 ## Canonical decision
 Glide owns login and row-level access. No Pocket HR email OTP, four-digit PIN, or second sign-in inside the embedded Vercel app. Do **not** treat a Glide URL/email parameter, App: Logins row, Sheet1 Admin_Role, or iframe context as verified identity.
 

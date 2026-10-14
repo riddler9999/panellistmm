@@ -46,7 +46,8 @@ describe('consultation access boundary', () => {
     expect(projectTicketList(admin, rows).map(row => row.status)).toEqual(statuses);
   });
   it('rejects spoofed admin roles and case-insensitively isolates owners', () => {
-    expect(resolvePrincipal({email:'a@example.com',verified:true,role:'Admin'} as any,users)).toEqual({email:'a@example.com',role:'User'});
+    const forgedIdentity = {email:'a@example.com',verified:true,role:'Admin'};
+    expect(resolvePrincipal(forgedIdentity,users)).toEqual({email:'a@example.com',role:'User'});
     const user = resolvePrincipal({email:'A@EXAMPLE.COM',verified:true},users)!;
     expect(projectTicketList(user,[{'Row ID':'case',Owner_Email:'A@example.com'}])).toHaveLength(1);
   });

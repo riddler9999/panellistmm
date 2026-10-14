@@ -1,5 +1,7 @@
 # Pocket HR Consultation Embed — implementation evidence 2026-10-14
 
+> လက်ရှိ authentication ဆုံးဖြတ်ချက်: [ADR-003](../../.ai-architect/decisions/ADR-003-pocket-hr-authentication-resolution.md) ကိုဖတ်ရန်။ အောက်ပါအစောပိုင်း runtime/CI မှတ်တမ်းများကို current test result ဟုမယူရ။ နောက်ဆုံး verification သည် [resolution evidence](../../work/reviews/2026-10-14-pocket-hr-auth-resolution-verification.md) တွင်ရှိသည်။
+
 ## Actual Google Sheet contract
 Drive spreadsheet: `Panellist HR Tickets Bridge`, spreadsheet ID `1B6Mo7NU6E1erFosckf8KZv1sz2SZeSJdVwq7BhS1-qQ`.
 Live `Sheet1!A1:AH1` header confirms:
@@ -28,6 +30,6 @@ Direct live Google Sheets read of `Sheet1!A1:AH1` confirmed 34 columns, includin
 
 The active Unified Orchestrator `97Hrjp3aKOLIR4wJ` uses the sheet above and matches `Row ID`; the Internal HR API `kZVxvax5MG7BIClj` validates clarification inputs. Neither by itself provides an authenticated read API or a proven publish acknowledgement contract.
 
-`App: Logins` in the bridge spreadsheet is not independently verified as the canonical identity store; consultant/user role mapping in the approved Users source is still outstanding. Never derive role from `Sheet1.Admin_Role` or from client email. The 4-digit PIN + 30-day revocable session must remain disabled until identity binding and persistent lockout/session storage are verified, including real Glide embed behavior.
+`App: Logins` သည် canonical identity registry ဖြစ်ကြောင်း မအတည်ပြုရသေး။ Consultant/User role mapping မပြီးသေး။ `Sheet1.Admin_Role` သို့မဟုတ် client email ဖြင့် role မဆုံးဖြတ်ရ။ 4-digit PIN + 30-day session proposal သည် Glide-login-only ဆုံးဖြတ်ချက်ဖြင့် superseded ဖြစ်ပြီး နောက်ပိုင်း enable လုပ်ရန်အဆင့်တစ်ခုအဖြစ် မဆက်ယူရ။
 
 The October 14 correction commits are `8c310ce709b2a999a53c57126d482f3d0048e093` (fail-closed projection) and `fe029c868363068a7891e10dcc15935b1c9cfc7c` (focused projection test). Test execution for these commits is **not verified**; do not report PASS. Existing UI CI red status remains a tracked, explicitly deferred defect, not an accepted production release state.

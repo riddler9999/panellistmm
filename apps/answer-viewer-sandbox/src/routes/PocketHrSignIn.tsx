@@ -1,5 +1,5 @@
 /** Glide owns sign-in and row-level access. This standalone iframe cannot verify Glide sessions. */
-export function PocketHrSignIn({ onSuccess: _onSuccess }: { onSuccess: () => void }) {
+export function PocketHrSignIn() {
   return <main className="viewer-shell pocket-hr-auth">
     <section className="state-card" role="status">
       <h1>Pocket HR</h1>
