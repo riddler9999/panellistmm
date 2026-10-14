@@ -12,7 +12,8 @@ declare v_current integer; v_existing public.pocket_hr_approvals%rowtype; v_revi
 begin
   if length(trim(p_request_id)) = 0 or length(trim(p_request_id)) > 256
      or p_expected_revision < 0 or length(trim(p_content)) = 0
-     or length(p_content) > 50000 or p_approved_by_email !~ '^[^ @]+@[^ @]+[.][^ @]+  then raise exception 'invalid_approval_input'; end if;
+     or length(p_content) > 50000 or position('@' in p_approved_by_email) < 2
+  then raise exception 'invalid_approval_input'; end if;
   perform pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended(p_request_id, 8492));
   select coalesce(max(revision),0) into v_current from public.pocket_hr_approvals where request_id=p_request_id;
   if v_current <> p_expected_revision then
