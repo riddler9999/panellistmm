@@ -1,21 +1,9 @@
-import { randomBytes, scryptSync, timingSafeEqual, createHash } from 'node:crypto';
+import { randomBytes, createHash } from 'node:crypto';
 import { db, readPasscodeAccounts } from './pocketHrData.js';
 import type { Principal } from './consultationAccess.js';
 
-type Account = { id: string; email: string; role: 'Admin'|'User'; pin_hash: string; disabled_at: string|null; failed_attempts: number; locked_until: string|null };
 const digest = (token: string) => createHash('sha256').update(token).digest('hex');
 
-export function hashPasscode(pin: string): string {
- if (!/^\d{4}$/.test(pin)) throw new Error('invalid_passcode');
- const salt = randomBytes(16).toString('hex');
- return 'scrypt:' + salt + ':' + scryptSync(pin, salt, 32).toString('hex');
-}
-export function verifyPasscode(pin: string, stored: string): boolean {
- const [scheme, salt, hash] = stored.split(':');
- if (!/^\d{4}$/.test(pin) || scheme !== 'scrypt' || !/^[0-9a-f]{32}$/.test(salt ?? '') || !/^[0-9a-f]{64}$/.test(hash ?? '')) return false;
- const expected = Buffer.from(hash, 'hex');
- return timingSafeEqual(scryptSync(pin, salt, 32), expected);
-}
 export function sessionCookie(token: string, maxAge = 86400): string {
  return 'pocket_hr_session=' + token + '; Path=/; HttpOnly; Secure; SameSite=None; Max-Age=' + maxAge;
 }
@@ -26,16 +14,20 @@ export function cookieToken(headers: Record<string,string|string[]|undefined>): 
  const token = raw.match(/(?:^|;\s*)pocket_hr_session=([0-9a-f]{64})(?:;|$)/)?.[1];
  return token ?? null;
 }
-export async function authenticate(pin: string): Promise<string|null> {
+export async function authenticate(pin: string, source = 'unknown'): Promise<string|null> {
  if (!/^\d{4}$/.test(pin)) return null;
- // Fail closed: 4-digit PIN has only 10,000 possibilities. Throttle globally across functions.
- const permitted = await db<boolean>('rpc/pocket_hr_allow_login_attempt','POST',{p_email_digest:digest('pocket-hr-pin-only-global-v1')});
- if (permitted !== true) return null;
  // Google Sheets is the authoritative source for active PINs and roles.
  const entries = await readPasscodeAccounts();
+ const sourceKey = digest('source:' + source); 
+ const sourceAllowed = await db<boolean>('rpc/pocket_hr_allow_login_attempt', 'POST', {p_email_digest:sourceKey});
+ if (sourceAllowed !== true) return null;
  const matching = entries.filter(entry => entry.passcode === pin);
+ if (matching.length === 1) {
+  const accountAllowed = await db<boolean>('rpc/pocket_hr_allow_login_attempt', 'POST', {p_email_digest:digest('account:' + matching[0].email)});
+  if (accountAllowed !== true) return null;
+ }
  // Reject ambiguous PINs rather than choosing a user's account arbitrarily.
- if (matching.length !== 1) return null;
+ if (matching.length !== 1 || entries.filter(entry => entry.email === matching[0].email).length !== 1) return null;
  const identity = matching[0];
  if (identity.status !== 'Active' || !['Admin','User'].includes(identity.role)) return null;
  const token = randomBytes(32).toString('hex');
