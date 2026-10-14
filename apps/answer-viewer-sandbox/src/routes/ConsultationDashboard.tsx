@@ -5,11 +5,11 @@ import type { ConsultationTicket } from '../server/consultationAccess';
 const demoTickets: ConsultationTicket[] = [
  {ticketId:'DEMO-001',title:'Leave Policy Consultation',status:'Awaiting Review',history:[{type:'QUESTION',content:'Could you clarify the leave approval process?',round:1},{type:'ADVICE',content:'Review the policy and confirm the applicable approval steps.',round:1}]},
  {ticketId:'DEMO-002',title:'Employee Handbook Review',status:'Approved',history:[{type:'QUESTION',content:'Please review the employee handbook.',round:1}],finalAnswer:'The handbook review is complete.'},
- {ticketId:'DEMO-003',title:'Attendance Policy Update',status:'Editing',history:[{type:'QUESTION',content:'We need to update the attendance policy.',round:1}]},
+ {ticketId:'DEMO-003',title:'Attendance Policy Update',status:'ဖောင်ပို့ပြီး (Submitted)',history:[{type:'QUESTION',content:'We need to update the attendance policy.',round:1}]},
  {ticketId:'DEMO-004',title:'New Hire Onboarding',status:'Submitted',history:[]}
 ];
 const statusClass = (status: string) => status.toLowerCase().replace(/[^a-z]+/g, '-').replace(/^-|-$/g, '');
-const ticketIcons: Record<string, string> = { Submitted: '▤', 'Awaiting Review': '▧', Editing: '✎', Approved: '✓', Failed: '!', 'In Progress': '◷' };
+const ticketIcons: Record<string, string> = { Submitted: '▤', 'ဖောင်ပို့ပြီး (Submitted)': '▤', 'Awaiting Review': '▧', Approved: '✓', Failed: '!' };
 const ticketIcon = (status: string) => ticketIcons[status] ?? '▣';
 
 export function ConsultationDashboard() {
