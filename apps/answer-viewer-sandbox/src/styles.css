@@ -122,3 +122,15 @@
 @media(max-width:640px){.consultation-dashboard{padding:16px 14px 34px}.consult-list-heading{align-items:center}.consult-list-heading h1{font-size:1.25rem}.consult-toolbar input{background:#fff;padding:13px 15px}.consult-request{width:100%}.consult-request-copy{flex:1}.consult-detail-head{align-items:flex-start}.consult-detail-title{flex-basis:calc(100% - 65px)}.consult-detail-head>.consult-badge{margin-left:59px}.consult-detail-tabs{position:sticky;top:0;z-index:2}.consult-message{padding:14px}.consult-message p{padding:14px}.consult-timeline-heading{flex-wrap:wrap}}
 @media(max-width:360px){.consult-request-icon{width:40px;height:40px}.consult-request{gap:8px}.consult-request-copy strong{font-size:.8rem}.consult-chevron{display:none}.consult-detail-tabs button{font-size:.76rem}}
 @media(prefers-reduced-motion:reduce){.consult-request{transition:none}.consult-request:hover{transform:none}}
+
+
+/* Pocket HR passcode sign-in: explicit responsive form layout */
+.consult-welcome{width:100%;min-width:0}
+.consult-welcome .pocket-hr-pin-form{display:flex;flex-direction:column;align-items:stretch;gap:10px;width:100%;max-width:420px;min-width:0;text-align:left}
+.pocket-hr-pin-form>p:first-child{text-align:center;margin:0 0 12px}
+.pocket-hr-pin-form label{display:block;font-size:.9rem;font-weight:650;color:#27304b;margin-top:5px}
+.pocket-hr-pin-form input{display:block;width:100%;min-width:0;max-width:100%;height:48px;border:1px solid #d9dcea;border-radius:12px;padding:10px 14px;background:#fff;color:#20243d;font:inherit}
+.pocket-hr-pin-form .consult-new{display:block;width:100%;margin-top:12px;white-space:normal}
+.pocket-hr-pin-form [role=alert]{color:#b42318;text-align:left;font-size:.85rem}
+.consult-welcome .pocket-hr-preview{border:1px solid #e2d9fb;border-radius:12px;background:#f5f1ff;color:#5f28d7;font:inherit;font-weight:650;padding:12px 18px;cursor:pointer}
+@media(max-width:640px){.consult-welcome{padding:26px 20px;margin:32px auto;gap:16px}.consult-welcome .pocket-hr-pin-form{max-width:100%}.consult-welcome h1{font-size:1.65rem}}
