@@ -19,7 +19,6 @@ export function ConsultationDashboard() {
   const [demoMode, setDemoMode] = useState(false);
   const [session, setSession] = useState<{role:'Admin'|'User';tickets:ConsultationTicket[]}|null>(null);
   const [checking, setChecking] = useState(true);
-  const loginEmail = 'moehtetofficial1@gmail.com'; // Temporary admin-only login until Glide identity handoff is available.
   const [passcode, setPasscode] = useState('');
   const [loginError, setLoginError] = useState('');
   const [loggingIn, setLoggingIn] = useState(false);
