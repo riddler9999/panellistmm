@@ -96,3 +96,30 @@ export async function acknowledgeDelivery(requestId: string, revision: number): 
   });
   return response.ok;
 }
+
+/** Read approval/delivery proofs in two bounded queries rather than two queries per ticket.
+ * Caller must authorize and bound ticket IDs before invoking this function.
+ */
+export async function readProofs(requestIds: string[]): Promise<Map<string, { approval: ApprovalProof | null; delivery: DeliveryProof | null }>> {
+  const ids = [...new Set(requestIds.map(id => id.trim()).filter(Boolean))];
+  if (ids.length > 500) throw new Error('proof_batch_too_large');
+  const proofs = new Map<string, { approval: ApprovalProof | null; delivery: DeliveryProof | null }>();
+  if (ids.length === 0) return proofs;
+  const inFilter = ids.map(id => '"' + id.replace(/\\/g, '\\\\').replace(/"/g, '\\"') + '"').join(',');
+  const approvals = await db('pocket_hr_approvals?select=*&request_id=in.(' + query(inFilter) + ')&order=revision.desc&limit=500');
+  for (const a of approvals) {
+    if (!ids.includes(a.request_id) || proofs.has(a.request_id)) continue;
+    proofs.set(a.request_id, {
+      approval: { requestId: a.request_id, revision: a.revision, approvedContent: a.approved_content, approvedByAccountId: a.approved_by_account_id, approvedAt: a.approved_at },
+      delivery: null,
+    });
+  }
+  if (proofs.size === 0) return proofs;
+  const deliveries = await db('pocket_hr_deliveries?select=*&request_id=in.(' + query(inFilter) + ')&limit=500');
+  for (const d of deliveries) {
+    const proof = proofs.get(d.request_id);
+    if (!proof || proof.approval?.revision !== d.revision) continue;
+    proof.delivery = { requestId: d.request_id, revision: d.revision, result: d.result, deliveredAt: d.delivered_at };
+  }
+  return proofs;
+}
