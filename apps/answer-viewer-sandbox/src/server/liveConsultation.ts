@@ -20,8 +20,7 @@ export async function loadLiveConsultations(principal: Principal): Promise<Consu
     if (!ticket) return [];
     if (principal.role === 'Admin') ticket.revision = proofs.get(ticket.ticketId)?.approval?.revision ?? 0;
     // Sheet is the publication source of truth. Never release AI drafts.
-    if (String(row.Ticket_Status ?? '').trim() === 'Approved' &&
-        String(row.Review_Status ?? '').trim() === 'Approved') {
+    if (String(row.Ticket_Status ?? '').trim() === 'Approved') {
       const answer = String(row.Final_Answer ?? '').trim();
       if (answer) ticket.finalAnswer = answer;
     }
