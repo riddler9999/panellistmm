@@ -67,7 +67,7 @@ export function ConsultationDashboard() {
         <button type="button" className="consult-back" onClick={() => setSelected(null)} aria-label="Back to requests">‹</button>
         <section className="consult-detail-head">
           <span className={`consult-request-icon tone-${statusClass(active.status)}`} aria-hidden="true">{ticketIcon(active.status)}</span>
-          <div className="consult-detail-title"><small>{active.ticketId}</small><h1>{active.title}</h1></div><span className={`consult-badge tone-${statusClass(active.status)}`}>{active.status}</span>
+          <div className="consult-detail-title"><small>{active.ticketId}{active.createdAt ? ` · ${active.createdAt}` : ''}</small><h1>{active.title}</h1>{active.category && <small>{active.category}</small>}</div><span className={`consult-badge tone-${statusClass(active.status)}`}>{active.status}</span>
         </section>
         <nav className="consult-detail-tabs" aria-label="Request details">
           {(['Conversation', 'Details', 'Files'] as const).map(name =>
@@ -78,11 +78,12 @@ export function ConsultationDashboard() {
             ? <p className="consult-empty">No released conversation entries available.</p> : null}
           {role === 'Admin' && active.history.map((entry, index) =>
             <article className="consult-message" key={index}><div className="consult-message-author"><span className="consult-avatar">{entry.type === 'QUESTION' ? 'U' : 'C'}</span><strong>{entry.type === 'QUESTION' ? 'User' : 'Consultant'}</strong><small>Round {entry.round}</small></div><p>{entry.content}</p></article>)}
+          {active.description && <article className="consult-message"><div className="consult-message-author"><span className="consult-avatar">U</span><strong>Request</strong></div><p>{active.description}</p></article>}
           {active.approvedQuestion && <article className="consult-message"><strong>Consultant · Clarification</strong><p>{active.approvedQuestion}</p></article>}
           {active.finalAnswer && <article className="consult-message consult-final"><strong>Final Answer</strong><p>{active.finalAnswer}</p></article>}
         </section>}
-        {tab === 'Details' && <section className="state-card consult-details"><h2>Request Details</h2><dl><div><dt>Request ID</dt><dd>{active.ticketId}</dd></div><div><dt>Subject</dt><dd>{active.title}</dd></div><div><dt>Status</dt><dd><span className={`consult-badge tone-${statusClass(active.status)}`}>{active.status}</span></dd></div></dl></section>}
-        {tab === 'Files' && <section className="state-card consult-files"><div className="consult-file-icon">▤</div><h2>No files available</h2><p>Files will appear here when authorized attachments are provided by the backend.</p></section>}
+        {tab === 'Details' && <section className="state-card consult-details"><h2>Request Details</h2><dl><div><dt>Request ID</dt><dd>{active.ticketId}</dd></div><div><dt>Subject</dt><dd>{active.title}</dd></div><div><dt>Status</dt><dd><span className={`consult-badge tone-${statusClass(active.status)}`}>{active.status}</span></dd></div>{active.category && <div><dt>Category</dt><dd>{active.category}</dd></div>}{active.createdAt && <div><dt>Created</dt><dd>{active.createdAt}</dd></div>}{active.description && <div><dt>Description</dt><dd>{active.description}</dd></div>}{role === 'Admin' && active.reviewStatus && <div><dt>Review Status</dt><dd>{active.reviewStatus}</dd></div>}{role === 'Admin' && active.processingStatus && <div><dt>Processing Status</dt><dd>{active.processingStatus}</dd></div>}{role === 'Admin' && active.artifact?.status && <div><dt>Artifact Status</dt><dd>{active.artifact.status}</dd></div></dl></section>}
+        {tab === 'Files' && <section className="state-card consult-files"><div className="consult-file-icon">▤</div>{role === 'Admin' && active.artifact?.title ? <><h2>{active.artifact.title}</h2><p>{[active.artifact.type, active.artifact.format, active.artifact.status].filter(Boolean).join(' · ')}</p></> : <><h2>No files available</h2><p>Only verified, authorized attachments will appear here.</p></>}</section>}
       </> : <>
         <div className="consult-list-heading"><h1>{role === 'Admin' ? 'All Requests' : 'My Requests'}</h1><p>{tickets.length} requests</p></div>
         <div className="consult-toolbar">
