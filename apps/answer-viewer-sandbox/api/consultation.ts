@@ -1,5 +1,5 @@
-import { authenticatedPrincipal } from '../src/server/passcodeAuth';
-import { loadLiveConsultations } from '../src/server/liveConsultation';
+import { authenticatedPrincipal } from '../src/server/passcodeAuth.js';
+import { loadLiveConsultations } from '../src/server/liveConsultation.js';
 type Req = { method?: string; headers: Record<string,string|string[]|undefined>; body?: unknown };
 type Res = { status(n:number):Res; setHeader(k:string,v:string):void; json(v:unknown):void };
 export default async function handler(req:Req,res:Res) {
