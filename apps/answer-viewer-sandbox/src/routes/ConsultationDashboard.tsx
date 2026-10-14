@@ -4,6 +4,8 @@ import { PocketHrSignIn } from './PocketHrSignIn';
 
 type DashboardResponse = { role: 'Admin' | 'User'; tickets: ConsultationTicket[] };
 const statuses = ['All', 'Submitted', 'Awaiting Review', 'Editing', 'Approved', 'Failed'] as const;
+const statusClass = (status: string) => status.toLowerCase().replace(/[^a-z]+/g, '-').replace(/^-|-$/g, '');
+const ticketIcon = (status: string) => ({Submitted:'▤', 'Awaiting Review':'▧', Editing:'✎', Approved:'✓', Failed:'!', 'In Progress':'◷'}[status] ?? '▣');
 
 export function ConsultationDashboard() {
   const [data, setData] = useState<DashboardResponse | null>(null);
@@ -48,17 +50,18 @@ export function ConsultationDashboard() {
 
   return <main className="viewer-shell consultation-dashboard">
     {data && data.role !== sessionRole ? <section className="state-card" role="alert">Access Denied</section> : <>
-    {data && <header className="consult-detail-head"><h1>{data.role === 'Admin' ? 'All Requests' : 'My Requests'}</h1></header>}
+    
     {error ? <section className="state-card" role="alert"><strong>Access Denied</strong><p>အကောင့်ကို Backend က အတည်မပြုနိုင်သေးပါ။ လုံခြုံရေးအတွက် Request တွေကို မပြထားပါ။</p></section>
       : !data ? <section className="state-card" role="status">Loading consultations…</section>
       : active ? <>
-        <button type="button" className="consult-back" onClick={() => setSelected(null)}>← Back to requests</button>
+        <button type="button" className="consult-back" onClick={() => setSelected(null)} aria-label="Back to requests">‹</button>
         <section className="consult-detail-head">
-          <small>{active.ticketId}</small><h1>{active.title}</h1><span className="consult-badge">{active.status}</span>
+          <span className={`consult-request-icon tone-${statusClass(active.status)}`} aria-hidden="true">{ticketIcon(active.status)}</span>
+          <div className="consult-detail-title"><small>{active.ticketId}</small><h1>{active.title}</h1></div><span className={`consult-badge tone-${statusClass(active.status)}`}>{active.status}</span>
         </section>
         <nav className="consult-detail-tabs" aria-label="Request details">
           {(['Conversation', 'Details', 'Files'] as const).map(name =>
-            <button key={name} type="button" className={tab === name ? 'active' : ''} aria-current={tab === name ? 'page' : undefined} onClick={() => setTab(name)}>{name}</button>)}
+            <button key={name} type="button" className={tab === name ? 'active' : ''} aria-current={tab === name ? 'page' : undefined} onClick={() => setTab(name)}><span aria-hidden="true">{name === 'Conversation' ? '☏' : name === 'Details' ? '▤' : '♧'}</span> {name}</button>)}
         </nav>
         {tab === 'Conversation' && <section className="consult-timeline">
           {active.history.length === 0 && !active.approvedQuestion && !active.finalAnswer
@@ -80,9 +83,9 @@ export function ConsultationDashboard() {
         </div>
         {visible.length === 0 ? <section className="state-card">Request မရှိသေးပါ။</section> :
           <div className="consult-list">{visible.map(ticket => <button type="button" className="consult-request" key={ticket.ticketId} onClick={() => { setSelected(ticket.ticketId); setTab('Conversation'); }}>
-            <span className="consult-request-icon" aria-hidden="true">▤</span>
+            <span className={`consult-request-icon tone-${statusClass(ticket.status)}`} aria-hidden="true">{ticketIcon(ticket.status)}</span>
             <span className="consult-request-copy"><small>{ticket.ticketId}</small><strong>{ticket.title}</strong></span>
-            <span className="consult-badge">{ticket.status}</span><span aria-hidden="true">›</span>
+            <span className={`consult-badge tone-${statusClass(ticket.status)}`}>{ticket.status}</span><span className="consult-chevron" aria-hidden="true">›</span>
           </button>)}</div>}
       </>}
     </>}
