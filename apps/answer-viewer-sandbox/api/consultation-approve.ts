@@ -14,7 +14,7 @@ export default async function handler(req:Req,res:Res) {
  const host=req.headers.host;
  if(typeof origin!=='string'||typeof host!=='string'||!origin.startsWith('https://')||
     (()=>{try{return new URL(origin).host!==host;}catch{return true;}})())
-   return res.status(403).json({error:'invalid_origin'});
+   return res.status(403).json({error:'access_denied'});
  try {
   const principal=await authenticatedPrincipal(req.headers);
   if(principal?.role!=='Admin') return res.status(403).json({error:'access_denied'});
@@ -39,9 +39,9 @@ export default async function handler(req:Req,res:Res) {
   // until both the immutable snapshot and durable delivery acknowledgement exist.
   await writeTicketPublication(input.requestId,{C:'Delivery Pending',Y:'Delivery Pending'});
   await writeTicketPublication(input.requestId,{H:content});
-  if(!await acknowledgeDelivery(input.requestId,revision))
-    return res.status(503).json({error:'delivery_pending',revision});
   await writeTicketPublication(input.requestId,{C:'Approved',Y:'Approved'});
+  if(!await acknowledgeDelivery(input.requestId,revision))
+    return res.status(503).json({error:'delivery_ack_pending',revision});
   return res.status(200).json({ok:true,revision,state:'published'});
  } catch {
   return res.status(503).json({error:'approval_unavailable'});
