@@ -73,11 +73,11 @@ export function ConsultationDashboard() {
       <label htmlFor="pocket-hr-email">Account Email</label>
       <input id="pocket-hr-email" type="email" autoComplete="username" required value={loginEmail} onChange={event=>setLoginEmail(event.target.value)}/>
       <label htmlFor="pocket-hr-pin">4-Digit Passcode</label>
-      <input id="pocket-hr-pin" type="password" inputMode="numeric" pattern="[0-9]{4}" maxLength={4} autoComplete="current-password" required value={passcode} onChange={event=>setPasscode(event.target.value.replace(/\\D/g,'').slice(0,4))}/>
+      <input id="pocket-hr-pin" type="password" inputMode="numeric" pattern="[0-9]{4}" maxLength={4} autoComplete="current-password" required value={passcode} onChange={event=>setPasscode(event.target.value.replace(/\D/g,'').slice(0,4))}/>
       {loginError && <p role="alert">{loginError}</p>}
       <button type="submit" className="consult-new" disabled={loggingIn}>{loggingIn?'Signing in...':'Open Dashboard'}</button>
     </form>}
-    <button type="button" onClick={()=>setDemoMode(true)}>Preview Reference UI</button><small>Preview uses sample data only.</small>
+    <button type="button" className="pocket-hr-preview" onClick={()=>setDemoMode(true)}>Preview Reference UI</button><small>Preview uses sample data only.</small>
     </section></main>;
 
   return <main className="viewer-shell consultation-dashboard">
