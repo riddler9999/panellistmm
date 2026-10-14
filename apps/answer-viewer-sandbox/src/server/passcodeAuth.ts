@@ -56,5 +56,5 @@ export async function authenticatedPrincipal(headers: Record<string,string|strin
 }
 export async function revokeSession(headers: Record<string,string|string[]|undefined>): Promise<void> {
  const token = cookieToken(headers);
- if (token) await db('pocket_hr_sessions?token_hash=eq.' + digest(token), 'DELETE');
+ if (token) await db('pocket_hr_sessions?token_digest=eq.' + digest(token), 'PATCH', { revoked_at: new Date().toISOString() });
 }
