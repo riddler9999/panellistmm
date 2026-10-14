@@ -1,6 +1,6 @@
 import type { TicketRow } from './ticketRow';
 import type { ApprovalProof, DeliveryProof } from './deliveryPolicy';
-import { createSign } from 'node:crypto';
+import { createSign, randomUUID } from 'node:crypto';
 
 const config = () => {
   const url = process.env.SUPABASE_URL;
@@ -197,7 +197,7 @@ export async function writePasscodeAccount(action:'create'|'reset'|'disable', em
 export async function createSheetRequest(ownerEmail:string,title:string,category:string,description:string):Promise<string>{
  const id=process.env.POCKET_HR_SHEET_ID;
  if(!id) throw new Error('sheet_not_configured');
- const requestId=crypto.randomUUID();
+ const requestId=randomUUID();
  const rows=await readTickets();
  if(rows.some(row=>row['Row ID']===requestId)) throw new Error('request_id_collision');
  const values=Array(34).fill('');
