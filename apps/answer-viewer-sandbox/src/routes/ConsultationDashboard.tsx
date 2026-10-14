@@ -1,8 +1,7 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import type { ConsultationTicket } from '../server/consultationAccess';
 
 
-type DashboardResponse = { role: 'Admin' | 'User'; tickets: ConsultationTicket[] };
 const demoTickets: ConsultationTicket[] = [
  {ticketId:'DEMO-001',title:'Leave Policy Consultation',status:'Awaiting Review',history:[{type:'QUESTION',content:'Could you clarify the leave approval process?',round:1},{type:'ADVICE',content:'Review the policy and confirm the applicable approval steps.',round:1}]},
  {ticketId:'DEMO-002',title:'Employee Handbook Review',status:'Approved',history:[{type:'QUESTION',content:'Please review the employee handbook.',round:1}],finalAnswer:'The handbook review is complete.'},
@@ -14,38 +13,14 @@ const ticketIcons: Record<string, string> = { Submitted: '▤', 'Awaiting Review
 const ticketIcon = (status: string) => ticketIcons[status] ?? '▣';
 
 export function ConsultationDashboard() {
-  const [data, setData] = useState<DashboardResponse | null>(null);
-  const [error, setError] = useState(false);
-  const [authenticated, setAuthenticated] = useState(false);
-  const [sessionRole, setSessionRole] = useState<'Admin' | 'User' | null>(null);
-  const [loadingSession, setLoadingSession] = useState(true);
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<string>('All');
   const [selected, setSelected] = useState<string | null>(null);
   const [demoMode, setDemoMode] = useState(false);
   const [tab, setTab] = useState<'Conversation' | 'Details' | 'Files'>('Conversation');
 
-  useEffect(() => {
-    const controller = new AbortController();
-    fetch('/api/pocket-hr-session', { credentials: 'include', cache: 'no-store', signal: controller.signal })
-      .then(async res => { if (!res.ok) throw new Error('session unavailable'); const session = await res.json() as { role?: unknown }; if (session.role !== 'Admin' && session.role !== 'User') throw new Error('invalid role'); setSessionRole(session.role); setAuthenticated(true); })
-      .catch(() => { if (!controller.signal.aborted) { setAuthenticated(false); setSessionRole(null); } })
-      .finally(() => { if (!controller.signal.aborted) setLoadingSession(false); });
-    return () => controller.abort();
-  }, []);
-
-  useEffect(() => {
-    if (!authenticated) return;
-    const controller = new AbortController();
-    fetch('/api/consultation', { credentials: 'include', cache: 'no-store', signal: controller.signal })
-      .then(async response => { if (!response.ok) throw new Error('access denied'); return response.json() as Promise<DashboardResponse>; })
-      .then(setData).catch(() => { if (!controller.signal.aborted) setError(true); });
-    return () => controller.abort();
-  }, [authenticated]);
-
-
-  const tickets = demoMode ? demoTickets : (data?.tickets ?? []);
-  const role = demoMode ? 'Admin' : data?.role;
+  const tickets = demoTickets;
+  const role = 'Admin';
   const visible = useMemo(() => tickets.filter(ticket =>
     (filter === 'All' || ticket.status === filter) &&
     [ticket.ticketId, ticket.title].some(value => value.toLocaleLowerCase().includes(search.trim().toLocaleLowerCase()))
@@ -54,16 +29,13 @@ export function ConsultationDashboard() {
   // Derive filter labels from actual ticket statuses; never invent workflow states.
   const filters = ['All', ...Array.from(new Set(tickets.map(ticket => ticket.status).filter(Boolean)))];
 
-  if (loadingSession) return <main className="viewer-shell" role="status">Checking session…</main>;
-  if (!authenticated && !demoMode) return <main className="viewer-shell consultation-dashboard"><section className="consult-welcome"><div className="consult-welcome-mark">P</div><h1>Pocket HR</h1><p>Glide မှာ Login ဝင်ပြီး သင့် Requests ကို ကြည့်ပါ။ Web App က Glide Identity ကို အတည်မပြုနိုင်သေးတဲ့အတွက် Private Data ကို မပြထားပါ။</p><button type="button" className="consult-new" onClick={() => setDemoMode(true)}>Preview Reference UI</button><small>Design preview only · Sample data · No real HR records</small></section></main>;
+  if (!demoMode) return <main className="viewer-shell consultation-dashboard"><section className="consult-welcome"><div className="consult-welcome-mark">P</div><h1>Pocket HR</h1><p>Glide မှာ Login ဝင်ပြီး သင့် Requests ကို ကြည့်ပါ။ Web App က Glide Identity ကို အတည်မပြုနိုင်သေးတဲ့အတွက် Private Data ကို မပြထားပါ။</p><button type="button" className="consult-new" onClick={() => setDemoMode(true)}>Preview Reference UI</button><small>Design preview only · Sample data · No real HR records</small></section></main>;
 
   return <main className="viewer-shell consultation-dashboard">
-    {!demoMode && data && data.role !== sessionRole ? <section className="state-card" role="alert">Access Denied</section> : <>
+    <>
     
     {demoMode && <div className="consult-preview-banner"><span>DESIGN PREVIEW · SAMPLE DATA</span><button type="button" onClick={() => {setDemoMode(false);setSelected(null);}}>Exit Preview</button></div>}
-    {error && !demoMode ? <section className="state-card" role="alert"><strong>Access Denied</strong><p>အကောင့်ကို Backend က အတည်မပြုနိုင်သေးပါ။ လုံခြုံရေးအတွက် Request တွေကို မပြထားပါ။</p></section>
-      : !data && !demoMode ? <section className="state-card" role="status">Loading consultations…</section>
-      : active ? <>
+    {active ? <>
         <button type="button" className="consult-back" onClick={() => setSelected(null)} aria-label="Back to requests">‹</button>
         <section className="consult-detail-head">
           <span className={`consult-request-icon tone-${statusClass(active.status)}`} aria-hidden="true">{ticketIcon(active.status)}</span>
