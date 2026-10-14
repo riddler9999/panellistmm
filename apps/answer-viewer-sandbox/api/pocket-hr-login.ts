@@ -11,5 +11,10 @@ export default async function handler(req:Req,res:Res) {
   if(!token) return res.status(401).json({error:'invalid_credentials'});
   res.setHeader('Set-Cookie',sessionCookie(token));
   return res.status(200).json({ok:true});
- } catch { return res.status(503).json({error:'auth_unavailable'}); }
+ } catch (error) {
+  // Keep upstream credentials and user data out of public responses and logs.
+  const code = error instanceof Error && /^[a-z_]+$/.test(error.message) ? error.message : 'unexpected_failure';
+  console.error('pocket_hr_login_failed', { code });
+  return res.status(503).json({error:'auth_unavailable'});
+ }
 }
