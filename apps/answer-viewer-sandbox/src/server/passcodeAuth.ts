@@ -17,10 +17,10 @@ export function cookieToken(headers: Record<string,string|string[]|undefined>): 
 export async function authenticate(pin: string, source = 'unknown'): Promise<string|null> {
  if (!/^\d{4}$/.test(pin)) return null;
  // Google Sheets is the authoritative source for active PINs and roles.
- const entries = await readPasscodeAccounts();
- const sourceKey = digest('source:' + source); 
- const sourceAllowed = await db<boolean>('rpc/pocket_hr_allow_login_attempt', 'POST', {p_email_digest:sourceKey});
+ const sourceKey = digest('source:' + source);
+ const sourceAllowed = await db<boolean>('rpc/pocket_hr_allow_scoped_login_attempt', 'POST', {p_digest:sourceKey,p_max_attempts:90});
  if (sourceAllowed !== true) return null;
+ const entries = await readPasscodeAccounts();
  const matching = entries.filter(entry => entry.passcode === pin);
  if (matching.length === 1) {
   const accountAllowed = await db<boolean>('rpc/pocket_hr_allow_scoped_login_attempt', 'POST', {p_digest:digest('account:' + matching[0].email),p_max_attempts:9});
