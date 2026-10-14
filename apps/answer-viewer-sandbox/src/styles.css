@@ -32,3 +32,64 @@
 .consult-details p{display:flex;gap:14px;flex-wrap:wrap}
 .consult-empty{color:#697591}
 @media(max-width:600px){.consult-toolbar{gap:9px;flex-wrap:wrap}.consult-toolbar input{flex-basis:100%}.consult-new{width:100%}.consult-request{padding:12px;gap:10px}.consult-request-icon{width:48px;height:48px;font-size:24px}.consult-request-copy strong{font-size:.9rem}.consult-badge{padding:8px;font-size:.72rem}.consult-detail-head{padding:16px}}
+
+
+/* Pocket HR reference-aligned UI; scoped so the Answer Viewer is unchanged. */
+.consultation-dashboard{max-width:1180px;padding:28px 28px 60px;background:#fff;color:#171a2c}
+.consult-toolbar{margin:8px 0 24px;gap:24px}
+.consult-toolbar input{min-height:68px;border:1px solid #e5e7ef;border-radius:19px;padding:18px 25px 18px 54px;font-size:1rem;background:linear-gradient(90deg,#fff,#fcfcff);box-shadow:0 2px 10px #171a2c05}
+.consult-new{min-height:68px;border-radius:15px;background:#6023f2;font-weight:650;box-shadow:0 7px 16px #6327f01c}
+.consult-new:disabled{opacity:1;background:#6125ed9c;cursor:not-allowed}
+.consult-filters{gap:12px;margin-bottom:6px;padding-bottom:18px;scrollbar-width:thin}
+.consult-filters button{background:#f6f6fa;color:#56617d;padding:14px 20px;border-radius:15px;font-size:.94rem}
+.consult-filters button.active{background:#e9e0ff;color:#5723d8}
+.consult-list{gap:13px}
+.consult-request{min-height:116px;padding:18px 23px;border-color:#e9eaf1;border-radius:21px;gap:21px;box-shadow:0 3px 13px #26325b05}
+.consult-request-icon{width:72px;height:72px;font-size:35px;font-weight:750;border-radius:17px;background:#f0eaff;color:#6225e8}
+.consult-request-copy{gap:6px}
+.consult-request-copy small,.consult-detail-head small{font-size:.94rem;color:#64708c}
+.consult-request-copy strong{font-size:1.13rem;font-weight:700;line-height:1.5}
+.consult-badge{font-weight:550;padding:12px 17px;min-width:120px;text-align:center}
+.consult-chevron{font-size:2rem;color:#64708c;margin-left:4px;line-height:1}
+.tone-submitted{background:#e5f3ff;color:#0082dc}
+.tone-awaiting-review{background:#fff3df;color:#dc8a0b}
+.tone-editing,.tone-in-progress{background:#eee6ff;color:#6527e4}
+.tone-approved{background:#e0faea;color:#08a850}
+.tone-failed{background:#ffe8ec;color:#e32b4b}
+.consult-request-icon.tone-submitted{background:#e5f3ff;color:#168bff}
+.consult-request-icon.tone-awaiting-review{background:#e5f3ff;color:#168bff}
+.consult-request-icon.tone-editing,.consult-request-icon.tone-in-progress{background:#f0e9ff;color:#6327ee}
+.consult-request-icon.tone-approved{background:#e0faea;color:#08b75a}
+.consult-request-icon.tone-failed{background:#ffe8ec;color:#f0234a}
+.consult-back{font-size:2.4rem;line-height:1;padding:0 12px 12px 0;color:#56617d}
+.consult-detail-head{margin:0 0 12px;padding:22px 24px;gap:22px;flex-wrap:nowrap;border-radius:20px}
+.consult-detail-title{min-width:0;flex:1}
+.consult-detail-title h1{margin:4px 0 0;font-size:1.35rem;line-height:1.5}
+.consult-detail-tabs{background:#f6f7fb;border-radius:17px;overflow:hidden;border:0;gap:0;margin:0 0 24px}
+.consult-detail-tabs button{padding:18px 10px;font-size:1.02rem;border-bottom:4px solid transparent}
+.consult-detail-tabs button.active{background:#fff;color:#6024e8;border-color:#6024e8}
+.consult-detail-tabs button span{margin-right:7px}
+.consult-timeline{gap:18px}
+.consult-message{border-color:#e9eaf2;border-radius:18px;background:#fff}
+.consult-message p{background:#f1edff;line-height:1.9}
+.consult-final{background:#eafbf1}
+.consult-final p{background:#fff}
+@media(max-width:640px){
+ .consultation-dashboard{padding:14px 12px 32px}
+ .consult-toolbar{gap:10px;margin:4px 0 14px}
+ .consult-toolbar input{min-height:54px;padding:12px 16px;flex-basis:100%;font-size:.87rem}
+ .consult-new{min-height:48px;width:100%;font-size:.9rem}
+ .consult-filters{gap:8px;margin-bottom:2px}
+ .consult-filters button{padding:11px 13px;font-size:.82rem}
+ .consult-request{min-height:90px;padding:12px;gap:11px;border-radius:17px}
+ .consult-request-icon{width:49px;height:49px;font-size:24px;border-radius:12px}
+ .consult-request-copy small{font-size:.72rem}
+ .consult-request-copy strong{font-size:.86rem}
+ .consult-badge{min-width:0;font-size:.7rem;padding:8px 9px;border-radius:10px}
+ .consult-chevron{font-size:1.5rem;margin-left:0}
+ .consult-detail-head{padding:14px;gap:10px;flex-wrap:wrap}
+ .consult-detail-title h1{font-size:1rem}
+ .consult-detail-tabs button{font-size:.83rem;padding:13px 4px}
+ .consult-detail-tabs button span{margin-right:3px}
+}
+@media(max-width:380px){.consult-request{gap:7px}.consult-request-icon{width:42px;height:42px}.consult-badge{font-size:.64rem;padding:7px}.consult-chevron{font-size:1.2rem}}
