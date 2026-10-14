@@ -4,7 +4,7 @@ import type { TicketRow } from './ticketRow';
 const users = [{ email: 'a@example.com', role: 'User' },{ email: 'b@example.com', role: 'User' },{ email: 'admin@example.com', role: 'Admin' },{ email: 'assistant@example.com', role: 'Assistant' }];
 const tickets: TicketRow[] = [
   { 'Row ID': 'a', Owner_Email: 'a@example.com', Ticket_Title: 'A', Ticket_Status: 'Awaiting Review', AI_Answer: 'SECRET DRAFT' },
-  { 'Row ID': 'b', Owner_Email: 'b@example.com', Ticket_Title: 'B', Ticket_Status: 'Delivered', Final_Answer: 'PUBLIC APPROVED', Approval_Status: 'Approved' },
+  { 'Row ID': 'b', Owner_Email: 'b@example.com', Ticket_Title: 'B', Ticket_Status: 'Approved', Final_Answer: 'UNRELEASED FINAL', Review_Status: 'Approved' },
 ];
 describe('consultation access boundary', () => {
   it('requires verified identity, never editable email or role alone', () => {
@@ -27,7 +27,7 @@ describe('consultation access boundary', () => {
   });
   it('never exposes unapproved final advice, even with delivered status', () => {
     const a = resolvePrincipal({email:'a@example.com',verified:true},users)!;
-    expect(projectConsultationTicket(a,{...tickets[0],Ticket_Status:'Delivered',Final_Answer:'UNAPPROVED'})).not.toHaveProperty('finalAnswer');
+    expect(projectConsultationTicket(a,{...tickets[0],Ticket_Status:'Approved',Final_Answer:'UNAPPROVED'})).not.toHaveProperty('finalAnswer');
   });
   it('withholds user-facing answers until separate delivery proof exists', () => {
     const user = resolvePrincipal({email:'b@example.com',verified:true},users)!;
@@ -38,6 +38,17 @@ describe('consultation access boundary', () => {
     expect(response).not.toHaveProperty('finalAnswer');
     expect(JSON.stringify(response)).not.toContain('INTERNAL FINAL');
     expect(JSON.stringify(response)).not.toContain('INTERNAL QUESTION');
+  });
+  it('preserves observed raw Sheet statuses without synthesizing a delivery status', () => {
+    const admin = resolvePrincipal({email:'admin@example.com',verified:true},users)!;
+    const statuses = ['Approved','Awaiting Review','ဖောင်ပို့ပြီး (Submitted)','Submitted','Failed',''];
+    const rows = statuses.map((status,index) => ({ 'Row ID': 'r-' + index, Owner_Email: 'a@example.com', Ticket_Status: status }));
+    expect(projectTicketList(admin, rows).map(row => row.status)).toEqual(statuses);
+  });
+  it('rejects spoofed admin roles and case-insensitively isolates owners', () => {
+    expect(resolvePrincipal({email:'a@example.com',verified:true,role:'Admin'} as any,users)).toEqual({email:'a@example.com',role:'User'});
+    const user = resolvePrincipal({email:'A@EXAMPLE.COM',verified:true},users)!;
+    expect(projectTicketList(user,[{'Row ID':'case',Owner_Email:'A@example.com'}])).toHaveLength(1);
   });
   it('does not mistake missing owner for public data', () => {
     const a = resolvePrincipal({email:'a@example.com',verified:true},users)!;
