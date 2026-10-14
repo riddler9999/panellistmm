@@ -39,9 +39,9 @@ export default async function handler(req:Req,res:Res) {
   // until both the immutable snapshot and durable delivery acknowledgement exist.
   await writeTicketPublication(input.requestId,{C:'Delivery Pending',Y:'Delivery Pending'});
   await writeTicketPublication(input.requestId,{H:content});
-  await writeTicketPublication(input.requestId,{C:'Approved',Y:'Approved'});
   if(!await acknowledgeDelivery(input.requestId,revision))
     return res.status(503).json({error:'delivery_ack_pending',revision});
+  await writeTicketPublication(input.requestId,{C:'Approved',Y:'Approved'});
   return res.status(200).json({ok:true,revision,state:'published'});
  } catch {
   return res.status(503).json({error:'approval_unavailable'});
