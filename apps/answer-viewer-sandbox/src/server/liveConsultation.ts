@@ -1,6 +1,6 @@
-import { canAccessTicket, projectConsultationTicket, type Principal, type ConsultationTicket } from './consultationAccess';
-import { releasedAnswer } from './deliveryPolicy';
-import { readTickets, readProofs } from './pocketHrData';
+import { canAccessTicket, projectConsultationTicket, type Principal, type ConsultationTicket } from './consultationAccess.js';
+import { releasedAnswer } from './deliveryPolicy.js';
+import { readTickets, readProofs } from './pocketHrData.js';
 
 /** Server-only live data assembler. Caller MUST authenticate principal independently of URL/email. */
 export async function loadLiveConsultations(principal: Principal): Promise<ConsultationTicket[]> {
