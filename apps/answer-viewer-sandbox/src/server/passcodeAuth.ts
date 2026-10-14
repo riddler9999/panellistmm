@@ -1,6 +1,6 @@
 import { randomBytes, scryptSync, timingSafeEqual, createHash } from 'node:crypto';
-import { db } from './pocketHrData';
-import type { Principal } from './consultationAccess';
+import { db } from './pocketHrData.js';
+import type { Principal } from './consultationAccess.js';
 
 type Account = { id: string; email: string; role: 'Admin'|'User'; pin_hash: string; disabled_at: string|null; failed_attempts: number; locked_until: string|null };
 const digest = (token: string) => createHash('sha256').update(token).digest('hex');
