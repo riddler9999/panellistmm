@@ -1,4 +1,3 @@
-import { randomUUID } from 'node:crypto';
 import { authenticatedPrincipal, hashPasscode } from '../src/server/passcodeAuth';
 import { db } from '../src/server/pocketHrData';
 
@@ -8,6 +7,9 @@ type Account = {id:string;email:string;role:'Admin'|'User';disabled_at:string|nu
 export default async function handler(req:Req,res:Res) {
  res.setHeader('Cache-Control','private, no-store');
  if(req.method!=='POST') return res.status(405).json({error:'method_not_allowed'});
+ const origin=req.headers.origin;
+ const host=req.headers.host;
+ if(typeof origin!=='string'||typeof host!=='string'||!/^https:\/\//.test(origin)||new URL(origin).host!==host) return res.status(403).json({error:'invalid_origin'});
  try {
   const principal=await authenticatedPrincipal(req.headers);
   if(principal?.role!=='Admin') return res.status(403).json({error:'access_denied'});
@@ -20,11 +22,11 @@ export default async function handler(req:Req,res:Res) {
   if(action==='create') {
    if(existing.length) return res.status(409).json({error:'account_exists'});
    if(b.role!=='User'&&b.role!=='Admin') return res.status(400).json({error:'invalid_role'});
-   const inserted=await db<Account[]>('pocket_hr_accounts','POST',{
-    identity_provider:'verified_admin_provisioning',external_subject:randomUUID(),
-    email,role:b.role,pin_hash:hashPasscode(b.passcode as string),pin_set_at:new Date().toISOString()
+   if(typeof b.verifiedAuthUserId!=='string'||!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(b.verifiedAuthUserId)) return res.status(400).json({error:'verified_auth_user_required'});
+   await db('rpc/pocket_hr_provision_verified_account','POST',{
+    p_subject:b.verifiedAuthUserId,p_email:email,p_role:b.role,p_pin_hash:hashPasscode(b.passcode as string)
    });
-   return res.status(201).json({email:inserted[0]?.email,role:inserted[0]?.role});
+   return res.status(201).json({email,role:b.role});
   }
   if(existing.length!==1) return res.status(404).json({error:'account_not_found'});
   if(action==='disable') {
