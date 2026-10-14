@@ -15,7 +15,7 @@ function setup(rows: string[][]) {
  const calls: string[] = [];
  vi.stubGlobal('fetch',vi.fn(async (url:string, options?:{body?:string}) => {
   calls.push(url);
-  if(url.includes('/rpc/pocket_hr_allow_login_attempt')) return {ok:true,json:async()=>true};
+  if(url.includes('/rpc/pocket_hr_allow_scoped_login_attempt')) return {ok:true,json:async()=>true};
   if(url.includes('oauth2.googleapis.com')) return {ok:true,json:async()=>({access_token:'test'})};
   if(url.includes('sheets.googleapis.com')) return {ok:true,json:async()=>({values:[['Email','Role','Passcode','Status'],...rows]})};
   if(url.includes('/pocket_hr_sessions') && options?.body && !url.includes('token_digest=eq.')) {
