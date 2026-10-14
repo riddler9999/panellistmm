@@ -7,7 +7,14 @@ export async function loadLiveConsultations(principal: Principal): Promise<Consu
     throw new Error('verified_principal_required');
   }
   const rows = (await readTickets()).filter(row => canAccessTicket(principal, row));
-  const proofs = principal.role === 'Admin' ? await readProofs(rows.map(row => String(row['Row ID'] ?? '').trim())) : new Map();
+  const proofs: Awaited<ReturnType<typeof readProofs>> = new Map();
+  if (principal.role === 'Admin') {
+    const ids = rows.map(row => String(row['Row ID'] ?? '').trim());
+    for (let i = 0; i < ids.length; i += 200) {
+      const batch = await readProofs(ids.slice(i,i+200));
+      for (const [id, proof] of batch) proofs.set(id, proof);
+    }
+  }
   return rows.flatMap(row => {
     const ticket = projectConsultationTicket(principal, row);
     if (!ticket) return [];
