@@ -57,7 +57,7 @@ export function ConsultationDashboard() {
   const [actionDraft, setActionDraft] = useState('');
   const [actionMode, setActionMode] = useState<'approve' | 'edit' | 'request_clarification' | 'reject' | null>(null);
 
-  const tickets = demoMode ? demoTickets : (session?.tickets ?? []);
+  const tickets = useMemo(() => demoMode ? demoTickets : (session?.tickets ?? []), [demoMode, session]);
   const role = demoMode ? 'Admin' : (session?.role ?? 'User');
   const visible = useMemo(() => tickets.filter(ticket =>
     (filter === 'All' || ticket.status === filter) &&
