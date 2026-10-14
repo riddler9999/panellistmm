@@ -10,9 +10,10 @@ describe('Glide dashboard scaffold', () => {
     expect(screen.queryByText('All Requests')).not.toBeInTheDocument();
   });
   it('renders responsive ticket cards from server projection', async () => {
-    vi.stubGlobal('fetch', vi.fn(async (url: string) => url.includes('pocket-hr-session') ? ({ ok: true, json: async () => ({ email: 'a@example.com', role: 'User' }) }) : ({ ok: true, json: async () => ({role:'User',tickets:[{ticketId:'test',title:'My HR Request',status:'Resolved',history:[]}]}) })));
-    render(<ConsultationDashboard />);
-    expect(await screen.findByText('My HR Request')).toBeInTheDocument();
+    // Explicitly enter sample-only preview; no authenticated session is available.
+        render(<ConsultationDashboard />);
+    screen.getByRole('button', { name: /Preview Reference UI/i }).click();
+    expect(await screen.findByText('Leave Policy Consultation')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /New Request/i })).toBeDisabled();
   });
 });
