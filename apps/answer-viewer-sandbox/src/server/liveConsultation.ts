@@ -1,6 +1,5 @@
 import { canAccessTicket, projectConsultationTicket, type Principal, type ConsultationTicket } from './consultationAccess.js';
-import { releasedAnswer } from './deliveryPolicy.js';
-import { readTickets, readProofs } from './pocketHrData.js';
+import { readTickets } from './pocketHrData.js';
 
 /** Server-only live data assembler. Caller MUST authenticate principal independently of URL/email. */
 export async function loadLiveConsultations(principal: Principal): Promise<ConsultationTicket[]> {
@@ -8,18 +7,15 @@ export async function loadLiveConsultations(principal: Principal): Promise<Consu
     throw new Error('verified_principal_required');
   }
   const rows = (await readTickets()).filter(row => canAccessTicket(principal, row));
-  const ids = rows.map(row => String(row['Row ID'] ?? '').trim());
-  const proofs: Awaited<ReturnType<typeof readProofs>> = new Map();
-  for (let i = 0; i < ids.length; i += 200) {
-    const batch = await readProofs(ids.slice(i, i + 200));
-    for (const [id, proof] of batch) proofs.set(id, proof);
-  }
   return rows.flatMap(row => {
     const ticket = projectConsultationTicket(principal, row);
     if (!ticket) return [];
-    const proof = proofs.get(ticket.ticketId);
-    const answer = releasedAnswer(principal, row, proof?.approval ?? null, proof?.delivery ?? null);
-    if (answer) ticket.finalAnswer = answer;
+    // Sheet is the publication source of truth. Never release AI drafts.
+    if (String(row.Ticket_Status ?? '').trim() === 'Approved' &&
+        String(row.Review_Status ?? '').trim() === 'Approved') {
+      const answer = String(row.Final_Answer ?? '').trim();
+      if (answer) ticket.finalAnswer = answer;
+    }
     return [ticket];
   });
 }
