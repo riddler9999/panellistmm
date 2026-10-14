@@ -88,6 +88,6 @@ export function ConsultationDashboard() {
             <span className={`consult-badge tone-${statusClass(ticket.status)}`}>{ticket.status}</span><span className="consult-chevron" aria-hidden="true">›</span>
           </button>)}</div>}
       </>}
-    </>}
+    </>
   </main>;
 }
