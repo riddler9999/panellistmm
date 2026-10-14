@@ -1,7 +1,7 @@
 import type { TicketRow } from './ticketRow';
 
 export type Principal = { email: string; role: 'Admin' | 'User' };
-export type ConsultationTicket = { ticketId: string; title: string; status: string; finalAnswer?: string; approvedQuestion?: string; history: Array<{ type: 'QUESTION' | 'ANSWER' | 'ADVICE'; content: string; round: number }> };
+export type ConsultationTicket = { ticketId: string; title: string; status: string; finalAnswer?: string; approvedQuestion?: string; category?: string; createdAt?: string; description?: string; reviewStatus?: string; processingStatus?: string; artifact?: { type?: string; title?: string; format?: string; status?: string; url?: string }; history: Array<{ type: 'QUESTION' | 'ANSWER' | 'ADVICE'; content: string; round: number }> };
 const validEmail = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 const string = (value: unknown) => typeof value === 'string' ? value.trim() : '';
 
@@ -27,13 +27,27 @@ export function projectConsultationTicket(principal: Principal, ticket: TicketRo
   if (!ticketId) return null;
   const status = string(ticket.Ticket_Status);
   const projection: ConsultationTicket = {
-    ticketId, title: string(ticket.Ticket_Title) || 'HR Consultation', status, history: [],
+    ticketId, title: string(ticket.Ticket_Title) || 'HR Consultation', status,
+    category: string(ticket.Ticket_Category), createdAt: string(ticket.Created_At),
+    description: string(ticket.Request_Text),
+    reviewStatus: principal.role === 'Admin' ? string(ticket.Review_Status) : undefined,
+    processingStatus: principal.role === 'Admin' ? string(ticket.Processing_Status) : undefined,
+    artifact: principal.role === 'Admin' ? {
+      type: string(ticket.Artifact_Type), title: string(ticket.Artifact_Title),
+      format: string(ticket.Artifact_Format), status: string(ticket.Artifact_Status),
+      // A Sheet URL is untrusted and never automatically published or linked.
+    } : undefined,
+    history: [],
   };
   // AI_Answer is an unapproved draft in the currently running n8n integration.
   // It is never included in a User response. Consultant receives it only after server authorization.
   if (principal.role === 'Admin') {
     const draft = string(ticket.AI_Answer ?? ticket.Sheet_AI_Answer);
     if (draft) projection.history.push({ type: 'ADVICE', content: draft, round: 0 });
+    const consultantAnswer = string(ticket.Consultant_Answer);
+    if (consultantAnswer) projection.history.push({type:'ANSWER',content:consultantAnswer,round:0});
+    const clarification = string(ticket.Clarification_Question);
+    if (clarification) projection.approvedQuestion = clarification;
   }
   // Sheet1 currently has no Approval_Status/Approved_Question columns. Never infer
   // approval from Ticket_Status or the presence of Final_Answer alone.
