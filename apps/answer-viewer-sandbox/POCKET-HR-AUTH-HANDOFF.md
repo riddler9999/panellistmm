@@ -1,16 +1,25 @@
-# Pocket HR Provisioning & Release Gate
+# Pocket HR — Glide Native Login & Row Owners (approved 2026-10-14)
 
-This branch uses Supabase Auth email OTP for initial verification, followed by a four-digit PIN and a server-side 30-day session. A Glide login log is NOT trusted identity.
+## Canonical decision
+Glide owns login and row-level access. No Pocket HR email OTP, four-digit PIN, or second sign-in inside the embedded Vercel app. Do **not** treat a Glide URL/email parameter, App: Logins row, Sheet1 Admin_Role, or iframe context as verified identity.
 
-**Provisioning is administrator-only.** After a user completes Supabase Auth signup and verifies their email, an authorized server administrator must verify the intended user/consultant role against the approved account roster, hash a privately chosen four-digit PIN with `hashPin` and a server-held `POCKET_HR_PIN_PEPPER`, and call `rpc/pocket_hr_provision_verified_account` using a service-role credential. The RPC accepts an Auth user UUID, verified email, role (`Admin` or `User`) and salted PIN hash. It rejects missing/unconfirmed Auth identities, mismatched email, role mismatch, and duplicate provisioning. Never publish this RPC to an anonymous client or create accounts directly from Glide login logs or URL/query email. Never store the raw PIN in Sheets, GitHub, n8n, or logs.
+## Confirmed Google Sheets source (read-only inspection)
+Spreadsheet: Panellist HR Tickets Bridge (Sheet1).
+Actual columns include `Row ID`, `Owner_Email`, `Admin_Role`, `Final_Answer`, and `🔒 Row ID`. The `Admin_Role` value in ticket rows is not proof of an authenticated user's Glide Role. Missing `Owner_Email` must never make a ticket public.
 
-Runtime secret configuration (server only): `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `POCKET_HR_PIN_PEPPER`. Frontend uses a Supabase publishable key for email OTP. Check Supabase Auth email signup/invite and OTP template configuration before UAT; `create_user: false` prevents the frontend from self-registering unapproved accounts.
+## Glide configuration (manual verification required)
+1. Confirm Glide's actual User Profile source and real Role values; only then configure Admin/User role access.
+2. Configure Row Owners on Requests using `Owner_Email` and a role-based owner column containing `Admin` for each request. Verify Glide's role/owner configuration using two distinct real users.
+3. Admin view: All Requests. User view: My Requests. Visibility conditions alone are not data-security boundaries; Row Owners must apply to the underlying table.
+4. The backing Google Sheet is accessible to the server/service account but its direct file-sharing permissions must not grant ordinary users bypass access.
 
-Before release:
-- Provision approved accounts and validate email/role assignments out-of-band, using the verified Auth UUID.
-- Test success/failure, repeated bad PIN, 15-minute reset, revocation, expiration, and cross-user access with separate real users.
-- Complete trusted Google Sheets ticket transport and the independently acknowledged approval/delivery contract.
-- Confirm browser iframe/cross-site cookie behavior inside Glide; third-party cookie restrictions may require a first-party domain.
-- Keep `/api/consultation` fail-closed until the previous two items are independently verified and tests pass.
+## Important backend limitation
+Glide Row Owners protect data served by Glide, **not** independently hosted Vercel endpoints that read Google Sheets with a service account. Until an independently verifiable server-side user identity exists, `/api/consultation` and consultation approval endpoints must remain fail-closed. Do not remove their session guard or substitute client-supplied email/role. The legacy Supabase provisioned-account/PIN/session tables and API are NOT the approved Glide authentication path.
 
-The `App: Logins` tab contains only Time/Email/Agreed and is neither a signed Glide identity assertion nor an authoritative role registry. `Sheet1.Admin_Role` belongs to ticket data and must not grant account privileges. Existing n8n Unified Orchestrator and HR Consultant Internal API output internal assessments, not proof of public delivery.
+## Release gates
+- Verify Glide User Profile role mapping and the actual Row Owners configuration with Admin, User A, User B.
+- Prove User A cannot read User B ticket data via Glide UI and any exposed data access route.
+- Prove unauthenticated Vercel consultation and approval endpoints deny access; make no 'PASS' claim without executed tests.
+- Keep PR #13 unmerged and production release blocked until these gates are evidenced.
+
+Ponytail: reuse Glide native access controls; do not build new authentication adapters or add dependencies merely to bypass the handoff blocker.
