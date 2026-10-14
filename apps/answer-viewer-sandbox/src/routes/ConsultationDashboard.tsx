@@ -9,6 +9,7 @@ export function ConsultationDashboard() {
   const [data, setData] = useState<DashboardResponse | null>(null);
   const [error, setError] = useState(false);
   const [authenticated, setAuthenticated] = useState(false);
+  const [sessionRole, setSessionRole] = useState<'Admin' | 'User' | null>(null);
   const [loadingSession, setLoadingSession] = useState(true);
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<string>('All');
@@ -18,8 +19,8 @@ export function ConsultationDashboard() {
   useEffect(() => {
     const controller = new AbortController();
     fetch('/api/pocket-hr-session', { credentials: 'include', cache: 'no-store', signal: controller.signal })
-      .then(res => { if (!res.ok) throw new Error('session unavailable'); setAuthenticated(true); })
-      .catch(() => { if (!controller.signal.aborted) setAuthenticated(false); })
+      .then(async res => { if (!res.ok) throw new Error('session unavailable'); const session = await res.json() as { role?: unknown }; if (session.role !== 'Admin' && session.role !== 'User') throw new Error('invalid role'); setSessionRole(session.role); setAuthenticated(true); })
+      .catch(() => { if (!controller.signal.aborted) { setAuthenticated(false); setSessionRole(null); } })
       .finally(() => { if (!controller.signal.aborted) setLoadingSession(false); });
     return () => controller.abort();
   }, []);
@@ -43,9 +44,11 @@ export function ConsultationDashboard() {
   const filters = Array.from(new Set<string>([...statuses, ...tickets.map(ticket => ticket.status).filter(Boolean)]));
 
   if (loadingSession) return <main className="viewer-shell" role="status">Checking session…</main>;
-  if (!authenticated) return <PocketHrSignIn onSuccess={() => { setError(false); setAuthenticated(true); }} />;
+  if (!authenticated) return <PocketHrSignIn onSuccess={() => { setError(false); setLoadingSession(true); fetch('/api/pocket-hr-session', { credentials: 'include', cache: 'no-store' }).then(async res => { if (!res.ok) throw new Error('session unavailable'); const session = await res.json() as { role?: unknown }; if (session.role !== 'Admin' && session.role !== 'User') throw new Error('invalid role'); setSessionRole(session.role); setAuthenticated(true); }).catch(() => { setSessionRole(null); setAuthenticated(false); setError(true); }).finally(() => setLoadingSession(false)); }} />;
 
   return <main className="viewer-shell consultation-dashboard">
+    {data && data.role !== sessionRole ? <section className="state-card" role="alert">Access Denied</section> : <>
+    {data && <header className="consult-detail-head"><h1>{data.role === 'Admin' ? 'All Requests' : 'My Requests'}</h1></header>}
     {error ? <section className="state-card" role="alert"><strong>Access Denied</strong><p>အကောင့်ကို Backend က အတည်မပြုနိုင်သေးပါ။ လုံခြုံရေးအတွက် Request တွေကို မပြထားပါ။</p></section>
       : !data ? <section className="state-card" role="status">Loading consultations…</section>
       : active ? <>
@@ -82,5 +85,6 @@ export function ConsultationDashboard() {
             <span className="consult-badge">{ticket.status}</span><span aria-hidden="true">›</span>
           </button>)}</div>}
       </>}
+    </>}
   </main>;
 }
