@@ -4,6 +4,8 @@ type Res = {status(n:number):Res;setHeader(k:string,v:string):void;json(v:unknow
 export default async function handler(req:Req,res:Res) {
  res.setHeader('Cache-Control','private, no-store');
  if(req.method==='POST'){
+  const origin=req.headers.origin,host=req.headers.host;
+  if(typeof origin!=='string'||typeof host!=='string'||!/^https:\/\//.test(origin)||new URL(origin).host!==host) return res.status(403).json({error:'invalid_origin'});
   try {await revokeSession(req.headers);res.setHeader('Set-Cookie',clearSessionCookie());return res.status(200).json({ok:true});}
   catch{return res.status(503).json({error:'auth_unavailable'});}
  }
