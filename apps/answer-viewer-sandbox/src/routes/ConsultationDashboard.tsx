@@ -34,7 +34,6 @@ export function ConsultationDashboard() {
   if (!demoMode) return <main className="viewer-shell consultation-dashboard"><section className="consult-welcome"><div className="consult-welcome-mark">P</div><h1>Pocket HR</h1><p>Glide မှာ Login ဝင်ပြီး သင့် Requests ကို ကြည့်ပါ။ Web App က Glide Identity ကို အတည်မပြုနိုင်သေးတဲ့အတွက် Private Data ကို မပြထားပါ။</p><button type="button" className="consult-new" onClick={() => setDemoMode(true)}>Preview Reference UI</button><small>Design preview only · Sample data · No real HR records</small></section></main>;
 
   return <main className="viewer-shell consultation-dashboard">
-    <>
     
     {demoMode && <div className="consult-preview-banner"><span>DESIGN PREVIEW · SAMPLE DATA</span><button type="button" onClick={() => {setDemoMode(false);setSelected(null);}}>Exit Preview</button></div>}
     {active ? <>
@@ -88,6 +87,5 @@ export function ConsultationDashboard() {
             <span className={`consult-badge tone-${statusClass(ticket.status)}`}>{ticket.status}</span><span className="consult-chevron" aria-hidden="true">›</span>
           </button>)}</div>}
       </>}
-    </>
   </main>;
 }
