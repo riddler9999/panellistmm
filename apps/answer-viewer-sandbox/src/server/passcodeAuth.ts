@@ -2,20 +2,20 @@ import { randomBytes, scryptSync, timingSafeEqual, createHash } from 'node:crypt
 import { db } from './pocketHrData';
 import type { Principal } from './consultationAccess';
 
-type Account = { id: string; email: string; role: 'Admin'|'User'; passcode_hash: string; enabled: boolean; failed_attempts: number; locked_until: string|null };
+type Account = { id: string; email: string; role: 'Admin'|'User'; pin_hash: string; disabled_at: string|null; failed_attempts: number; locked_until: string|null };
 const digest = (token: string) => createHash('sha256').update(token).digest('hex');
 const enc = (value: string) => encodeURIComponent(value);
 
 export function hashPasscode(pin: string): string {
  if (!/^\d{4}$/.test(pin)) throw new Error('invalid_passcode');
  const salt = randomBytes(16).toString('hex');
- return salt + ':' + scryptSync(pin, salt, 64).toString('hex');
+ return 'scrypt:' + salt + ':' + scryptSync(pin, salt, 32).toString('hex');
 }
 export function verifyPasscode(pin: string, stored: string): boolean {
- const [salt, hash] = stored.split(':');
- if (!/^\d{4}$/.test(pin) || !salt || !/^[0-9a-f]{128}$/.test(hash ?? '')) return false;
+ const [scheme, salt, hash] = stored.split(':');
+ if (!/^\d{4}$/.test(pin) || scheme !== 'scrypt' || !/^[0-9a-f]{32}$/.test(salt ?? '') || !/^[0-9a-f]{64}$/.test(hash ?? '')) return false;
  const expected = Buffer.from(hash, 'hex');
- return timingSafeEqual(scryptSync(pin, salt, 64), expected);
+ return timingSafeEqual(scryptSync(pin, salt, 32), expected);
 }
 export function sessionCookie(token: string, maxAge = 86400): string {
  return 'pocket_hr_session=' + token + '; Path=/; HttpOnly; Secure; SameSite=None; Max-Age=' + maxAge;
@@ -33,25 +33,25 @@ export async function authenticate(email: string, pin: string): Promise<string|n
  const rows = await db<Account[]>('pocket_hr_accounts?select=*&email=eq.' + enc(normalized) + '&limit=2');
  if (rows.length !== 1) return null;
  const account = rows[0];
- if (!account.enabled || (account.locked_until && Date.parse(account.locked_until) > Date.now())) return null;
- if (!verifyPasscode(pin, account.passcode_hash)) {
-  const attempts = account.failed_attempts + 1;
-  await db('pocket_hr_accounts?id=eq.' + enc(account.id), 'PATCH', { failed_attempts: attempts, locked_until: attempts >= 5 ? new Date(Date.now() + 15*60*1000).toISOString() : null });
+ if (account.disabled_at || (account.locked_until && Date.parse(account.locked_until) > Date.now())) return null;
+ if (!verifyPasscode(pin, account.pin_hash)) {
+  await db('rpc/pocket_hr_record_pin_attempt','POST',{p_account_id:account.id,p_success:false});
   return null;
  }
- await db('pocket_hr_accounts?id=eq.' + enc(account.id), 'PATCH', { failed_attempts: 0, locked_until: null });
+ const accepted = await db<boolean>('rpc/pocket_hr_record_pin_attempt','POST',{p_account_id:account.id,p_success:true});
+ if (!accepted) return null;
  const token = randomBytes(32).toString('hex');
- await db('pocket_hr_sessions', 'POST', { token_hash: digest(token), account_id: account.id, expires_at: new Date(Date.now()+86400000).toISOString() });
+ await db('pocket_hr_sessions', 'POST', { token_digest: digest(token), account_id: account.id, expires_at: new Date(Date.now()+86400000).toISOString() });
  return token;
 }
 export async function authenticatedPrincipal(headers: Record<string,string|string[]|undefined>): Promise<Principal|null> {
  const token = cookieToken(headers);
  if (!token) return null;
- const sessions = await db<Array<{account_id:string; expires_at:string}>>('pocket_hr_sessions?select=account_id,expires_at&token_hash=eq.' + digest(token) + '&limit=1');
- if (sessions.length !== 1 || Date.parse(sessions[0].expires_at) <= Date.now()) return null;
- const accounts = await db<Array<Pick<Account,'email'|'role'|'enabled'>>>('pocket_hr_accounts?select=email,role,enabled&id=eq.' + enc(sessions[0].account_id) + '&limit=1');
+ const sessions = await db<Array<{account_id:string; expires_at:string;revoked_at:string|null}>>('pocket_hr_sessions?select=account_id,expires_at,revoked_at&token_digest=eq.' + digest(token) + '&limit=1');
+ if (sessions.length !== 1 || sessions[0].revoked_at !== null || Date.parse(sessions[0].expires_at) <= Date.now()) return null;
+ const accounts = await db<Array<Pick<Account,'email'|'role'|'disabled_at'>>>('pocket_hr_accounts?select=email,role,disabled_at&id=eq.' + enc(sessions[0].account_id) + '&limit=1');
  const account = accounts[0];
- if (!account?.enabled || !['Admin','User'].includes(account.role)) return null;
+ if (!account || account.disabled_at !== null || !['Admin','User'].includes(account.role)) return null;
  return { email: account.email, role: account.role };
 }
 export async function revokeSession(headers: Record<string,string|string[]|undefined>): Promise<void> {
