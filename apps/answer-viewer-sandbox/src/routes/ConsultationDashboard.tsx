@@ -5,7 +5,8 @@ import { PocketHrSignIn } from './PocketHrSignIn';
 type DashboardResponse = { role: 'Admin' | 'User'; tickets: ConsultationTicket[] };
 const statuses = ['All', 'Submitted', 'Awaiting Review', 'Editing', 'Approved', 'Failed'] as const;
 const statusClass = (status: string) => status.toLowerCase().replace(/[^a-z]+/g, '-').replace(/^-|-$/g, '');
-const ticketIcon = (status: string) => ({Submitted:'▤', 'Awaiting Review':'▧', Editing:'✎', Approved:'✓', Failed:'!', 'In Progress':'◷'}[status] ?? '▣');
+const ticketIcons: Record<string, string> = { Submitted: '▤', 'Awaiting Review': '▧', Editing: '✎', Approved: '✓', Failed: '!', 'In Progress': '◷' };
+const ticketIcon = (status: string) => ticketIcons[status] ?? '▣';
 
 export function ConsultationDashboard() {
   const [data, setData] = useState<DashboardResponse | null>(null);
@@ -46,7 +47,7 @@ export function ConsultationDashboard() {
   const filters = Array.from(new Set<string>([...statuses, ...tickets.map(ticket => ticket.status).filter(Boolean)]));
 
   if (loadingSession) return <main className="viewer-shell" role="status">Checking session…</main>;
-  if (!authenticated) return <PocketHrSignIn onSuccess={() => { setError(false); setLoadingSession(true); fetch('/api/pocket-hr-session', { credentials: 'include', cache: 'no-store' }).then(async res => { if (!res.ok) throw new Error('session unavailable'); const session = await res.json() as { role?: unknown }; if (session.role !== 'Admin' && session.role !== 'User') throw new Error('invalid role'); setSessionRole(session.role); setAuthenticated(true); }).catch(() => { setSessionRole(null); setAuthenticated(false); setError(true); }).finally(() => setLoadingSession(false)); }} />;
+  if (!authenticated) return <PocketHrSignIn onSuccess={() => {}} />;
 
   return <main className="viewer-shell consultation-dashboard">
     {data && data.role !== sessionRole ? <section className="state-card" role="alert">Access Denied</section> : <>
