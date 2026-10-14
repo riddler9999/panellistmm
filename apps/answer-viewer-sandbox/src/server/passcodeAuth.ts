@@ -23,7 +23,7 @@ export async function authenticate(pin: string, source = 'unknown'): Promise<str
  if (sourceAllowed !== true) return null;
  const matching = entries.filter(entry => entry.passcode === pin);
  if (matching.length === 1) {
-  const accountAllowed = await db<boolean>('rpc/pocket_hr_allow_login_attempt', 'POST', {p_email_digest:digest('account:' + matching[0].email)});
+  const accountAllowed = await db<boolean>('rpc/pocket_hr_allow_scoped_login_attempt', 'POST', {p_digest:digest('account:' + matching[0].email),p_max_attempts:9});
   if (accountAllowed !== true) return null;
  }
  // Reject ambiguous PINs rather than choosing a user's account arbitrarily.
