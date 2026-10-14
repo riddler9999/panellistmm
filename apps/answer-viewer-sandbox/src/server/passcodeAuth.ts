@@ -4,7 +4,6 @@ import type { Principal } from './consultationAccess.js';
 
 type Account = { id: string; email: string; role: 'Admin'|'User'; pin_hash: string; disabled_at: string|null; failed_attempts: number; locked_until: string|null };
 const digest = (token: string) => createHash('sha256').update(token).digest('hex');
-const enc = (value: string) => encodeURIComponent(value);
 
 export function hashPasscode(pin: string): string {
  if (!/^\d{4}$/.test(pin)) throw new Error('invalid_passcode');
@@ -34,31 +33,31 @@ export async function authenticate(pin: string): Promise<string|null> {
  if (permitted !== true) return null;
  // Google Sheets is the authoritative source for active PINs and roles.
  const entries = await readPasscodeAccounts();
- const matching = entries.filter(entry => /^\\d{4}$/.test(entry.passcode) && timingSafeEqual(Buffer.from(pin), Buffer.from(entry.passcode)));
+ const matching = entries.filter(entry => entry.passcode === pin);
  // Reject ambiguous PINs rather than choosing a user's account arbitrarily.
  if (matching.length !== 1) return null;
  const identity = matching[0];
  if (identity.status !== 'Active' || !['Admin','User'].includes(identity.role)) return null;
- const rows = await db<Account[]>('pocket_hr_accounts?select=*&email=eq.' + enc(identity.email) + '&limit=2');
- if (rows.length !== 1) return null;
- const account = rows[0];
- if (account.disabled_at || account.role !== identity.role ||
-     (account.locked_until && Date.parse(account.locked_until) > Date.now())) return null;
- const accepted = await db<boolean>('rpc/pocket_hr_record_pin_attempt','POST',{p_account_id:account.id,p_success:true});
- if (accepted !== true) return null;
  const token = randomBytes(32).toString('hex');
- await db('pocket_hr_sessions', 'POST', {token_digest:digest(token),account_id:account.id,expires_at:new Date(Date.now()+86400000).toISOString()});
+ await db('pocket_hr_sessions', 'POST', {
+  token_digest: digest(token),
+  sheet_email: identity.email,
+  expires_at: new Date(Date.now() + 86400000).toISOString()
+ });
  return token;
 }
 export async function authenticatedPrincipal(headers: Record<string,string|string[]|undefined>): Promise<Principal|null> {
  const token = cookieToken(headers);
  if (!token) return null;
- const sessions = await db<Array<{account_id:string; expires_at:string;revoked_at:string|null}>>('pocket_hr_sessions?select=account_id,expires_at,revoked_at&token_digest=eq.' + digest(token) + '&limit=1');
+ const sessions = await db<Array<{sheet_email:string;expires_at:string;revoked_at:string|null}>>(
+  'pocket_hr_sessions?select=sheet_email,expires_at,revoked_at&token_digest=eq.' + digest(token) + '&limit=1'
+ );
  if (sessions.length !== 1 || sessions[0].revoked_at !== null || Date.parse(sessions[0].expires_at) <= Date.now()) return null;
- const accounts = await db<Array<Pick<Account,'email'|'role'|'disabled_at'>>>('pocket_hr_accounts?select=email,role,disabled_at&id=eq.' + enc(sessions[0].account_id) + '&limit=1');
- const account = accounts[0];
- if (!account || account.disabled_at !== null || !['Admin','User'].includes(account.role)) return null;
- return { email: account.email, role: account.role };
+ const email = sessions[0].sheet_email.trim().toLowerCase();
+ const entries = await readPasscodeAccounts();
+ const matches = entries.filter(entry => entry.email === email);
+ if (matches.length !== 1 || matches[0].status !== 'Active' || !['Admin','User'].includes(matches[0].role)) return null;
+ return { email, role: matches[0].role as Principal['role'] };
 }
 export async function revokeSession(headers: Record<string,string|string[]|undefined>): Promise<void> {
  const token = cookieToken(headers);
