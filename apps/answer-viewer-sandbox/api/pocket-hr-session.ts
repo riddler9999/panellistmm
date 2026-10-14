@@ -1,4 +1,4 @@
-import { authenticatedPrincipal, clearSessionCookie, revokeSession } from '../src/server/passcodeAuth';
+import { authenticatedPrincipal, clearSessionCookie, revokeSession } from '../src/server/passcodeAuth.js';
 type Req = {method?:string;headers:Record<string,string|string[]|undefined>};
 type Res = {status(n:number):Res;setHeader(k:string,v:string):void;json(v:unknown):void};
 export default async function handler(req:Req,res:Res) {
