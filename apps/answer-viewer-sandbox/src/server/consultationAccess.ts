@@ -1,7 +1,7 @@
 import type { TicketRow } from './ticketRow';
 
 export type Principal = { email: string; role: 'Admin' | 'User' };
-export type ConsultationTicket = { ticketId: string; title: string; status: string; finalAnswer?: string; approvedQuestion?: string; category?: string; createdAt?: string; description?: string; reviewStatus?: string; processingStatus?: string; artifact?: { type?: string; title?: string; format?: string; status?: string; url?: string }; history: Array<{ type: 'QUESTION' | 'ANSWER' | 'ADVICE'; content: string; round: number }> };
+export type ConsultationTicket = { ticketId: string; revision?: number; title: string; status: string; finalAnswer?: string; approvedQuestion?: string; category?: string; createdAt?: string; description?: string; reviewStatus?: string; processingStatus?: string; artifact?: { type?: string; title?: string; format?: string; status?: string; url?: string }; history: Array<{ type: 'QUESTION' | 'ANSWER' | 'ADVICE'; content: string; round: number }> };
 const validEmail = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 const string = (value: unknown) => typeof value === 'string' ? value.trim() : '';
 
