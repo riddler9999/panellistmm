@@ -30,6 +30,8 @@ export function cookieToken(headers: Record<string,string|string[]|undefined>): 
 export async function authenticate(email: string, pin: string): Promise<string|null> {
  const normalized = email.trim().toLowerCase();
  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized) || !/^\d{4}$/.test(pin)) return null;
+ const permitted = await db<boolean>('rpc/pocket_hr_allow_login_attempt','POST',{p_email_digest:digest(normalized)});
+ if (permitted !== true) return null;
  const rows = await db<Account[]>('pocket_hr_accounts?select=*&email=eq.' + enc(normalized) + '&limit=2');
  if (rows.length !== 1) return null;
  const account = rows[0];
