@@ -48,6 +48,12 @@ export function ConsultationDashboard() {
   const [tab, setTab] = useState<'Conversation' | 'Details' | 'Files'>('Conversation');
   const [actionDraft, setActionDraft] = useState('');
   const [actionError, setActionError] = useState('');
+  const [creating,setCreating]=useState(false);
+  const [newTitle,setNewTitle]=useState('');
+  const [newCategory,setNewCategory]=useState('');
+  const [newDescription,setNewDescription]=useState('');
+  const [requestError,setRequestError]=useState('');
+  const [requestBusy,setRequestBusy]=useState(false);
   const [actionSubmitting, setActionSubmitting] = useState(false);
 
   const tickets = useMemo(() => session?.tickets ?? [], [session]);
@@ -75,6 +81,36 @@ export function ConsultationDashboard() {
       setActionDraft('');
     } catch { setActionError('Could not refresh the approved request.'); }
     finally { setActionSubmitting(false); }
+  }
+
+  async function refreshTickets(){
+    const response=await fetch('/api/consultation',{credentials:'include',cache:'no-store'});
+    if(!response.ok)throw new Error('refresh_failed');
+    setSession(await response.json() as {role:'Admin'|'User';tickets:ConsultationTicket[]});
+  }
+  async function createRequest(event:React.FormEvent){
+    event.preventDefault();if(requestBusy)return;
+    setRequestBusy(true);setRequestError('');
+    try{
+      const response=await fetch('/api/consultation-create',{method:'POST',credentials:'include',
+        headers:{'Content-Type':'application/json'},body:JSON.stringify({title:newTitle,category:newCategory,description:newDescription})});
+      if(!response.ok)throw new Error('create_failed');
+      await refreshTickets();setCreating(false);setNewTitle('');setNewCategory('');setNewDescription('');
+    }catch{setRequestError('Could not submit request. Please retry.');}
+    finally{setRequestBusy(false);}
+  }
+  async function consultantAction(action:'edit'|'request_clarification'|'reject'){
+    if(!active||actionSubmitting)return;
+    setActionSubmitting(true);setActionError('');
+    try{
+      const response=await fetch('/api/consultation-action',{method:'POST',credentials:'include',
+        headers:{'Content-Type':'application/json'},body:JSON.stringify({
+          action,requestId:active.ticketId,expectedRevision:active.revision??0,content:actionDraft
+        })});
+      if(!response.ok)throw new Error('action_failed');
+      await refreshTickets();setActionDraft('');
+    }catch{setActionError('Action could not be saved. Reload and retry.');}
+    finally{setActionSubmitting(false);}
   }
 
   if (!session) return <main className="viewer-shell consultation-dashboard"><section className="consult-welcome"><div className="consult-welcome-mark">P</div><h1>Pocket HR</h1>
@@ -115,6 +151,9 @@ export function ConsultationDashboard() {
           <textarea id="consult-action-draft" value={actionDraft} onChange={event=>setActionDraft(event.target.value)} placeholder="Review and enter the answer to publish" />
           {actionError && <p role="alert">{actionError}</p>}
           <button type="button" disabled={actionSubmitting || !actionDraft.trim()} onClick={approveTicket}>{actionSubmitting?'Publishing...':'Approve & Publish'}</button>
+          <button type="button" disabled={actionSubmitting || !actionDraft.trim()} onClick={()=>consultantAction('edit')}>Save Draft</button>
+          <button type="button" disabled={actionSubmitting || !actionDraft.trim()} onClick={()=>consultantAction('request_clarification')}>Ask Clarification</button>
+          <button type="button" disabled={actionSubmitting} onClick={()=>consultantAction('reject')}>Reject</button>
         </section>}
         {tab === 'Details' && <section className="state-card consult-details"><h2>Request Details</h2><dl><div><dt>Request ID</dt><dd>{active.ticketId}</dd></div><div><dt>Subject</dt><dd>{active.title}</dd></div><div><dt>Status</dt><dd><span className={`consult-badge tone-${statusClass(active.status)}`}>{active.status}</span></dd></div>{active.category && <div><dt>Category</dt><dd>{active.category}</dd></div>}{active.createdAt && <div><dt>Created</dt><dd>{active.createdAt}</dd></div>}{active.description && <div><dt>Description</dt><dd>{active.description}</dd></div>}{role === 'Admin' && active.reviewStatus && <div><dt>Review Status</dt><dd>{active.reviewStatus}</dd></div>}{role === 'Admin' && active.processingStatus && <div><dt>Processing Status</dt><dd>{active.processingStatus}</dd></div>}{role === 'Admin' && active.artifact?.status && <div><dt>Artifact Status</dt><dd>{active.artifact.status}</dd></div>}</dl></section>}
         {tab === 'Files' && <section className="state-card consult-files"><div className="consult-file-icon">▤</div>{role === 'Admin' && active.artifact?.title ? <><h2>{active.artifact.title}</h2><p>{[active.artifact.type, active.artifact.format, active.artifact.status].filter(Boolean).join(' · ')}</p></> : <><h2>No files available</h2><p>Only verified, authorized attachments will appear here.</p></>}</section>}
@@ -122,8 +161,20 @@ export function ConsultationDashboard() {
         <div className="consult-list-heading"><h1>{role === 'Admin' ? 'All Requests' : 'My Requests'}</h1><p>{tickets.length} requests</p></div>
         <div className="consult-toolbar">
           <input aria-label="Search requests" type="search" placeholder="Search requests, subject, or ID..." value={search} onChange={event => setSearch(event.target.value)} />
-          <button type="button" className="consult-new" disabled title="Request creation is not connected to a verified backend contract">＋ New Request</button>
+          <button type="button" className="consult-new" onClick={()=>setCreating(true)}>＋ New Request</button>
         </div>
+        {creating && <form className="state-card" onSubmit={createRequest}>
+          <h2>New Request</h2>
+          <label htmlFor="new-request-title">Title</label>
+          <input id="new-request-title" required maxLength={160} value={newTitle} onChange={e=>setNewTitle(e.target.value)}/>
+          <label htmlFor="new-request-category">Category</label>
+          <input id="new-request-category" maxLength={80} value={newCategory} onChange={e=>setNewCategory(e.target.value)}/>
+          <label htmlFor="new-request-description">Description</label>
+          <textarea id="new-request-description" required maxLength={10000} value={newDescription} onChange={e=>setNewDescription(e.target.value)}/>
+          {requestError && <p role="alert">{requestError}</p>}
+          <button type="submit" disabled={requestBusy}>{requestBusy?'Submitting...':'Submit Request'}</button>
+          <button type="button" onClick={()=>setCreating(false)}>Cancel</button>
+        </form>}
         <div className="consult-filters" aria-label="Filter requests">
           {filters.map(status => <button type="button" key={status} className={filter === status ? 'active' : ''} aria-pressed={filter === status} onClick={() => setFilter(status)}>{status} ({status === 'All' ? tickets.length : tickets.filter(ticket => ticket.status === status).length})</button>)}
         </div>
