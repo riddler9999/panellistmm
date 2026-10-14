@@ -32,7 +32,7 @@ async function googleAccessToken(): Promise<string> {
   const now = Math.floor(Date.now() / 1000);
   const header = base64url(JSON.stringify({ alg: 'RS256', typ: 'JWT' }));
   const claims = base64url(JSON.stringify({
-    iss: email, scope: 'https://www.googleapis.com/auth/spreadsheets.readonly',
+    iss: email, scope: 'https://www.googleapis.com/auth/spreadsheets',
     aud: 'https://oauth2.googleapis.com/token', iat: now, exp: now + 3000,
   }));
   const unsigned = header + '.' + claims;
@@ -83,7 +83,7 @@ export async function readTickets(): Promise<TicketRow[]> {
     if (keys.filter(k => k === key).length !== 1) throw new Error('sheet_headers_invalid');
   }
   const seen = new Set<string>();
-  return rows.map(row => Object.fromEntries(keys.map((key, index) => [key, row[index] ?? ''])) as TicketRow)
+  return rows.map((row, index) => ({ ...Object.fromEntries(keys.map((key, column) => [key, row[column] ?? ''])), __sheetRow: index + 2 }) as TicketRow)
     .filter(row => {
       const id = String(row['Row ID'] ?? '').trim();
       if (!id || seen.has(id)) throw new Error('sheet_row_id_invalid_or_duplicate');
@@ -138,4 +138,23 @@ export async function readProofs(requestIds: string[]): Promise<Map<string, { ap
     proof.delivery = { requestId: d.request_id, revision: d.revision, result: d.result, deliveredAt: d.delivered_at };
   }
   return proofs;
+}
+
+/** Update known Sheet1 columns by their verified row index. Never accept row numbers from the browser. */
+export async function writeTicketPublication(requestId: string, updates: Record<'C'|'H'|'Y', string> | Partial<Record<'C'|'H'|'Y',string>>): Promise<void> {
+ const id = process.env.POCKET_HR_SHEET_ID;
+ if (!id) throw new Error('sheet_not_configured');
+ const rows = await readTickets();
+ const ticket = rows.find(row => String(row['Row ID']).trim() === requestId);
+ if (!ticket || !Number.isSafeInteger(ticket.__sheetRow)) throw new Error('ticket_not_found');
+ const row = ticket.__sheetRow as number;
+ const token = await googleAccessToken();
+ const data = Object.entries(updates).map(([column, value]) => ({
+  range: 'Sheet1!' + column + row, majorDimension: 'ROWS', values: [[value]]
+ }));
+ const response = await fetch('https://sheets.googleapis.com/v4/spreadsheets/' + encodeURIComponent(id) + '/values:batchUpdate', {
+  method:'POST',headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},
+  body:JSON.stringify({valueInputOption:'RAW',data}),cache:'no-store'
+ });
+ if(!response.ok) throw new Error('sheet_write_failed');
 }
