@@ -9,7 +9,7 @@ export default async function handler(req:Req,res:Res) {
  const origin=req.headers.origin,host=req.headers.host;
  if(typeof origin!=='string'||typeof host!=='string'||!origin.startsWith('https://')||
     (()=>{try{return new URL(origin).host!==host;}catch{return true;}})())
-    return res.status(403).json({error:'invalid_origin'});
+    return res.status(403).json({error:'access_denied'});
  try {
   const principal=await authenticatedPrincipal(req.headers);
   if(principal?.role!=='Admin') return res.status(403).json({error:'access_denied'});
