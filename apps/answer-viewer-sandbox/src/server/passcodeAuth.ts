@@ -2,6 +2,14 @@ import { randomBytes, createHash } from 'node:crypto';
 import { db, readPasscodeAccounts } from './pocketHrData.js';
 import type { Principal } from './consultationAccess.js';
 
+async function loginStage<T>(stage:string,operation:()=>Promise<T>):Promise<T>{
+ try{return await operation();}catch(error){
+  const cause=error instanceof Error?error.name:'unknown';
+  console.error('pocket_hr_login_stage_failed',{stage,cause});
+  throw new Error('login_stage_'+stage);
+ }
+}
+
 const digest = (token: string) => createHash('sha256').update(token).digest('hex');
 
 export function sessionCookie(token: string, maxAge = 86400): string {
@@ -18,12 +26,12 @@ export async function authenticate(pin: string, source = 'unknown'): Promise<str
  if (!/^\d{4}$/.test(pin)) return null;
  // Google Sheets is the authoritative source for active PINs and roles.
  const sourceKey = digest('source:' + source);
- const sourceAllowed = await db<boolean>('rpc/pocket_hr_allow_scoped_login_attempt', 'POST', {p_digest:sourceKey,p_max_attempts:90});
+ const sourceAllowed = await loginStage('source_limit',()=>db<boolean>('rpc/pocket_hr_allow_scoped_login_attempt', 'POST', {p_digest:sourceKey,p_max_attempts:90}));
  if (sourceAllowed !== true) return null;
- const entries = await readPasscodeAccounts();
+ const entries = await loginStage('sheet_accounts',()=>readPasscodeAccounts());
  const matching = entries.filter(entry => entry.passcode === pin);
  if (matching.length === 1) {
-  const accountAllowed = await db<boolean>('rpc/pocket_hr_allow_scoped_login_attempt', 'POST', {p_digest:digest('account:' + matching[0].email),p_max_attempts:9});
+  const accountAllowed = await loginStage('account_limit',()=>db<boolean>('rpc/pocket_hr_allow_scoped_login_attempt', 'POST', {p_digest:digest('account:' + matching[0].email),p_max_attempts:9}));
   if (accountAllowed !== true) return null;
  }
  // Reject ambiguous PINs rather than choosing a user's account arbitrarily.
@@ -31,11 +39,11 @@ export async function authenticate(pin: string, source = 'unknown'): Promise<str
  const identity = matching[0];
  if (identity.status !== 'Active' || !['Admin','User'].includes(identity.role)) return null;
  const token = randomBytes(32).toString('hex');
- await db('pocket_hr_sessions', 'POST', {
+ await loginStage('session_write',()=>db('pocket_hr_sessions', 'POST', {
   token_digest: digest(token),
   sheet_email: identity.email,
   expires_at: new Date(Date.now() + 86400000).toISOString()
- });
+ }));
  return token;
 }
 export async function authenticatedPrincipal(headers: Record<string,string|string[]|undefined>): Promise<Principal|null> {
