@@ -48,4 +48,12 @@ describe('approval publication ordering',()=>{
   expect(result().status).toBe(403);
   expect(db).not.toHaveBeenCalled();
  });
+ it('keeps resolved requests read-only even for Admin',async()=>{
+  vi.mocked(readTickets).mockResolvedValue([{'Row ID':'T-1',Owner_Email:'user@example.com',Ticket_Status:'Resolved'}]);
+  const {res,result}=response();
+  await handler(req,res);
+  expect(result().status).toBe(409);
+  expect(db).not.toHaveBeenCalled();
+  expect(writeTicketPublication).not.toHaveBeenCalled();
+ });
 });

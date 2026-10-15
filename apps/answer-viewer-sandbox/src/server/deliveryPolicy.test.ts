@@ -5,6 +5,10 @@ const ticket = { 'Row ID': 'r-1', Owner_Email: 'owner@example.com', Final_Answer
 const approval: ApprovalProof = { requestId: 'r-1', revision: 2, approvedContent: 'approved snapshot', approvedByAccountId: 'uuid-1', approvedAt: '2026-10-14T00:00:00Z' };
 const delivery: DeliveryProof = { requestId: 'r-1', revision: 2, result: 'success', deliveredAt: '2026-10-14T00:00:01Z' };
 describe('immutable approval and delivery release policy', () => {
+  it('accepts the verified email approver used by the current PIN architecture', () => {
+    expect(releasedAnswer(user,ticket,{...approval,approvedByAccountId:null,approvedByEmail:'admin@example.com'},delivery)).toBe('approved snapshot');
+    expect(releasedAnswer(user,ticket,{...approval,approvedByAccountId:null,approvedByEmail:''},delivery)).toBeNull();
+  });
   it('returns only the approved snapshot with exact successful delivery', () => {
     expect(releasedAnswer(user, ticket, approval, delivery)).toBe('approved snapshot');
     expect(deliveryKey('r-1', 2)).toBe('r-1:2');

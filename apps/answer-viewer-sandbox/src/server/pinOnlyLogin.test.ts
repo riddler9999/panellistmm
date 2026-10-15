@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { authenticate, authenticatedPrincipal, sessionCookie } from './passcodeAuth';
+import { authenticate, authenticatedPrincipal, sessionCookie, revokeSession } from './passcodeAuth';
 import { generateKeyPairSync } from 'node:crypto';
 
 afterEach(() => { vi.unstubAllGlobals(); vi.unstubAllEnvs(); });
@@ -9,7 +9,7 @@ function setup(rows: string[][]) {
  vi.stubEnv('UPSTASH_REDIS_REST_URL','https://example.upstash.io');
  vi.stubEnv('UPSTASH_REDIS_REST_TOKEN','test');
  vi.stubEnv('POCKET_HR_SHEET_ID','test');
- vi.stubEnv('GOOGLE_SERVICE_ACCOUNT_EMAIL','service@example.com');
+ vi.stubEnv('GOOGLE_SERVICE_ACCOUNT_EMAIL','service@test.iam.gserviceaccount.com');
  vi.stubEnv('GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY',privateKey);
  const redis = new Map<string,string>();
  const calls: string[] = [];
@@ -35,6 +35,19 @@ function setup(rows: string[][]) {
 }
 
 describe('Google Sheets auth authority',()=>{
+ it('rejects a disabled account and invalid PIN before creating a session',async()=>{
+  setup([['a@example.com','User','1234','Disabled']]);
+  expect(await authenticate('1234')).toBeNull();
+  expect(await authenticate('9999')).toBeNull();
+ });
+ it('invalidates a session on logout',async()=>{
+  setup([['a@example.com','User','1234','Active']]);
+  const token=await authenticate('1234');
+  const headers={cookie:sessionCookie(token!)};
+  expect(await authenticatedPrincipal(headers)).not.toBeNull();
+  await revokeSession(headers);
+  expect(await authenticatedPrincipal(headers)).toBeNull();
+ });
  it('authenticates unique active Sheet PIN',async()=>{
   const calls=setup([['a@example.com','Admin','1234','Active']]);
   const token=await authenticate('1234');

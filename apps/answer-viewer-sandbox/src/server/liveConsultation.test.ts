@@ -23,9 +23,20 @@ describe('live Sheet consultation projection',()=>{
   expect(JSON.stringify(rows)).not.toContain('SECRET AI DRAFT');
   expect(readProofs).not.toHaveBeenCalled();
  });
- it('shows Sheet answer only when Ticket_Status is Approved',async()=>{
+ it('withholds a Sheet answer without approval and delivery proof',async()=>{
   const rows=await loadLiveConsultations({email:'b@example.com',role:'User'});
-  expect(rows[0].finalAnswer).toBe('SHEET APPROVED ANSWER');
+  expect(rows[0].finalAnswer).toBeUndefined();
+  expect(readProofs).toHaveBeenCalledWith(['B-001']);
+ });
+ it.each(['Approved','Resolved'])('releases only the approved snapshot in %s state',async(status)=>{
+  vi.mocked(readTickets).mockResolvedValue([{...sheetRows[1],Ticket_Status:status}]);
+  vi.mocked(readProofs).mockResolvedValue(new Map([['B-001',{
+   approval:{requestId:'B-001',revision:3,approvedContent:'verified snapshot',approvedByAccountId:'consultant',approvedAt:'2026-10-15T00:00:00Z'},
+   delivery:{requestId:'B-001',revision:3,result:'success',deliveredAt:'2026-10-15T00:00:01Z'}
+  }]]));
+  const rows=await loadLiveConsultations({email:'b@example.com',role:'User'});
+  expect(rows[0].finalAnswer).toBe('verified snapshot');
+  expect(JSON.stringify(rows)).not.toContain('SHEET APPROVED ANSWER');
  });
  it('provides latest revision to Admin without exposing revision in User response',async()=>{
   vi.mocked(readProofs).mockResolvedValue(new Map([['B-001',{

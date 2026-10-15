@@ -129,12 +129,12 @@ export async function readProofs(requestIds: string[]): Promise<Map<string, { ap
   const inFilter = ids.map(id => '"' + id.replace(/\\/g, '\\\\').replace(/"/g, '\\"') + '"').join(',');
   const approvals = await db<Array<{
     request_id: string; revision: number; approved_content: string;
-    approved_by_account_id: string; approved_at: string;
+    approved_by_account_id: string | null; approved_by_email?: string | null; approved_at: string;
   }>>('pocket_hr_approvals?select=*&request_id=in.(' + query(inFilter) + ')&order=revision.desc&limit=10000');
   for (const a of approvals) {
     if (!ids.includes(a.request_id) || proofs.has(a.request_id)) continue;
     proofs.set(a.request_id, {
-      approval: { requestId: a.request_id, revision: a.revision, approvedContent: a.approved_content, approvedByAccountId: a.approved_by_account_id, approvedAt: a.approved_at },
+      approval: { requestId: a.request_id, revision: a.revision, approvedContent: a.approved_content, approvedByAccountId: a.approved_by_account_id, approvedByEmail: a.approved_by_email, approvedAt: a.approved_at },
       delivery: null,
     });
   }

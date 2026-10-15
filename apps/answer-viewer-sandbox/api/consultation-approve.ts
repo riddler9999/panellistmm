@@ -23,6 +23,8 @@ export default async function handler(req:Req,res:Res) {
   const rows=await readTickets();
   const ticket=rows.find(row=>String(row['Row ID']).trim()===input.requestId);
   if(!ticket) return res.status(404).json({error:'ticket_not_found'});
+  if(String(ticket.Ticket_Status).trim().toLowerCase()==='resolved')
+    return res.status(409).json({error:'request_already_final'});
   const content=input.content!;
   let revision:number;
   try {
@@ -35,7 +37,7 @@ export default async function handler(req:Req,res:Res) {
       return res.status(409).json({error:'revision_conflict'});
    throw e;
   }
-  // Sheet status is the only user-facing release condition. Keep it non-approved
+  // Sheet status is one user-facing release condition. Keep it non-approved
   // until both the immutable snapshot and durable delivery acknowledgement exist.
   await writeTicketPublication(input.requestId,{C:'Delivery Pending',Y:'Delivery Pending'});
   await writeTicketPublication(input.requestId,{H:content});

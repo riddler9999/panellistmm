@@ -16,14 +16,14 @@ export default async function handler(req:Req,res:Res) {
   const b=req.body && typeof req.body==='object'?req.body as Record<string,unknown>:{};
   const email=typeof b.email==='string'?b.email.trim().toLowerCase():'';
   const action=b.action;
-  if(!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email)||
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)||
     !['create','reset','disable'].includes(String(action)))
    return res.status(400).json({error:'invalid_input'});
   if(action==='disable' && email===principal.email)
    return res.status(409).json({error:'cannot_disable_self'});
   if(action==='create' && !['Admin','User'].includes(String(b.role)))
    return res.status(400).json({error:'invalid_role'});
-  if(action!=='disable' && (typeof b.passcode!=='string'||!/^\\d{4}$/.test(b.passcode)))
+  if(action!=='disable' && (typeof b.passcode!=='string'||!/^\d{4}$/.test(b.passcode)))
    return res.status(400).json({error:'invalid_input'});
   await writePasscodeAccount(action as 'create'|'reset'|'disable',email,
     typeof b.passcode==='string'?b.passcode:undefined,

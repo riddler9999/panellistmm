@@ -5,7 +5,8 @@ export type ApprovalProof = {
   requestId: string;
   revision: number;
   approvedContent: string;
-  approvedByAccountId: string;
+  approvedByAccountId?: string | null;
+  approvedByEmail?: string | null;
   approvedAt: string;
 };
 export type DeliveryProof = {
@@ -30,7 +31,8 @@ export function releasedAnswer(
   if (!requestId || !owner || (principal.role !== 'Admin' && principal.email.toLowerCase() !== owner)) return null;
   if (!approval || !delivery || approval.requestId !== requestId || delivery.requestId !== requestId) return null;
   if (!Number.isSafeInteger(approval.revision) || approval.revision < 1 || delivery.revision !== approval.revision) return null;
-  if (!approval.approvedByAccountId || !value(approval.approvedAt) || !value(approval.approvedContent)) return null;
+  const hasApprover = !!approval.approvedByAccountId || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value(approval.approvedByEmail));
+  if (!hasApprover || !value(approval.approvedAt) || !value(approval.approvedContent)) return null;
   if (delivery.result !== 'success' || !value(delivery.deliveredAt)) return null;
   // A Sheet cell or status alone is never a release authority. The immutable approved snapshot wins.
   return approval.approvedContent;

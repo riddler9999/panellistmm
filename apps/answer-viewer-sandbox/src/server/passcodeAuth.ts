@@ -8,6 +8,7 @@ async function loginStage<T>(stage:string,operation:()=>Promise<T>):Promise<T>{
   const cause=error instanceof Error && /^(sheet_identity_not_configured|sheet_not_configured|sheet_token_unavailable|sheet_token_missing|pin_sheet_unavailable|pin_sheet_headers_invalid)$/.test(error.message) ? error.message : error instanceof Error ? error.name : 'unknown';
   console.error('pocket_hr_login_stage_failed',{stage,cause});
   // Raw upstream errors can contain credentials. Preserve only the safe category.
+  // eslint-disable-next-line preserve-caught-error -- Deliberately redact upstream error payloads.
   throw new Error('login_stage_'+stage, {cause: new Error(cause)});
  }
 }
