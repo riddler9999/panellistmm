@@ -190,7 +190,7 @@ export async function writePasscodeAccount(action:'create'|'reset'|'disable', em
  });
  if(!response.ok) throw new Error('pin_sheet_write_failed');
  // Revoke sessions when status or PIN is changed.
- if(action!=='create') await db('pocket_hr_sessions?sheet_email=eq.'+encodeURIComponent(email)+'&revoked_at=is.null','PATCH',{revoked_at:new Date().toISOString()});
+ if(action!=='create') { const { invalidateAccountSessions } = await import('./passcodeAuth.js'); await invalidateAccountSessions(email); }
 }
 
 /** Append a new request to the existing Sheet1 bridge. Owner is derived from session. */
