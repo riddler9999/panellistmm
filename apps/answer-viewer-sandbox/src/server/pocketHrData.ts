@@ -25,10 +25,20 @@ export async function db<T>(path: string, method = 'GET', body?: unknown): Promi
 }
 const query = (s: string) => encodeURIComponent(s);
 const base64url = (input: string | Buffer) => Buffer.from(input).toString('base64url');
+/** Only log allowlisted machine codes, never upstream messages, credentials or rows. */
+async function googleFailure(response: Response, stage: string): Promise<never> {
+  const body = await response.json().catch(() => ({})) as { error?: { status?: string; errors?: Array<{reason?: string}>; details?: Array<{reason?: string}> } | string };
+  const error = typeof body.error === 'object' ? body.error : undefined;
+  const allowed = new Set(['SERVICE_DISABLED', 'ACCESS_TOKEN_SCOPE_INSUFFICIENT', 'PERMISSION_DENIED', 'NOT_FOUND', 'INVALID_ARGUMENT', 'accessNotConfigured', 'forbidden', 'invalid_grant', 'invalid_client']);
+  const candidates = [typeof body.error === 'string' ? body.error : '', error?.status, ...(error?.errors ?? []).map(e => e.reason), ...(error?.details ?? []).map(e => e.reason)];
+  console.error('pocket_hr_google_failure', {stage, status: response.status, reasons: candidates.filter((v): v is string => !!v && allowed.has(v))});
+  throw new Error(stage);
+}
 export async function googleAccessToken(): Promise<string> {
   const email = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
   const privateKey = process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY?.replace(/\\n/g, '\n');
   if (!email || !privateKey) throw new Error('sheet_identity_not_configured');
+  if (!/^[^\s@]+@[^\s@]+\.iam\.gserviceaccount\.com$/.test(email)) throw new Error('sheet_identity_invalid');
   const now = Math.floor(Date.now() / 1000);
   const header = base64url(JSON.stringify({ alg: 'RS256', typ: 'JWT' }));
   const claims = base64url(JSON.stringify({
@@ -45,7 +55,7 @@ export async function googleAccessToken(): Promise<string> {
     body: new URLSearchParams({ grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer', assertion }),
     cache: 'no-store',
   });
-  if (!response.ok) throw new Error('sheet_token_unavailable');
+  if (!response.ok) return googleFailure(response, 'sheet_token_unavailable');
   const result = await response.json() as { access_token?: string };
   if (!result.access_token) throw new Error('sheet_token_missing');
   return result.access_token;
@@ -58,7 +68,7 @@ export async function readPasscodeAccounts(): Promise<Array<{email:string;role:s
  const url = 'https://sheets.googleapis.com/v4/spreadsheets/' + encodeURIComponent(id)
   + '/values/' + encodeURIComponent("'Pocket HR PINs'!A1:D1001");
  const response = await fetch(url,{headers:{Authorization:'Bearer '+token},cache:'no-store'});
- if (!response.ok) throw new Error('pin_sheet_unavailable');
+ if (!response.ok) return googleFailure(response, 'pin_sheet_unavailable');
  const values = (await response.json() as {values?:unknown[][]}).values ?? [];
  const [header,...rows] = values;
  if (!header || ['Email','Role','Passcode','Status'].some((v,i)=>header[i]!==v)) throw new Error('pin_sheet_headers_invalid');
@@ -169,7 +179,7 @@ export async function writePasscodeAccount(action:'create'|'reset'|'disable', em
  if(action==='create' && matched.length) throw new Error('account_exists');
  if(action!=='create' && matched.length!==1) throw new Error('account_not_found');
  if(action!=='disable') {
-  if(!pin || !/^\\d{4}$/.test(pin)) throw new Error('invalid_pin');
+  if(!pin || !/^\d{4}$/.test(pin)) throw new Error('invalid_pin');
   if(accounts.some(a=>a.passcode===pin && a.email!==email)) throw new Error('pin_collision');
  }
  const token=await googleAccessToken();
