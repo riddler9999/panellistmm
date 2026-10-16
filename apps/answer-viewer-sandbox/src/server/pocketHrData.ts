@@ -19,6 +19,10 @@ export async function db<T>(path: string, method = 'GET', body?: unknown): Promi
   if (!response.ok) {
     const error = new Error('storage_request_failed') as Error & { status?: number };
     error.status = response.status;
+    // Log only the known table and HTTP status; never log keys, request URLs, or response bodies.
+    const table = path.split('?')[0];
+    const allowedTable = ['pocket_hr_approvals', 'pocket_hr_deliveries'].includes(table) ? table : 'other';
+    console.error('pocket_hr_storage_failure', { table: allowedTable, status: response.status, method });
     throw error;
   }
   return response.json();
