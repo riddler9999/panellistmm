@@ -1,3 +1,6 @@
+import { draftVersion } from '../src/server/draftVersion.js';
+import { readConversation, withTicketLock } from '../src/server/conversationLifecycle.js';
+export const config = { maxDuration: 60 };
 import { authenticatedPrincipal } from '../src/server/passcodeAuth.js';
 import { validateConsultantAction } from '../src/server/consultantActions.js';
 import { readTickets, readProof, updateSheetRequest } from '../src/server/pocketHrData.js';
@@ -14,19 +17,25 @@ export default async function handler(req:Req,res:Res){
   if(principal?.role!=='Admin')return res.status(403).json({error:'access_denied'});
   const input=validateConsultantAction(req.body);
   if(!input||input.action==='approve')return res.status(400).json({error:'invalid_action'});
+  return await withTicketLock(input.requestId,async()=>{
+  const conversation=await readConversation(input.requestId);
+  if(conversation?.closed_at || conversation?.pending_sync) return res.status(409).json({error:'ticket_closed_or_syncing'});
   const ticket=(await readTickets()).find(row=>String(row['Row ID']).trim()===input.requestId);
   if(!ticket)return res.status(404).json({error:'ticket_not_found'});
+  if((req.body as {draftVersion?:unknown}).draftVersion!==draftVersion(ticket)) return res.status(409).json({error:'draft_changed'});
   const proof=await readProof(input.requestId);
   const revision=proof.approval?.revision??0;
+  if(revision>(conversation?.reply_revision??0)) return res.status(409).json({error:'response_already_approved'});
   if(revision!==input.expectedRevision)return res.status(409).json({error:'revision_conflict'});
-  if(String(ticket.Ticket_Status).trim()==='Approved'||String(ticket.Ticket_Status).trim()==='Resolved')
+  if(String(ticket.Ticket_Status).trim()==='Approved'||['Resolved','Closed'].includes(String(ticket.Ticket_Status).trim()))
    return res.status(409).json({error:'request_already_final'});
   const values:Record<string,string>=input.action==='edit'
    ?{Consultant_Answer:input.content!,Review_Status:'Draft'}
    :input.action==='request_clarification'
-   ?{Clarification_Question:input.content!,Needs_Clarification:'Yes',Review_Status:'Clarification Requested',Ticket_Status:'Needs Clarification'}
+   ?{Clarification_Question:input.content!,Needs_Clarification:'Yes',Review_Status:'Draft',Ticket_Status:'Awaiting Review'}
    :{Review_Status:'Rejected',Ticket_Status:'Rejected'};
   await updateSheetRequest(input.requestId,values);
   return res.status(200).json({ok:true,state:input.action});
+  });
  }catch{return res.status(503).json({error:'consultant_action_unavailable'});}
 }

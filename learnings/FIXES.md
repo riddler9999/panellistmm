@@ -22,3 +22,7 @@ Template:
 - Verification: publish ပြီးနောက် `get_workflow_details` ဖြင့် node ၂ ခုစလုံး live ဖြစ်ကြောင်း၊ `active: true`, `activeVersion.sameAsDraft: true` ဖြစ်ကြောင်း အတည်ပြု။ Burmese fallback string များ + `join('\n')` အားလုံး intact。
 - Regression prevention: Write field နှင့် pending-dedup guard ကို **တစ်ခုတည်းသော field ပေါ်တွင်** သတ်မှတ်ရမည် — write ကိုသာ ပြောင်း၍ dedup ကို မပြောင်းလျှင် ticket တိုင်းကို ၅ မိနစ်တိုင်း infinite re-draft (duplicate LLM cost) ဖြစ်စေမည်။
 - Result: n8n side reconciled + live。 **End-to-end HITL enforcement မပြီးသေး** — Glide-side enforcement (visibility conditions + Approve/Edit reads `Sheet_AI_Answer` + status gating) ကို owner က handoff contract အတိုင်း implement ရန်ကျန်ရှိသည်။
+
+## 2026-10-16 — Status alias filter count
+
+Submitted aliases normalize လုပ်စဉ် filter count က raw status နှင့်နှိုင်းယှဉ်၍ Processing (0) ဖြစ်ခဲ့သည်။ UI regression test ဖြင့်ဖမ်းမိပြီး filtering နှင့် count နှစ်ခုလုံးတွင် ticketStatus normalization သုံး၍ ပြင်ထားသည်။ ConsultationDashboard test သည် aliases နှစ်ခုကို Processing (2) ဟုစစ်သည်။

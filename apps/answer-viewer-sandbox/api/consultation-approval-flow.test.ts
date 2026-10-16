@@ -1,11 +1,13 @@
+import { draftVersion } from '../src/server/draftVersion';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import handler from './consultation-approve';
 import { authenticatedPrincipal } from '../src/server/passcodeAuth';
-import { db, readTickets, acknowledgeDelivery, writeTicketPublication } from '../src/server/pocketHrData';
+import { db, readProof, readTickets, acknowledgeDelivery, writeTicketPublication } from '../src/server/pocketHrData';
 
+vi.mock('../src/server/conversationLifecycle',()=>({readConversation:vi.fn(async()=>null),withTicketLock:vi.fn(async(_id:string,work:()=>Promise<unknown>)=>work())}));
 vi.mock('../src/server/passcodeAuth',()=>({authenticatedPrincipal:vi.fn()}));
 vi.mock('../src/server/pocketHrData',()=>({
- db:vi.fn(),readTickets:vi.fn(),acknowledgeDelivery:vi.fn(),writeTicketPublication:vi.fn()
+ readProof:vi.fn(async()=>({approval:null,delivery:null})),db:vi.fn(),readTickets:vi.fn(),acknowledgeDelivery:vi.fn(),writeTicketPublication:vi.fn()
 }));
 function response() {
  let status=200;let body:unknown;
@@ -13,7 +15,7 @@ function response() {
  return {res,result:()=>({status,body})};
 }
 const req={method:'POST',headers:{origin:'https://panellistmm.vercel.app',host:'panellistmm.vercel.app'},
- body:{action:'approve',requestId:'T-1',expectedRevision:0,content:'Approved advice'}};
+ body:{draftVersion:draftVersion({'Row ID':'T-1',Owner_Email:'user@example.com'}),action:'approve',requestId:'T-1',expectedRevision:0,content:'Approved advice'}};
 describe('approval publication ordering',()=>{
  beforeEach(()=>{
   vi.resetAllMocks();
@@ -56,4 +58,20 @@ describe('approval publication ordering',()=>{
   expect(db).not.toHaveBeenCalled();
   expect(writeTicketPublication).not.toHaveBeenCalled();
  });
+ it('rejects a changed draft before creating any snapshot',async()=>{
+  vi.mocked(readTickets).mockResolvedValue([{'Row ID':'T-1',Owner_Email:'user@example.com',AI_Answer:'new assessment'}]);
+  const {res,result}=response();await handler(req,res);
+  expect(result().status).toBe(409);expect(db).not.toHaveBeenCalled();
+ });
+ it('does not approve an already delivered response again',async()=>{
+  vi.mocked(readTickets).mockResolvedValue([{'Row ID':'T-1',Owner_Email:'user@example.com',Ticket_Status:'Approved'}]);
+  const {res,result}=response();await handler(req,res);
+  expect(result().status).toBe(409);expect(db).not.toHaveBeenCalled();
+ });
+ it('resumes the same committed snapshot after publication failure',async()=>{
+  vi.mocked(readProof).mockResolvedValue({approval:{requestId:'T-1',revision:1,approvedContent:'Approved advice',approvedByEmail:'admin@example.com',approvedAt:'2026-10-16T00:00:00Z'},delivery:null});
+  const {res,result}=response();await handler(req,res);
+  expect(result().status).toBe(200);expect(db).not.toHaveBeenCalled();expect(acknowledgeDelivery).toHaveBeenCalledWith('T-1',1);
+ });
+
 });

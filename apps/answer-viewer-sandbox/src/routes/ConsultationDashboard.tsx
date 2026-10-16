@@ -1,3 +1,4 @@
+import { ticketStatus } from '../domain/ticketStatus';
 import { useEffect, useMemo, useState } from 'react';
 import type { ConsultationTicket } from '../server/consultationAccess';
 
@@ -54,6 +55,8 @@ export function ConsultationDashboard() {
   }
   const [tab, setTab] = useState<'Conversation' | 'Details' | 'Files'>('Conversation');
   const [actionDraft, setActionDraft] = useState('');
+  const [editing, setEditing] = useState(false);
+  const [reply, setReply] = useState('');
   const [actionError, setActionError] = useState('');
   const [creating,setCreating]=useState(false);
   const [newTitle,setNewTitle]=useState('');
@@ -63,15 +66,28 @@ export function ConsultationDashboard() {
   const [requestBusy,setRequestBusy]=useState(false);
   const [actionSubmitting, setActionSubmitting] = useState(false);
 
+  useEffect(()=>{
+    if(!session || editing || actionSubmitting)return;
+    let mounted=true;
+    const timer=setInterval(()=>{
+      fetch('/api/consultation',{credentials:'include',cache:'no-store'})
+        .then(async response=>{if(response.ok&&mounted)setSession(await response.json());})
+        .catch(()=>{});
+    },15000);
+    return ()=>{mounted=false;clearInterval(timer);};
+  },[session,editing,actionSubmitting]);
+
   const tickets = useMemo(() => session?.tickets ?? [], [session]);
   const role = session?.role ?? 'User';
   const visible = useMemo(() => tickets.filter(ticket =>
-    (filter === 'All' || ticket.status === filter) &&
+    (filter === 'All' || ticketStatus(ticket.status) === filter) &&
     [ticket.ticketId, ticket.title].some(value => value.toLocaleLowerCase().includes(search.trim().toLocaleLowerCase()))
   ), [tickets, filter, search]);
   const active = tickets.find(ticket => ticket.ticketId === selected);
   // Derive filter labels from actual ticket statuses; never invent workflow states.
-  const filters = ['All', ...Array.from(new Set(tickets.map(ticket => ticket.status).filter(Boolean)))];
+  const filters = ['All', ...Array.from(new Set(tickets.map(ticket => ticketStatus(ticket.status)).filter(Boolean)))];
+
+  const responseContent = editing ? actionDraft : active?.history.at(-1)?.content ?? '';
 
   async function approveTicket() {
     if (!active || actionSubmitting || role !== 'Admin') return;
@@ -79,13 +95,13 @@ export function ConsultationDashboard() {
     try {
       const response = await fetch('/api/consultation-approve', {
         method:'POST',credentials:'include',headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({action:'approve',requestId:active.ticketId,expectedRevision:active.revision ?? 0,content:actionDraft})
+        body:JSON.stringify({action:'approve',requestId:active.ticketId,expectedRevision:active.revision ?? 0,content:responseContent,draftVersion:active.draftVersion})
       });
       if (!response.ok) { setActionError(response.status===409?'This request changed. Reload and review again.':'Approval was not published. Retry after checking the request.'); return; }
       const refreshed = await fetch('/api/consultation',{credentials:'include',cache:'no-store'});
       if (!refreshed.ok) throw new Error('refresh_failed');
       setSession(await refreshed.json() as {role:'Admin'|'User';tickets:ConsultationTicket[]});
-      setActionDraft('');
+      setActionDraft(''); setEditing(false);
     } catch { setActionError('Could not refresh the approved request.'); }
     finally { setActionSubmitting(false); }
   }
@@ -106,18 +122,15 @@ export function ConsultationDashboard() {
     }catch{setRequestError('Could not submit request. Please retry.');}
     finally{setRequestBusy(false);}
   }
-  async function consultantAction(action:'edit'|'request_clarification'|'reject'){
+  async function userAction(action:'reply'|'close') {
     if(!active||actionSubmitting)return;
     setActionSubmitting(true);setActionError('');
-    try{
-      const response=await fetch('/api/consultation-action',{method:'POST',credentials:'include',
-        headers:{'Content-Type':'application/json'},body:JSON.stringify({
-          action,requestId:active.ticketId,expectedRevision:active.revision??0,content:actionDraft
-        })});
+    try {
+      const response=await fetch('/api/consultation-reply',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify({action,requestId:active.ticketId,expectedRevision:active.revision,content:reply})});
       if(!response.ok)throw new Error('action_failed');
-      await refreshTickets();setActionDraft('');
-    }catch{setActionError('Action could not be saved. Reload and retry.');}
-    finally{setActionSubmitting(false);}
+      await refreshTickets();setReply('');
+    } catch {setActionError('Could not save. Refresh and try again.');}
+    finally {setActionSubmitting(false);}
   }
 
   if (!session) return <main className="viewer-shell consultation-dashboard"><section className="consult-welcome"><div className="consult-welcome-mark">P</div><h1>Pocket HR</h1>
@@ -137,32 +150,32 @@ export function ConsultationDashboard() {
         <button type="button" className="consult-back" onClick={() => setSelected(null)} aria-label="Back to requests">‹</button>
         <section className="consult-detail-head">
           <span className={`consult-request-icon tone-${statusClass(active.status)}`} aria-hidden="true">{ticketIcon(active.status)}</span>
-          <div className="consult-detail-title"><small>{active.ticketId}{active.createdAt ? ` · ${active.createdAt}` : ''}</small><h1>{active.title}</h1>{active.category && <small>{active.category}</small>}</div><span className={`consult-badge tone-${statusClass(active.status)}`}>{active.status}</span>
+          <div className="consult-detail-title"><small>{active.ticketId}{active.createdAt ? ` · ${active.createdAt}` : ''}</small><h1>{active.title}</h1>{active.category && <small>{active.category}</small>}</div><span className={`consult-badge tone-${statusClass(active.status)}`}>{ticketStatus(active.status)}</span>
         </section>
         <nav className="consult-detail-tabs" aria-label="Request details">
           {(['Conversation', 'Details', 'Files'] as const).map(name =>
             <button key={name} type="button" className={tab === name ? 'active' : ''} aria-current={tab === name ? 'page' : undefined} onClick={() => setTab(name)}><span aria-hidden="true">{name === 'Conversation' ? '☏' : name === 'Details' ? '▤' : '♧'}</span> {name}</button>)}
         </nav>
-        {tab === 'Conversation' && <section className="consult-timeline"><div className="consult-timeline-heading"><h2>Conversation</h2><span>{active.history.length + Number(!!active.approvedQuestion) + Number(!!active.finalAnswer)} messages</span></div>
-          {active.history.length === 0 && !active.approvedQuestion && !active.finalAnswer
-            ? <p className="consult-empty">No released conversation entries available.</p> : null}
-          {role === 'Admin' && active.history.map((entry, index) =>
-            <article className="consult-message" key={index}><div className="consult-message-author"><span className="consult-avatar">{entry.type === 'QUESTION' ? 'U' : 'C'}</span><strong>{entry.type === 'QUESTION' ? 'User' : 'Consultant'}</strong><small>Round {entry.round}</small></div><p>{entry.content}</p></article>)}
-          {active.description && <article className="consult-message"><div className="consult-message-author"><span className="consult-avatar">U</span><strong>Request</strong></div><p>{active.description}</p></article>}
-          {active.approvedQuestion && <article className="consult-message"><strong>Consultant · Clarification</strong><p>{active.approvedQuestion}</p></article>}
-          {active.finalAnswer && <article className="consult-message consult-final"><strong>Final Answer</strong><p>{active.finalAnswer}</p></article>}
-        </section>}
-        {role === 'Admin' && <section className="state-card consult-actions" aria-label="Consultant actions">
-          <h2>Consultant Approval</h2>
-          <label htmlFor="consult-action-draft">Approved answer</label>
-          <textarea id="consult-action-draft" value={actionDraft} onChange={event=>setActionDraft(event.target.value)} placeholder="Review and enter the answer to publish" />
+        {tab === 'Conversation' && <section className="consult-timeline">
+          <div className="consult-timeline-heading"><h2>Conversation</h2></div>
+          {active.description && <article className="consult-message"><div className="consult-message-author"><span className="consult-avatar">U</span><strong>User · Request</strong></div><p>{active.description}</p></article>}
+          {active.conversation?.map((entry,index)=><article className="consult-message" key={index}><strong>{entry.role==='user'?'User':'Consultant'}</strong><p>{entry.content}</p>{role==='Admin'&&entry.role==='consultant'&&<button className="consult-approved" disabled>Approved ✓</button>}</article>)}
+          {active.responseApproved && <article className="consult-message consult-final"><strong>Consultant</strong><p>{active.finalAnswer}</p>{role==='Admin'&&<button className="consult-approved" disabled>Approved ✓</button>}</article>}
+          {role==='Admin' && !active.responseApproved && !active.closed && (editing || !!responseContent) && <article className="consult-message consult-actions">
+            <strong>Response for review</strong>
+            {editing ? <><label htmlFor="consult-action-draft">Edit response</label><textarea id="consult-action-draft" value={actionDraft} onChange={event=>setActionDraft(event.target.value)} maxLength={50000}/></> : <p>{responseContent}</p>}
+            <div className="consult-action-buttons"><button type="button" disabled={actionSubmitting || !responseContent.trim()} onClick={approveTicket}>{actionSubmitting?'Approving…':'Approve'}</button>
+            {editing ? <button type="button" disabled={actionSubmitting} onClick={()=>{setEditing(false);setActionDraft('');}}>Cancel edit</button> : <button type="button" disabled={actionSubmitting} onClick={()=>{setActionDraft(responseContent);setEditing(true);}}>Edit</button>}</div>
+          </article>}
+          {!active.responseApproved && !active.closed && !(role==='Admin'&&responseContent) && <p className="consult-empty">{active.syncPending?'Sending your follow-up…':'Waiting for a reviewed response.'}</p>}
           {actionError && <p role="alert">{actionError}</p>}
-          <button type="button" disabled={actionSubmitting || !actionDraft.trim()} onClick={approveTicket}>{actionSubmitting?'Publishing...':'Approve & Publish'}</button>
-          <button type="button" disabled={actionSubmitting || !actionDraft.trim()} onClick={()=>consultantAction('edit')}>Save Draft</button>
-          <button type="button" disabled={actionSubmitting || !actionDraft.trim()} onClick={()=>consultantAction('request_clarification')}>Ask Clarification</button>
-          <button type="button" disabled={actionSubmitting} onClick={()=>consultantAction('reject')}>Reject</button>
+          {active.closed ? <p className="consult-empty">Ticket closed</p> : role==='User' && <section className="consult-actions state-card">
+            {active.responseApproved && <><label htmlFor="consult-reply">Follow-up question</label><textarea id="consult-reply" maxLength={10000} value={reply} onChange={e=>setReply(e.target.value)}/><button disabled={actionSubmitting||!reply.trim()} onClick={()=>userAction('reply')}>Send follow-up</button></>}
+            <button disabled={actionSubmitting} onClick={()=>userAction('close')}>Close ticket</button>
+            {active.autoCloseAt && <p>This ticket closes automatically 48 hours after the latest approved response unless you send a follow-up.</p>}
+          </section>}
         </section>}
-        {tab === 'Details' && <section className="state-card consult-details"><h2>Request Details</h2><dl><div><dt>Request ID</dt><dd>{active.ticketId}</dd></div><div><dt>Subject</dt><dd>{active.title}</dd></div><div><dt>Status</dt><dd><span className={`consult-badge tone-${statusClass(active.status)}`}>{active.status}</span></dd></div>{active.category && <div><dt>Category</dt><dd>{active.category}</dd></div>}{active.createdAt && <div><dt>Created</dt><dd>{active.createdAt}</dd></div>}{active.description && <div><dt>Description</dt><dd>{active.description}</dd></div>}{role === 'Admin' && active.reviewStatus && <div><dt>Review Status</dt><dd>{active.reviewStatus}</dd></div>}{role === 'Admin' && active.processingStatus && <div><dt>Processing Status</dt><dd>{active.processingStatus}</dd></div>}{role === 'Admin' && active.artifact?.status && <div><dt>Artifact Status</dt><dd>{active.artifact.status}</dd></div>}</dl></section>}
+        {tab === 'Details' && <section className="state-card consult-details"><h2>Request Details</h2><dl><div><dt>Request ID</dt><dd>{active.ticketId}</dd></div><div><dt>Subject</dt><dd>{active.title}</dd></div><div><dt>Status</dt><dd><span className={`consult-badge tone-${statusClass(active.status)}`}>{ticketStatus(active.status)}</span></dd></div>{active.category && <div><dt>Category</dt><dd>{active.category}</dd></div>}{active.createdAt && <div><dt>Created</dt><dd>{active.createdAt}</dd></div>}{active.description && <div><dt>Description</dt><dd>{active.description}</dd></div>}{role === 'Admin' && active.reviewStatus && <div><dt>Review Status</dt><dd>{active.reviewStatus}</dd></div>}{role === 'Admin' && active.processingStatus && <div><dt>Processing Status</dt><dd>{active.processingStatus}</dd></div>}{role === 'Admin' && active.artifact?.status && <div><dt>Artifact Status</dt><dd>{active.artifact.status}</dd></div>}</dl></section>}
         {tab === 'Files' && <section className="state-card consult-files"><div className="consult-file-icon">▤</div>{role === 'Admin' && active.artifact?.title ? <><h2>{active.artifact.title}</h2><p>{[active.artifact.type, active.artifact.format, active.artifact.status].filter(Boolean).join(' · ')}</p></> : <><h2>No files available</h2><p>Only verified, authorized attachments will appear here.</p></>}</section>}
       </> : <>
         <div className="consult-list-heading"><h1>{role === 'Admin' ? 'All Requests' : 'My Requests'}</h1><p>{tickets.length} requests</p></div>
@@ -183,13 +196,13 @@ export function ConsultationDashboard() {
           <button type="button" onClick={()=>setCreating(false)}>Cancel</button>
         </form>}
         <div className="consult-filters" aria-label="Filter requests">
-          {filters.map(status => <button type="button" key={status} className={filter === status ? 'active' : ''} aria-pressed={filter === status} onClick={() => setFilter(status)}>{status} ({status === 'All' ? tickets.length : tickets.filter(ticket => ticket.status === status).length})</button>)}
+          {filters.map(status => <button type="button" key={status} className={filter === status ? 'active' : ''} aria-pressed={filter === status} onClick={() => setFilter(status)}>{status} ({status === 'All' ? tickets.length : tickets.filter(ticket => ticketStatus(ticket.status) === status).length})</button>)}
         </div>
         {visible.length === 0 ? <section className="state-card">Request မရှိသေးပါ။</section> :
-          <div className="consult-list">{visible.map(ticket => <button type="button" className="consult-request" key={ticket.ticketId} onClick={() => { setSelected(ticket.ticketId); setTab('Conversation'); }}>
+          <div className="consult-list">{visible.map(ticket => <button type="button" className="consult-request" key={ticket.ticketId} onClick={() => { setSelected(ticket.ticketId); setTab('Conversation'); setEditing(false); setActionDraft(''); setActionError(''); setReply(''); }}>
             <span className={`consult-request-icon tone-${statusClass(ticket.status)}`} aria-hidden="true">{ticketIcon(ticket.status)}</span>
             <span className="consult-request-copy"><small>{ticket.ticketId}</small><strong>{ticket.title}</strong></span>
-            <span className={`consult-badge tone-${statusClass(ticket.status)}`}>{ticket.status}</span><span className="consult-chevron" aria-hidden="true">›</span>
+            <span className={`consult-badge tone-${statusClass(ticket.status)}`}>{ticketStatus(ticket.status)}</span><span className="consult-chevron" aria-hidden="true">›</span>
           </button>)}</div>}
       </>}
   </main>;

@@ -19,3 +19,30 @@ describe('production Pocket HR dashboard',()=>{
   expect(screen.queryByText('Preview Reference UI')).not.toBeInTheDocument();
  });
 });
+describe('review conversation UI',()=>{
+ it('groups Submitted aliases into one clear filter',async()=>{
+  vi.stubGlobal('fetch',vi.fn(async()=>({ok:true,json:async()=>({role:'Admin',tickets:[
+   {ticketId:'1',title:'First',status:'Submitted',history:[]},
+   {ticketId:'2',title:'Second',status:'ဖောင်ပို့ပြီး (Submitted)',history:[]}
+  ]})})));
+  render(<ConsultationDashboard/>);
+  expect(await screen.findByRole('button',{name:'Processing (2)'})).toBeInTheDocument();
+  expect(screen.queryByText(/Submitted/)).not.toBeInTheDocument();
+ });
+ it('shows original user request first and approves the existing draft without retyping',async()=>{
+  const {default:userEvent}=await import('@testing-library/user-event');
+  const user=userEvent.setup();let approved=false;
+  const fetchMock=vi.fn(async(url:unknown)=>{
+   if(url==='/api/consultation-approve'){approved=true;return {ok:true};}
+   return {ok:true,json:async()=>({role:'Admin',tickets:[{ticketId:'1',title:'Test request',status:approved?'Approved':'Awaiting Review',description:'Original question',history:[{type:'ADVICE',content:'Proposed response',round:0}],responseApproved:approved,finalAnswer:approved?'Proposed response':undefined}]})};
+  });
+  vi.stubGlobal('fetch',fetchMock);render(<ConsultationDashboard/>);
+  await user.click(await screen.findByText('Test request'));
+  const articles=screen.getAllByRole('article');expect(articles[0]).toHaveTextContent('Original question');
+  expect(articles[1]).toHaveTextContent('Proposed response');
+  await user.click(screen.getByRole('button',{name:'Approve'}));
+  expect(await screen.findByRole('button',{name:'Approved ✓'})).toBeDisabled();
+  expect(screen.queryByRole('button',{name:'Edit'})).not.toBeInTheDocument();
+  const write=fetchMock.mock.calls.find(call=>call[0]==='/api/consultation-approve');expect(write).toBeDefined();
+ });
+});

@@ -1,7 +1,8 @@
+import { draftVersion } from './draftVersion.js';
 import type { TicketRow } from './ticketRow';
 
 export type Principal = { email: string; role: 'Admin' | 'User' };
-export type ConsultationTicket = { ticketId: string; revision?: number; title: string; status: string; finalAnswer?: string; approvedQuestion?: string; category?: string; createdAt?: string; description?: string; reviewStatus?: string; processingStatus?: string; artifact?: { type?: string; title?: string; format?: string; status?: string; url?: string }; history: Array<{ type: 'QUESTION' | 'ANSWER' | 'ADVICE'; content: string; round: number }> };
+export type ConsultationTicket = { ticketId: string; draftVersion?: string; conversation?: Array<{role:'user'|'consultant';content:string;revision:number}>; responseApproved?: boolean; closed?: boolean; autoCloseAt?: string; syncPending?: boolean; revision?: number; title: string; status: string; finalAnswer?: string; approvedQuestion?: string; category?: string; createdAt?: string; description?: string; reviewStatus?: string; processingStatus?: string; artifact?: { type?: string; title?: string; format?: string; status?: string; url?: string }; history: Array<{ type: 'QUESTION' | 'ANSWER' | 'ADVICE'; content: string; round: number }> };
 const validEmail = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 const string = (value: unknown) => typeof value === 'string' ? value.trim() : '';
 
@@ -42,12 +43,10 @@ export function projectConsultationTicket(principal: Principal, ticket: TicketRo
   // AI_Answer is an unapproved draft in the currently running n8n integration.
   // It is never included in a User response. Consultant receives it only after server authorization.
   if (principal.role === 'Admin') {
-    const draft = string(ticket.AI_Answer ?? ticket.Sheet_AI_Answer);
+    projection.draftVersion = draftVersion(ticket);
+    const draft = string(ticket.Consultant_Answer) || string(ticket.Clarification_Question) || string(ticket.AI_Answer) || string(ticket.Sheet_AI_Answer);
     if (draft) projection.history.push({ type: 'ADVICE', content: draft, round: 0 });
-    const consultantAnswer = string(ticket.Consultant_Answer);
-    if (consultantAnswer) projection.history.push({type:'ANSWER',content:consultantAnswer,round:0});
-    const clarification = string(ticket.Clarification_Question);
-    if (clarification) projection.approvedQuestion = clarification;
+
   }
   // Sheet1 currently has no Approval_Status/Approved_Question columns. Never infer
   // approval from Ticket_Status or the presence of Final_Answer alone.

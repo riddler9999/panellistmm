@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { loadLiveConsultations } from './liveConsultation';
 import { readTickets, readProofs } from './pocketHrData';
+vi.mock('./conversationLifecycle',async(importOriginal)=>({...await importOriginal<typeof import('./conversationLifecycle')>(),readConversations:vi.fn(async()=>new Map())}));
 vi.mock('./pocketHrData', () => ({ readTickets:vi.fn(), readProofs:vi.fn() }));
 const sheetRows = [
  { 'Row ID':'A-001',Owner_Email:'a@example.com',Ticket_Title:'Leave request',Ticket_Status:'Awaiting Review',AI_Answer:'SECRET AI DRAFT',Final_Answer:'NOT APPROVED' },

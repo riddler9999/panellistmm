@@ -226,7 +226,7 @@ export async function createSheetRequest(ownerEmail:string,title:string,category
 }
 /** Map named canonical columns to Sheet coordinates, never caller-provided coordinates. */
 export async function updateSheetRequest(requestId:string,values:Record<string,string>):Promise<void>{
- const allowed=['Ticket_Status','Review_Status','Consultant_Answer','Clarification_Question','Needs_Clarification','Final_Answer'];
+ const allowed=['Ticket_Status','Review_Status','Consultant_Answer','Clarification_Question','Needs_Clarification','Final_Answer','Request_Text','AI_Answer','Sheet_AI_Answer','AI_Draft','Processing_Status','Processing_Error','Unified_Status'];
  const rows=await readTickets();
  const row=rows.find(item=>String(item['Row ID'])===requestId);
  if(!row || !Number.isSafeInteger(row.__sheetRow)) throw new Error('ticket_not_found');
@@ -236,7 +236,7 @@ export async function updateSheetRequest(requestId:string,values:Record<string,s
  const data=Object.entries(values).map(([name,value])=>{
   if(!allowed.includes(name)) throw new Error('invalid_column');
   const index=headers.indexOf(name);
-  const column=String.fromCharCode(65+index);
+  const column=(index >= 26 ? String.fromCharCode(64 + Math.floor(index / 26)) : '') + String.fromCharCode(65 + index % 26);
   return {range:'Sheet1!'+column+row.__sheetRow,values:[[value]]};
  });
  const token=await googleAccessToken();
