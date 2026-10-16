@@ -1,5 +1,7 @@
 # Pocket HR — Production remediation နှင့် integration audit
 
+> Latest update — 2026-10-16 00:57 UTC: Sheets API blocker ပြေလည်ပြီး live PIN login၊ Admin session၊ invalid PIN rejection၊ logout/revocation အောင်မြင်သည်။ Public workbook permission မရှိတော့၊ service account writer ဖြစ်သည်။ Dashboard သည် Supabase approvals GET HTTP 401 ကြောင့် blocked ဖြစ်နေဆဲ။ အောက်ပါအစောပိုင်း SERVICE_DISABLED မှတ်တမ်းများသည် historical evidence ဖြစ်သည်။
+
 စစ်ဆေးသည့်ရက်: 2026-10-15 UTC။ Repository: `riddler9999/panellistmm`, PR #13,
 branch `feat/pocket-hr-embed-dashboard`။ **ပြီးစီးပြီဟု မသတ်မှတ်ရသေး။**
 လက်ရှိ source၊ live Google Sheets၊ n8n active version၊ Supabase schema နှင့် Vercel logs ကို အသုံးပြုထားသည်။
@@ -266,3 +268,33 @@ Production is **not fully remediated** until those checks pass. Release evidence
 
 Schema snapshot နှင့်ဤ audit သည် repository တွင်ရှိသည်။ Full HR data/PIN values ကို commit မလုပ်ထားပါ။
 အပြီးသတ် evidence commit သည် documentation-only ဖြစ်ပြီး deployed application code သည် အထက်ပါ `390d6f1` ဖြစ်သည်။
+
+## API enablement နောက် live verification — 2026-10-16 00:57 UTC
+
+Owner က Sheets API enable ပြီးကြောင်း ပြောပြီးနောက် fresh production tests ပြန်လုပ်ခဲ့သည်။
+Remote branch တွင် အခြားပြင်ဆင်မှုများ `32557b5`, `0d25fd8`, `ab77f8f` ရှိနေသဖြင့် local branch ကို fast-forward လုပ်ထားသည်။
+Current Production commit: `ab77f8f032b7fc6b540f5a677aab2fbe09a8c1b2`၊ deployment `dpl_GVoT7K5oU5XdrsjjoEfLodSYao2p` (READY)။
+
+| Actual live check | Result |
+|---|---|
+| Active Admin PIN login | HTTP 200 |
+| Redis session retrieval / current role | HTTP 200, Admin |
+| Valid-format PIN not in registry | HTTP 401 invalid_credentials |
+| Logout | HTTP 200 |
+| Reuse old cookie after logout | HTTP 401 unauthenticated |
+| Cookie attributes | Secure, HttpOnly, SameSite=None |
+| Mobile Chromium login + page reload | Session remains HTTP 200 / Admin |
+| Mobile Chromium logout + subsequent session check | 200 then 401 |
+| Admin dashboard data | HTTP 503 consultation_unavailable |
+| Glide embed persistence / User A-B accounts | Not executed |
+
+Fresh Drive metadata: `anyone` permission မရှိတော့၊ existing service account သည် `writer` ဖြစ်သည်။
+PIN rotation လုပ်ပြီးကြောင်းကို မအတည်ပြုထားပါ။ Write permission ရှိခြင်းသည် live approval write test အောင်မြင်ပြီးဟု မဆိုလိုပါ။
+
+Dashboard root-cause evidence: `2026-10-16T00:56:37.466Z` Production log တွင်
+`pocket_hr_storage_failure { table: 'pocket_hr_approvals', status: 401, method: 'GET' }` ဖြစ်သည်။
+Production SUPABASE_URL ကို decrypt read-back ဖြင့် expected Panellist project URL နှင့် equality စစ်ပြီး မှန်သည်။
+ထို့ကြောင့် Google login issue မဟုတ်တော့ဘဲ Supabase backend credential rejection ကို ပြင်ရန်ကျန်သည်။
+Key expired/malformed/wrong-project ဖြစ်သည့်အကြောင်းရင်းခွဲကို 401 တစ်ခုတည်းဖြင့် မသတ်မှတ်ထားပါ။
+Owner ထံ Production SUPABASE_SERVICE_ROLE_KEY ကို မှန်ကန်သော backend key ဖြင့် secure settings မှ update လုပ်ရန်တောင်းထားသည်။
+Key ကို chat/log/report တွင် မဖော်ပြထား။ Approval/delivery checks ကို bypass မလုပ်ထားပါ။
