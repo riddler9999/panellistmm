@@ -11,5 +11,9 @@ export default async function handler(req:Req,res:Res) {
   if(!principal) return res.status(403).json({error:'access_denied'});
   const tickets=await loadLiveConsultations(principal);
   return res.status(200).json({role:principal.role,tickets});
- } catch { return res.status(503).json({error:'consultation_unavailable'}); }
+ } catch (error) {
+  const code = error instanceof Error && /^[a-z_]+$/.test(error.message) ? error.message : 'unexpected_failure';
+  console.error('pocket_hr_consultation_failed', { code });
+  return res.status(503).json({error:'consultation_unavailable'});
+ }
 }
