@@ -232,3 +232,37 @@ No destructive Sheets/Glide mutation၊ no Supabase migration၊ no workflow act
 5. Review historical Approved rows individually; no approval/delivery evidence must be fabricated or inferred from status.
 
 Production is **not fully remediated** until those checks pass. Release evidence is appended after final deployment verification.
+
+## Final release evidence — 2026-10-16 00:30 UTC recheck
+
+- Deployed code commit: `390d6f1f8b5544d3c9c6d4edbb398a00918669dd`။
+- Vercel deployment: `dpl_GrfT48jZTfw1aMNHqB4BnLfbhiqj`, target Production, READY။
+- URL: `https://panellistmm.vercel.app`။ Domain inspection က အထက်ပါ commit/deployment ကို serve လုပ်ကြောင်း အတည်ပြုသည်။
+- GitHub Actions run `38793720832` သည် **success**: unit/behavioral tests၊ typecheck၊ lint၊ production build၊
+  client bundle check၊ Playwright browser verification အားလုံး passed။
+  https://github.com/riddler9999/panellistmm/actions/runs/38793720832
+- Intermediate diagnostic commit `5955544` ၏ CI run `38792294209` သည် failed ဖြစ်ခဲ့သည်။
+  New service-account validation နှင့်မကိုက်သော old test email fixture ကို final commit တွင်ပြင်ပြီး full CI ပြန်အောင်ခဲ့သည်။
+  အရင် failure ကို PASS ဟု မပြောင်းမှတ်ထားပါ။
+- Deployed Chromium checks: active Admin PIN **503**၊ invalid PIN format **401**၊ forged Admin identity **403**၊
+  unauthenticated session **401**။ အောင်မြင်သော live login / dashboard / logout / Glide embed test ဟု မဆိုရ။
+- Resume ပြီး fresh active-PIN attempt သည် **503** ဖြစ်နေဆဲ။ Runtime log
+  `2026-10-16T00:30:14.143Z` တွင် Google Sheets **403 PERMISSION_DENIED / SERVICE_DISABLED** ထပ်အတည်ပြုသည်။
+- Fresh Drive permission read တွင် `anyone:reader` နှင့် service-account `reader` မပြောင်းသေး။
+- Actual production UI source/CSS ကို မပြောင်းထား။ Local test fixture screenshots နှင့် sanitized production-check JSON ကို workspace evidence တွင်ထားသည်။
+
+### Changed implementation files
+
+`apps/answer-viewer-sandbox/` အောက်တွင်:
+
+- `src/server/pocketHrData.ts`: safe Google diagnostics၊ email validation၊ PIN regex၊ approval email mapping။
+- `src/server/passcodeAuth.ts`: safe error category ကိုသာ cause အဖြစ်ထိန်းထားသည်။
+- `src/server/liveConsultation.ts`, `src/server/deliveryPolicy.ts`: existing immutable release policy ကို live API တွင်ပြန်သုံးသည်။
+- `api/consultation-approve.ts`: Resolved request writes ပိတ်သည်။
+- `api/pocket-hr-admin-accounts.ts`: email/PIN validation မှန်အောင်ပြင်သည်။
+- `scripts/verify-browser.mjs`: installed Chromium executable ကို environment ဖြင့်ရွေးနိုင်သည်။
+- `googleAuth.test.ts`, `approvalStorage.test.ts`, `deliveryPolicy.test.ts`, `liveConsultation.test.ts`,
+  `pinOnlyLogin.test.ts`, `consultation-approval-flow.test.ts`, `pocket-hr-admin-accounts.test.ts`: regression coverage။
+
+Schema snapshot နှင့်ဤ audit သည် repository တွင်ရှိသည်။ Full HR data/PIN values ကို commit မလုပ်ထားပါ။
+အပြီးသတ် evidence commit သည် documentation-only ဖြစ်ပြီး deployed application code သည် အထက်ပါ `390d6f1` ဖြစ်သည်။
