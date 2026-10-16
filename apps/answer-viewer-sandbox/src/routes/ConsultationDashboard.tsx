@@ -35,7 +35,14 @@ export function ConsultationDashboard() {
       const response=await fetch('/api/pocket-hr-login',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify({passcode})});
       if(!response.ok){setLoginError(response.status===401?'Passcode is incorrect.':'Login unavailable.');return;}
       const ticketsResponse=await fetch('/api/consultation',{credentials:'include',cache:'no-store'});
-      if(!ticketsResponse.ok){setLoginError('Could not load requests.');return;}
+      if(!ticketsResponse.ok){
+        setLoginError(ticketsResponse.status===403
+          ? 'Session could not be verified. Please sign in again.'
+          : ticketsResponse.status===503
+            ? 'Requests service unavailable. Please try again shortly.'
+            : 'Could not load requests. Please retry.');
+        return;
+      }
       setSession(await ticketsResponse.json() as {role:'Admin'|'User';tickets:ConsultationTicket[]});
       setPasscode('');
     }catch{setLoginError('Network error. Try again.');}
