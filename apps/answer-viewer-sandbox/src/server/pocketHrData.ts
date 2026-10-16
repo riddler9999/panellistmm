@@ -65,18 +65,19 @@ export async function googleAccessToken(): Promise<string> {
   return result.access_token;
 }
 /** Admin-managed PIN register. Never expose its rows to the browser. */
-export async function readPasscodeAccounts(): Promise<Array<{email:string;role:string;passcode:string;status:string;sheetRow:number}>> {
+export async function readPasscodeAccounts(): Promise<Array<{email:string;role:string;passcode:string;status:string;sheetRow:number;name?:string}>> {
  const id = process.env.POCKET_HR_SHEET_ID;
  if (!id) throw new Error('sheet_not_configured');
  const token = await googleAccessToken();
  const url = 'https://sheets.googleapis.com/v4/spreadsheets/' + encodeURIComponent(id)
-  + '/values/' + encodeURIComponent("'Pocket HR PINs'!A1:D1001");
+  + '/values/' + encodeURIComponent("'Pocket HR PINs'!A1:E1001");
  const response = await fetch(url,{headers:{Authorization:'Bearer '+token},cache:'no-store'});
  if (!response.ok) return googleFailure(response, 'pin_sheet_unavailable');
  const values = (await response.json() as {values?:unknown[][]}).values ?? [];
  const [header,...rows] = values;
  if (!header || ['Email','Role','Passcode','Status'].some((v,i)=>header[i]!==v)) throw new Error('pin_sheet_headers_invalid');
  return rows.map((row,index)=>({sheetRow:index+2,
+  ...(header[4]==='Name' && String(row[4]??'').trim() ? {name:String(row[4]).trim().slice(0,120)} : {}),
   email:String(row[0]??'').trim().toLowerCase(),role:String(row[1]??'').trim(),
   passcode:String(row[2]??'').trim(),status:String(row[3]??'').trim(),
  })).filter(row=>row.email.length>0);
@@ -245,4 +246,22 @@ export async function updateSheetRequest(requestId:string,values:Record<string,s
   body:JSON.stringify({valueInputOption:'RAW',data}),cache:'no-store'
  });
  if(!response.ok) throw new Error('sheet_write_failed');
+}
+
+/** Optional fifth PIN registry column, separate from credentials and authorization. */
+export async function writeAccountName(email:string,name:string):Promise<void>{
+ if(!name.trim()||name.length>120||Array.from(name).some(character=>character.charCodeAt(0)<32))throw new Error('invalid_name');
+ const accounts=await readPasscodeAccounts();
+ const matches=accounts.filter(account=>account.email===email);
+ if(matches.length!==1)throw new Error('account_not_found');
+ const id=process.env.POCKET_HR_SHEET_ID;
+ if(!id)throw new Error('sheet_not_configured');
+ const token=await googleAccessToken();
+ const base='https://sheets.googleapis.com/v4/spreadsheets/'+encodeURIComponent(id);
+ const headerResponse=await fetch(base+'/values/'+encodeURIComponent("'Pocket HR PINs'!E1"),{headers:{Authorization:'Bearer '+token},cache:'no-store'});
+ if(!headerResponse.ok)throw new Error('pin_sheet_unavailable');
+ const header=(await headerResponse.json() as {values?:string[][]}).values?.[0]?.[0];
+ if(header && header!=='Name')throw new Error('name_column_unavailable');
+ const response=await fetch(base+'/values:batchUpdate',{method:'POST',headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify({valueInputOption:'RAW',data:[{range:"'Pocket HR PINs'!E1",values:[['Name']]},{range:"'Pocket HR PINs'!E"+matches[0].sheetRow,values:[[name.trim()]]}]})});
+ if(!response.ok)throw new Error('pin_sheet_write_failed');
 }

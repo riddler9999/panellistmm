@@ -1,3 +1,5 @@
+import { encodeResponse, validateOptions } from '../src/domain/reviewedResponse.js';
+import { selectAttachments } from '../src/server/responseAttachments.js';
 import { draftVersion } from '../src/server/draftVersion.js';
 import { readConversation, withTicketLock } from '../src/server/conversationLifecycle.js';
 export const config = { maxDuration: 60 };
@@ -35,9 +37,15 @@ export default async function handler(req:Req,res:Res) {
   const proof=await readProof(input.requestId);
   if(['Approved','Delivered'].includes(String(ticket.Ticket_Status)))
     return res.status(409).json({error:'response_already_approved'});
+  const body=req.body as {options?:unknown;attachmentIds?:unknown};
+  const options=validateOptions(body.options);
+  if(!options)return res.status(400).json({error:'invalid_options'});
+  let attachments;
+  try {attachments=await selectAttachments(input.requestId,body.attachmentIds);}catch{return res.status(400).json({error:'invalid_attachments'});}
+  const content=encodeResponse({text:input.content!,options,attachments});
+  if(content.length>50000)return res.status(400).json({error:'response_too_long'});
   const pending = proof.approval && (conversation?.reply_revision??0)<proof.approval.revision ? proof.approval : null;
-  if(pending && (pending.approvedContent!==input.content || ![pending.revision,pending.revision-1].includes(input.expectedRevision))) return res.status(409).json({error:'response_already_approved'});
-  const content=input.content!;
+  if(pending && (pending.approvedContent!==content || ![pending.revision,pending.revision-1].includes(input.expectedRevision))) return res.status(409).json({error:'response_already_approved'});
   let revision:number;
   try {
    revision=pending?.revision ?? await db<number>('rpc/pocket_hr_approve_snapshot','POST',{
@@ -52,7 +60,7 @@ export default async function handler(req:Req,res:Res) {
   // Sheet status is one user-facing release condition. Keep it non-approved
   // until both the immutable snapshot and durable delivery acknowledgement exist.
   await writeTicketPublication(input.requestId,{C:'Delivery Pending',Y:'Delivery Pending'});
-  await writeTicketPublication(input.requestId,{H:content});
+  await writeTicketPublication(input.requestId,{H:input.content!});
   if(!await acknowledgeDelivery(input.requestId,revision))
     return res.status(503).json({error:'delivery_ack_pending',revision});
   await writeTicketPublication(input.requestId,{C:'Approved',Y:'Approved'});

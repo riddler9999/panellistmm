@@ -46,3 +46,19 @@ describe('review conversation UI',()=>{
   const write=fetchMock.mock.calls.find(call=>call[0]==='/api/consultation-approve');expect(write).toBeDefined();
  });
 });
+
+describe('named requester and free-form clarification',()=>{
+ it('lets the user answer without choosing an AI option',async()=>{
+  const {default:userEvent}=await import('@testing-library/user-event');const user=userEvent.setup();
+  const fetchMock=vi.fn(async()=>({ok:true,json:async()=>({role:'User',tickets:[{ticketId:'T',title:'Clarification',requesterName:'မောင်မောင်',description:'Question',status:'Approved',history:[],responseApproved:true,finalAnswer:'Employment type?',options:['Permanent','Contract'],revision:1}]})}));
+  vi.stubGlobal('fetch',fetchMock);render(<ConsultationDashboard/>);
+  await user.click(await screen.findByText('Clarification'));
+  expect(screen.getByText('မောင်မောင် · Request')).toBeInTheDocument();
+  expect(screen.getByRole('radio',{name:'Write my own answer'})).toBeChecked();
+  await user.type(screen.getByLabelText('Your answer / additional details'),'Internship');
+  await user.click(screen.getByRole('button',{name:'Send follow-up'}));
+  const calls=fetchMock.mock.calls as unknown as Array<[string,RequestInit]>;
+  const sent=calls.find(call=>call[0]==='/api/consultation-reply');
+  expect(JSON.parse(sent![1].body as string).content).toBe('Internship');
+ });
+});

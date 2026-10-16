@@ -1,3 +1,4 @@
+import { decodeResponse } from '../src/domain/reviewedResponse.js';
 import { authenticatedPrincipal } from '../src/server/passcodeAuth.js';
 import { canAccessTicket } from '../src/server/consultationAccess.js';
 import { readTickets, readProof } from '../src/server/pocketHrData.js';
@@ -37,8 +38,9 @@ export default async function handler(req:Req,res:Res) {
    const proof=await readProof(input.requestId as string);
    const answer=releasedAnswer(principal,ticket,proof.approval,proof.delivery);
    if(!answer || !proof.approval || proof.approval.revision!==input.expectedRevision || !['Approved','Delivered'].includes(String(ticket.Ticket_Status)) || shouldAutoClose(proof.delivery?.deliveredAt)) return res.status(409).json({error:'reply_not_available'});
+   const response=decodeResponse(answer);
    state={...state,reply_revision:proof.approval.revision,pending_sync:true,entries:[...state.entries,
-    {role:'consultant',content:answer,revision:proof.approval.revision},
+    {role:'consultant',content:response.text,revision:proof.approval.revision,...(response.attachments.length?{attachments:response.attachments}:{}),...(response.options.length?{options:response.options}:{})},
     {role:'user',content:(input.content as string).trim(),revision:proof.approval.revision}]};
    await saveConversation(state);
    await syncReply(state);

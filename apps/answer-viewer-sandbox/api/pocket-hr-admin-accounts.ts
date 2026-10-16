@@ -1,5 +1,5 @@
 import { authenticatedPrincipal } from '../src/server/passcodeAuth.js';
-import { writePasscodeAccount } from '../src/server/pocketHrData.js';
+import { writePasscodeAccount, writeAccountName } from '../src/server/pocketHrData.js';
 type Req={method?:string;headers:Record<string,string|string[]|undefined>;body?:unknown};
 type Res={status(n:number):Res;setHeader(k:string,v:string):void;json(v:unknown):void};
 
@@ -17,8 +17,12 @@ export default async function handler(req:Req,res:Res) {
   const email=typeof b.email==='string'?b.email.trim().toLowerCase():'';
   const action=b.action;
   if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)||
-    !['create','reset','disable'].includes(String(action)))
+    !['create','reset','disable','set_name'].includes(String(action)))
    return res.status(400).json({error:'invalid_input'});
+  if(action==='set_name'){
+   if(typeof b.name!=='string'||!b.name.trim()||b.name.length>120)return res.status(400).json({error:'invalid_name'});
+   await writeAccountName(email,b.name);return res.status(200).json({ok:true});
+  }
   if(action==='disable' && email===principal.email)
    return res.status(409).json({error:'cannot_disable_self'});
   if(action==='create' && !['Admin','User'].includes(String(b.role)))

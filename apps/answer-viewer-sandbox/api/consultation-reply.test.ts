@@ -1,3 +1,4 @@
+import { encodeResponse } from '../src/domain/reviewedResponse';
 import { beforeEach,describe,it,expect,vi } from 'vitest';
 import handler from './consultation-reply';
 import { authenticatedPrincipal } from '../src/server/passcodeAuth';
@@ -54,4 +55,14 @@ describe('owner reply and close',()=>{
   vi.mocked(syncReply).mockRejectedValueOnce(new Error('unavailable'));
   expect(await call()).toBe(503);expect(saveConversation).toHaveBeenCalledWith(expect.objectContaining({pending_sync:true}));
  });
+ it('preserves approved files and choices when a new round starts',async()=>{
+  const proof=await readProof('T-1');
+  const attachments=[{id:'00000000-0000-4000-8000-000000000001',name:'form.xlsx',mime:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',size:100}];
+  proof.approval!.approvedContent=encodeResponse({text:'Choose a type',options:['A','B'],attachments});
+  vi.mocked(readProof).mockResolvedValue(proof);
+  expect(await call()).toBe(200);
+  const saved=vi.mocked(saveConversation).mock.calls[0][0];
+  expect(saved.entries[0]).toMatchObject({content:'Choose a type',options:['A','B'],attachments});
+ });
+
 });

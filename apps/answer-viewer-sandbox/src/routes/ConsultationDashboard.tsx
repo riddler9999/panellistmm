@@ -1,3 +1,4 @@
+import type { ResponseAttachment } from '../domain/reviewedResponse';
 import { ticketStatus } from '../domain/ticketStatus';
 import { useEffect, useMemo, useState } from 'react';
 import type { ConsultationTicket } from '../server/consultationAccess';
@@ -57,6 +58,11 @@ export function ConsultationDashboard() {
   const [actionDraft, setActionDraft] = useState('');
   const [editing, setEditing] = useState(false);
   const [reply, setReply] = useState('');
+  const [requesterName,setRequesterName]=useState('');
+  const [selectedOption,setSelectedOption]=useState('');
+  const [optionsText,setOptionsText]=useState('');
+  const [attachments,setAttachments]=useState<ResponseAttachment[]>([]);
+  const [uploading,setUploading]=useState(false);
   const [actionError, setActionError] = useState('');
   const [creating,setCreating]=useState(false);
   const [newTitle,setNewTitle]=useState('');
@@ -87,6 +93,8 @@ export function ConsultationDashboard() {
   // Derive filter labels from actual ticket statuses; never invent workflow states.
   const filters = ['All', ...Array.from(new Set(tickets.map(ticket => ticketStatus(ticket.status)).filter(Boolean)))];
 
+  const responseOptions = editing ? optionsText.split('\n').map(value=>value.trim()).filter(Boolean) : active?.draftOptions ?? [];
+  const responseAttachments = editing ? attachments : active?.draftAttachments ?? [];
   const responseContent = editing ? actionDraft : active?.history.at(-1)?.content ?? '';
 
   async function approveTicket() {
@@ -95,13 +103,13 @@ export function ConsultationDashboard() {
     try {
       const response = await fetch('/api/consultation-approve', {
         method:'POST',credentials:'include',headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({action:'approve',requestId:active.ticketId,expectedRevision:active.revision ?? 0,content:responseContent,draftVersion:active.draftVersion})
+        body:JSON.stringify({action:'approve',requestId:active.ticketId,expectedRevision:active.revision ?? 0,content:responseContent,draftVersion:active.draftVersion,options:responseOptions,attachmentIds:responseAttachments.map(file=>file.id)})
       });
       if (!response.ok) { setActionError(response.status===409?'This request changed. Reload and review again.':'Approval was not published. Retry after checking the request.'); return; }
       const refreshed = await fetch('/api/consultation',{credentials:'include',cache:'no-store'});
       if (!refreshed.ok) throw new Error('refresh_failed');
       setSession(await refreshed.json() as {role:'Admin'|'User';tickets:ConsultationTicket[]});
-      setActionDraft(''); setEditing(false);
+      setActionDraft(''); setEditing(false);setAttachments([]);setOptionsText('');
     } catch { setActionError('Could not refresh the approved request.'); }
     finally { setActionSubmitting(false); }
   }
@@ -126,11 +134,43 @@ export function ConsultationDashboard() {
     if(!active||actionSubmitting)return;
     setActionSubmitting(true);setActionError('');
     try {
-      const response=await fetch('/api/consultation-reply',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify({action,requestId:active.ticketId,expectedRevision:active.revision,content:reply})});
+      const response=await fetch('/api/consultation-reply',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify({action,requestId:active.ticketId,expectedRevision:active.revision,content:selectedOption ? selectedOption+(reply.trim()?'\n\n'+reply.trim():'') : reply})});
       if(!response.ok)throw new Error('action_failed');
-      await refreshTickets();setReply('');
+      await refreshTickets();setReply('');setSelectedOption('');
     } catch {setActionError('Could not save. Refresh and try again.');}
     finally {setActionSubmitting(false);}
+  }
+
+  async function saveRequesterName(){
+    if(!active?.requesterEmail||!requesterName.trim()||actionSubmitting)return;
+    setActionSubmitting(true);setActionError('');
+    try{
+      const response=await fetch('/api/pocket-hr-admin-accounts',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'set_name',email:active.requesterEmail,name:requesterName.trim()})});
+      if(!response.ok)throw new Error('name_failed');
+      await refreshTickets();
+    }catch{setActionError('Could not save the requester name.');}
+    finally{setActionSubmitting(false);}
+  }
+
+  function beginEdit(){
+    setActionDraft(responseContent);setOptionsText((active?.draftOptions??[]).join('\n'));
+    setAttachments(active?.draftAttachments??[]);setEditing(true);
+  }
+  async function uploadFile(file:File){
+    if(!active||uploading||attachments.length>=5)return;
+    if(file.size>2*1024*1024){setActionError('Choose a file smaller than 2 MB.');return;}
+    setUploading(true);setActionError('');
+    try {
+      const base64=await new Promise<string>((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(String(reader.result).split(',')[1]);reader.onerror=reject;reader.readAsDataURL(file);});
+      const response=await fetch('/api/consultation-file',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify({requestId:active.ticketId,name:file.name,base64})});
+      if(!response.ok)throw new Error('upload_failed');
+      const uploaded=await response.json() as ResponseAttachment;
+      setAttachments(current=>[...current,uploaded]);
+    }catch{setActionError('Could not attach this file. Use a valid PNG, Excel (.xlsx), or PDF up to 2 MB.');}
+    finally{setUploading(false);}
+  }
+  function fileLinks(files:ResponseAttachment[]|undefined,revision:number){
+    return files?.length ? <ul className="consult-attachments">{files.map(file=><li key={file.id}><a href={'/api/consultation-file?id='+encodeURIComponent(file.id)+'&revision='+revision} download>{file.name}</a><small> · {Math.ceil(file.size/1024)} KB</small></li>)}</ul> : null;
   }
 
   if (!session) return <main className="viewer-shell consultation-dashboard"><section className="consult-welcome"><div className="consult-welcome-mark">P</div><h1>Pocket HR</h1>
@@ -145,9 +185,9 @@ export function ConsultationDashboard() {
 
   return <main className="viewer-shell consultation-dashboard">
     
-    {session && <div className="consult-preview-banner"><span>{role === 'Admin' ? 'Consultant Dashboard' : 'My Requests'}</span><button type="button" onClick={logout}>Log out</button></div>}
+    {session && <div className="consult-preview-banner"><span>{role === 'Admin' ? 'Consultant Dashboard' : 'My Requests'}</span><button type="button" onClick={logout} disabled={uploading||actionSubmitting}>Log out</button></div>}
     {active ? <>
-        <button type="button" className="consult-back" onClick={() => setSelected(null)} aria-label="Back to requests">‹</button>
+        <button type="button" className="consult-back" disabled={uploading||actionSubmitting} onClick={() => setSelected(null)} aria-label="Back to requests">‹</button>
         <section className="consult-detail-head">
           <span className={`consult-request-icon tone-${statusClass(active.status)}`} aria-hidden="true">{ticketIcon(active.status)}</span>
           <div className="consult-detail-title"><small>{active.ticketId}{active.createdAt ? ` · ${active.createdAt}` : ''}</small><h1>{active.title}</h1>{active.category && <small>{active.category}</small>}</div><span className={`consult-badge tone-${statusClass(active.status)}`}>{ticketStatus(active.status)}</span>
@@ -158,25 +198,32 @@ export function ConsultationDashboard() {
         </nav>
         {tab === 'Conversation' && <section className="consult-timeline">
           <div className="consult-timeline-heading"><h2>Conversation</h2></div>
-          {active.description && <article className="consult-message"><div className="consult-message-author"><span className="consult-avatar">U</span><strong>User · Request</strong></div><p>{active.description}</p></article>}
-          {active.conversation?.map((entry,index)=><article className="consult-message" key={index}><strong>{entry.role==='user'?'User':'Consultant'}</strong><p>{entry.content}</p>{role==='Admin'&&entry.role==='consultant'&&<button className="consult-approved" disabled>Approved ✓</button>}</article>)}
-          {active.responseApproved && <article className="consult-message consult-final"><strong>Consultant</strong><p>{active.finalAnswer}</p>{role==='Admin'&&<button className="consult-approved" disabled>Approved ✓</button>}</article>}
+          {active.description && <article className="consult-message"><div className="consult-message-author"><span className="consult-avatar">U</span><strong>{active.requesterName || 'User'} · Request</strong></div><p>{active.description}</p></article>}
+          {active.conversation?.map((entry,index)=><article className="consult-message" key={index}><strong>{entry.role==='user'?(active.requesterName || 'User'):'Consultant'}</strong><p>{entry.content}</p>{fileLinks(entry.attachments,entry.revision)}{role==='Admin'&&entry.role==='consultant'&&<button className="consult-approved" disabled>Approved ✓</button>}</article>)}
+          {active.responseApproved && <article className="consult-message consult-final"><strong>Consultant</strong><p>{active.finalAnswer}</p>{fileLinks(active.attachments,active.revision??0)}{role==='Admin'&&<button className="consult-approved" disabled>Approved ✓</button>}</article>}
           {role==='Admin' && !active.responseApproved && !active.closed && (editing || !!responseContent) && <article className="consult-message consult-actions">
             <strong>Response for review</strong>
-            {editing ? <><label htmlFor="consult-action-draft">Edit response</label><textarea id="consult-action-draft" value={actionDraft} onChange={event=>setActionDraft(event.target.value)} maxLength={50000}/></> : <p>{responseContent}</p>}
-            <div className="consult-action-buttons"><button type="button" disabled={actionSubmitting || !responseContent.trim()} onClick={approveTicket}>{actionSubmitting?'Approving…':'Approve'}</button>
-            {editing ? <button type="button" disabled={actionSubmitting} onClick={()=>{setEditing(false);setActionDraft('');}}>Cancel edit</button> : <button type="button" disabled={actionSubmitting} onClick={()=>{setActionDraft(responseContent);setEditing(true);}}>Edit</button>}</div>
+            {editing ? <><label htmlFor="consult-action-draft">Edit response</label><textarea id="consult-action-draft" value={actionDraft} onChange={event=>setActionDraft(event.target.value)} maxLength={45000}/>
+              <label htmlFor="consult-options">Multiple-choice answers (optional, up to 8, one per line)</label><textarea id="consult-options" value={optionsText} onChange={e=>setOptionsText(e.target.value)} placeholder="Leave empty for a written answer"/>
+              <p>The user can always write their own answer without selecting an option.</p>
+              <label htmlFor="consult-file">Attach PNG, Excel (.xlsx), or PDF — up to 2 MB each, 5 files</label>
+              <input id="consult-file" type="file" accept=".png,.xlsx,.pdf" disabled={uploading||attachments.length>=5||actionSubmitting} onChange={e=>{const file=e.target.files?.[0];if(file)void uploadFile(file);e.target.value='';}}/>
+              {uploading&&<p role="status">Uploading…</p>}
+              <ul>{attachments.map(file=><li key={file.id}>{file.name} <button type="button" disabled={uploading||actionSubmitting} onClick={()=>setAttachments(current=>current.filter(item=>item.id!==file.id))}>Remove {file.name}</button></li>)}</ul>
+            </> : <><p>{responseContent}</p>{responseOptions.length>0&&<ul>{responseOptions.map(option=><li key={option}>{option}</li>)}</ul>}</>}
+            <div className="consult-action-buttons"><button type="button" disabled={actionSubmitting || uploading || !responseContent.trim()} onClick={approveTicket}>{actionSubmitting?'Approving…':'Approve'}</button>
+            {editing ? <button type="button" disabled={actionSubmitting||uploading} onClick={()=>{setEditing(false);setActionDraft('');}}>Cancel edit</button> : <button type="button" disabled={actionSubmitting} onClick={beginEdit}>Edit</button>}</div>
           </article>}
           {!active.responseApproved && !active.closed && !(role==='Admin'&&responseContent) && <p className="consult-empty">{active.syncPending?'Sending your follow-up…':'Waiting for a reviewed response.'}</p>}
           {actionError && <p role="alert">{actionError}</p>}
           {active.closed ? <p className="consult-empty">Ticket closed</p> : role==='User' && <section className="consult-actions state-card">
-            {active.responseApproved && <><label htmlFor="consult-reply">Follow-up question</label><textarea id="consult-reply" maxLength={10000} value={reply} onChange={e=>setReply(e.target.value)}/><button disabled={actionSubmitting||!reply.trim()} onClick={()=>userAction('reply')}>Send follow-up</button></>}
+            {active.responseApproved && <>{!!active.options?.length&&<fieldset className="consult-choices"><legend>Choose an answer or write your own</legend>{active.options.map(option=><label key={option}><input type="radio" name="clarification-choice" checked={selectedOption===option} onChange={()=>setSelectedOption(option)}/>{option}</label>)}<label><input type="radio" name="clarification-choice" checked={!selectedOption} onChange={()=>setSelectedOption('')}/>Write my own answer</label></fieldset>}<label htmlFor="consult-reply">{active.options?.length ? 'Your answer / additional details' : 'Follow-up question'}</label><textarea id="consult-reply" maxLength={10000} value={reply} onChange={e=>setReply(e.target.value)}/><button disabled={actionSubmitting||(!reply.trim()&&!selectedOption)} onClick={()=>userAction('reply')}>Send follow-up</button></>}
             <button disabled={actionSubmitting} onClick={()=>userAction('close')}>Close ticket</button>
             {active.autoCloseAt && <p>This ticket closes automatically 48 hours after the latest approved response unless you send a follow-up.</p>}
           </section>}
         </section>}
-        {tab === 'Details' && <section className="state-card consult-details"><h2>Request Details</h2><dl><div><dt>Request ID</dt><dd>{active.ticketId}</dd></div><div><dt>Subject</dt><dd>{active.title}</dd></div><div><dt>Status</dt><dd><span className={`consult-badge tone-${statusClass(active.status)}`}>{ticketStatus(active.status)}</span></dd></div>{active.category && <div><dt>Category</dt><dd>{active.category}</dd></div>}{active.createdAt && <div><dt>Created</dt><dd>{active.createdAt}</dd></div>}{active.description && <div><dt>Description</dt><dd>{active.description}</dd></div>}{role === 'Admin' && active.reviewStatus && <div><dt>Review Status</dt><dd>{active.reviewStatus}</dd></div>}{role === 'Admin' && active.processingStatus && <div><dt>Processing Status</dt><dd>{active.processingStatus}</dd></div>}{role === 'Admin' && active.artifact?.status && <div><dt>Artifact Status</dt><dd>{active.artifact.status}</dd></div>}</dl></section>}
-        {tab === 'Files' && <section className="state-card consult-files"><div className="consult-file-icon">▤</div>{role === 'Admin' && active.artifact?.title ? <><h2>{active.artifact.title}</h2><p>{[active.artifact.type, active.artifact.format, active.artifact.status].filter(Boolean).join(' · ')}</p></> : <><h2>No files available</h2><p>Only verified, authorized attachments will appear here.</p></>}</section>}
+        {tab === 'Details' && <section className="state-card consult-details"><h2>Request Details</h2>{role==='Admin'&&active.requesterEmail&&<div className="consult-actions"><label htmlFor="requester-name">Requester name</label><input id="requester-name" maxLength={120} value={requesterName} onChange={e=>setRequesterName(e.target.value)}/><button disabled={actionSubmitting||!requesterName.trim()} onClick={saveRequesterName}>Save name</button>{actionError&&<p role="alert">{actionError}</p>}</div>}<dl><div><dt>Request ID</dt><dd>{active.ticketId}</dd></div><div><dt>Subject</dt><dd>{active.title}</dd></div><div><dt>Status</dt><dd><span className={`consult-badge tone-${statusClass(active.status)}`}>{ticketStatus(active.status)}</span></dd></div>{active.category && <div><dt>Category</dt><dd>{active.category}</dd></div>}{active.createdAt && <div><dt>Created</dt><dd>{active.createdAt}</dd></div>}{active.description && <div><dt>Description</dt><dd>{active.description}</dd></div>}{role === 'Admin' && active.reviewStatus && <div><dt>Review Status</dt><dd>{active.reviewStatus}</dd></div>}{role === 'Admin' && active.processingStatus && <div><dt>Processing Status</dt><dd>{active.processingStatus}</dd></div>}{role === 'Admin' && active.artifact?.status && <div><dt>Artifact Status</dt><dd>{active.artifact.status}</dd></div>}</dl></section>}
+        {tab === 'Files' && <section className="state-card consult-files"><div className="consult-file-icon">▤</div>{fileLinks(active.attachments,active.revision??0)}{active.conversation?.map((entry,index)=><div key={index}>{fileLinks(entry.attachments,entry.revision)}</div>)}{role === 'Admin' && active.artifact?.title ? <><h2>{active.artifact.title}</h2><p>{[active.artifact.type, active.artifact.format, active.artifact.status].filter(Boolean).join(' · ')}</p></> : <><h2>{active.attachments?.length||active.conversation?.some(entry=>entry.attachments?.length)?'Approved files':'No files available'}</h2><p>Only verified, authorized attachments will appear here.</p></>}</section>}
       </> : <>
         <div className="consult-list-heading"><h1>{role === 'Admin' ? 'All Requests' : 'My Requests'}</h1><p>{tickets.length} requests</p></div>
         <div className="consult-toolbar">
@@ -199,7 +246,7 @@ export function ConsultationDashboard() {
           {filters.map(status => <button type="button" key={status} className={filter === status ? 'active' : ''} aria-pressed={filter === status} onClick={() => setFilter(status)}>{status} ({status === 'All' ? tickets.length : tickets.filter(ticket => ticketStatus(ticket.status) === status).length})</button>)}
         </div>
         {visible.length === 0 ? <section className="state-card">Request မရှိသေးပါ။</section> :
-          <div className="consult-list">{visible.map(ticket => <button type="button" className="consult-request" key={ticket.ticketId} onClick={() => { setSelected(ticket.ticketId); setTab('Conversation'); setEditing(false); setActionDraft(''); setActionError(''); setReply(''); }}>
+          <div className="consult-list">{visible.map(ticket => <button type="button" className="consult-request" key={ticket.ticketId} onClick={() => { setSelected(ticket.ticketId); setTab('Conversation'); setEditing(false); setActionDraft(''); setActionError(''); setReply('');setSelectedOption('');setAttachments([]);setOptionsText('');setRequesterName(ticket.requesterName??''); }}>
             <span className={`consult-request-icon tone-${statusClass(ticket.status)}`} aria-hidden="true">{ticketIcon(ticket.status)}</span>
             <span className="consult-request-copy"><small>{ticket.ticketId}</small><strong>{ticket.title}</strong></span>
             <span className={`consult-badge tone-${statusClass(ticket.status)}`}>{ticketStatus(ticket.status)}</span><span className="consult-chevron" aria-hidden="true">›</span>

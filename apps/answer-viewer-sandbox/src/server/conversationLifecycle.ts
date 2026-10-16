@@ -1,8 +1,9 @@
+import type { ResponseAttachment } from '../domain/reviewedResponse.js';
 import { randomUUID } from 'node:crypto';
 import { db, readTickets, updateSheetRequest } from './pocketHrData.js';
 import { redisCommand } from './pocketHrRedis.js';
 export const AUTO_CLOSE_MS = 48 * 60 * 60 * 1000;
-export type ConversationEntry = { role: 'user' | 'consultant'; content: string; revision: number };
+export type ConversationEntry = { role: 'user' | 'consultant'; content: string; revision: number; attachments?: ResponseAttachment[]; options?:string[] };
 export type ConversationState = {
  request_id: string; original_request: string; entries: ConversationEntry[];
  closed_at: string | null; close_reason: 'user' | 'timeout' | null;
@@ -40,7 +41,7 @@ export function shouldAutoClose(deliveredAt: string | null | undefined, now = Da
 }
 /** Retryable outbox: the stored user turn is committed before the Sheet bridge. */
 export async function syncReply(state: ConversationState): Promise<void> {
- const context = [state.original_request, ...state.entries.map(entry => `${entry.role === 'user' ? 'User' : 'Consultant'}: ${entry.content}`)].join('\n\n');
+ const context = [state.original_request, ...state.entries.map(entry => `${entry.role === 'user' ? 'User' : 'Consultant'}: ${entry.content}${entry.options?.length?'\nOptions: '+entry.options.join(' / '):''}`)].join('\n\n');
  const current=(await readTickets()).find(row=>row['Row ID']===state.request_id);
  if(!current) throw new Error('ticket_not_found');
  // If Sheet succeeded before a previous process stopped, preserve any new n8n draft.
