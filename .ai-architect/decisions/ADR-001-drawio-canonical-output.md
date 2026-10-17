@@ -1,7 +1,7 @@
 # ADR-001 — SOP နှင့် Org Chart အတွက် `.drawio` ကို Canonical Output အဖြစ်သတ်မှတ်ခြင်း
 
 ## Status
-Accepted
+Superseded by `ADR-005` on 2026-10-16 after explicit owner approval.
 
 ## Context
 Panellist SOP နှင့် Org Chart workflow များသည် editable diagram artifact ထုတ်ပေးရန်လိုအပ်သည်။ PNG သည် preview/display အတွက်အသုံးဝင်နိုင်သော်လည်း editable source မဟုတ်သောကြောင့် canonical artifact အဖြစ်မသင့်တော်။
