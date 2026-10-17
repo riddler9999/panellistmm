@@ -2,6 +2,7 @@ import type { ResponseAttachment } from '../domain/reviewedResponse.js';
 import { randomUUID } from 'node:crypto';
 import { db, readTickets, updateSheetRequest } from './pocketHrData.js';
 import { redisCommand } from './pocketHrRedis.js';
+import { dispatchUnifiedRequest } from './unifiedDispatch.js';
 export const AUTO_CLOSE_MS = 48 * 60 * 60 * 1000;
 export type ConversationEntry = { role: 'user' | 'consultant'; content: string; revision: number; attachments?: ResponseAttachment[]; options?:string[] };
 export type ConversationState = {
@@ -44,13 +45,21 @@ export async function syncReply(state: ConversationState): Promise<void> {
  const context = [state.original_request, ...state.entries.map(entry => `${entry.role === 'user' ? 'User' : 'Consultant'}: ${entry.content}${entry.options?.length?'\nOptions: '+entry.options.join(' / '):''}`)].join('\n\n');
  const current=(await readTickets()).find(row=>row['Row ID']===state.request_id);
  if(!current) throw new Error('ticket_not_found');
- // If Sheet succeeded before a previous process stopped, preserve any new n8n draft.
- if(current.Request_Text===context) {await saveConversation({...state,pending_sync:false});return;}
- await updateSheetRequest(state.request_id, {
-  Request_Text: context, AI_Answer: '', Sheet_AI_Answer: '', AI_Draft: '',
-  Consultant_Answer: '', Clarification_Question: '', Needs_Clarification: '',
-  Final_Answer: '', Review_Status: '', Processing_Status: '', Processing_Error: '',
-  Ticket_Status: 'Submitted', Unified_Status: '',
+ // A retry may arrive after the Sheet write but before async dispatch was acknowledged.
+ if(current.Request_Text!==context) {
+  await updateSheetRequest(state.request_id, {
+   Request_Text: context, AI_Answer: '', Sheet_AI_Answer: '', AI_Draft: '',
+   Consultant_Answer: '', Clarification_Question: '', Needs_Clarification: '',
+   Final_Answer: '', Review_Status: '', Processing_Status: '', Processing_Error: '',
+   Ticket_Status: 'Submitted', Unified_Status: '',
+  });
+ }
+ await dispatchUnifiedRequest({
+  requestId: state.request_id,
+  ownerEmail: String(current.Owner_Email??''),
+  title: String(current.Ticket_Title??''),
+  category: String(current.Ticket_Category??''),
+  description: context,
  });
  await saveConversation({ ...state, pending_sync: false });
 }
