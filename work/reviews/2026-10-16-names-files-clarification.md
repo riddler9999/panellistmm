@@ -24,7 +24,7 @@ Draft version: `978c5001-a67a-4137-8089-d3ee61671395`။ Active version: `1af405
 | SOP Diagram | PNG + XLSX | Step/owner/input/output/decision/next step |
 | Form | XLSX; PNG သည် optional preview | ဖြည့်နိုင်သည့် cells၊ field labels၊ validation |
 
-PNG သည် preview ဖြစ်ပြီး editable source မဟုတ်ပါ။ Excel data ပြင်ပြီးလျှင် PNG ကို regenerate လုပ်ရမည်။ PNG နှင့် Excel ကို အတူတူ version ဖြင့် consultant review လုပ်သင့်သည်။ ဤအဆင့်တွင် manual attachment ပို့နိုင်သော်လည်း Drawio → Excel/PNG automatic renderer replacement ကို implement/publish မလုပ်ထားပါ။ မူလ architecture ၏ canonical Drawio ဆုံးဖြတ်ချက်ကို owner ၏ format ရွေးချယ်မှုအဖြစ် သီးခြား reconcile လုပ်ရန်လိုသည်။
+PNG သည် preview ဖြစ်ပြီး editable source မဟုတ်ပါ။ Excel data ပြင်ပြီးလျှင် PNG ကို regenerate လုပ်ရမည်။ PNG နှင့် Excel ကို အတူတူ version ဖြင့် consultant review လုပ်သင့်သည်။ Automatic renderer replacement နှင့် architecture reconciliation ကို 2026-10-17 တွင် `ADR-005` နှင့် `work/reviews/2026-10-17-excel-png-renderer.md` အတိုင်း implement/publish လုပ်ပြီးဖြစ်သည်။
 
 ## Verification
 

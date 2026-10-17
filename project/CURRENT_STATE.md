@@ -20,6 +20,11 @@ Sep-15 repo state တွင်ရှိခဲ့သော `hr_kb rows 0` နှ�
 - `TASK-002` — RAG foundation: later runtime evidence ဖြင့် core ingestion/retrieval objective ကိုဖြတ်ကျော်ထားပြီး status reconciliation လိုသည်။
 - Next implementation domain — HITL consultant review / correction learning loop (`TASK-003`).
 
+## SOP / Org Renderer — 2026-10-17
+- Owner decision အရ Draw.io canonical output ကို `ADR-005` ဖြင့် supersede လုပ်ထားသည်။
+- Live `Panellist Unified Orchestrator` နှင့် `Panellist Artifact Architect API` သည် SOP/Org ready contracts ကို `Panellist Excel PNG Renderer` သို့ပို့သည်။
+- Renderer သည် editable XLSX နှင့် PNG snapshot နှစ်ဖိုင်လုံးအောင်မြင်မှ ready ပြန်ပေးသည်။ Draw.io generator နှင့် Org-only Excel scaffold inactive ဖြစ်သည်။ Historical Draw.io download endpoint ကို ရှိပြီးသား links အတွက်သာ ဆက်ထားသည်။
+
 ## Backlog
 - `SPEC-001` / `TASK-001` — Discovery routing.
 - Glide `Resources` 220 template corpus ingestion — SOP/FAQ/TicketQA advice corpus ထက် priority နိမ့်။

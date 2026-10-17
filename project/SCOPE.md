@@ -5,7 +5,7 @@
 - Discovery နှင့် intent routing
 - SOP generation
 - Organization Chart generation
-- `.drawio` diagram output
+- SOP / Org Chart အတွက် `.xlsx` + `.png` paired output
 - လိုအပ်သည့်နေရာများတွင် Human-in-the-loop review
 - User / request scoping
 - Auditability, fallback, timeout, retry နှင့် failure handling
@@ -20,7 +20,7 @@
 - Autonomous production deployment
 - Unapproved destructive database / infrastructure operations
 - Silent architecture changes
-- SOP / Org Chart အတွက် PNG ကို canonical output အဖြစ်အသုံးပြုခြင်း
+- SOP / Org Chart အတွက် PNG-only output အသုံးပြုခြင်း
 - Panellist project အပြင်ဘက် client workflows
 
 ## Scope Guard

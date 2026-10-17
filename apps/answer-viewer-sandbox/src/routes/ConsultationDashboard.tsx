@@ -1,4 +1,5 @@
 import type { ResponseAttachment } from '../domain/reviewedResponse';
+import { messageParts } from '../domain/messageParts';
 import { ticketStatus } from '../domain/ticketStatus';
 import { useEffect, useMemo, useState } from 'react';
 import type { ConsultationTicket } from '../server/consultationAccess';
@@ -172,6 +173,11 @@ export function ConsultationDashboard() {
   function fileLinks(files:ResponseAttachment[]|undefined,revision:number){
     return files?.length ? <ul className="consult-attachments">{files.map(file=><li key={file.id}><a href={'/api/consultation-file?id='+encodeURIComponent(file.id)+'&revision='+revision} download>{file.name}</a><small> · {Math.ceil(file.size/1024)} KB</small></li>)}</ul> : null;
   }
+  function messageText(content:string|undefined){
+    return <p>{messageParts(content??'').map((part,index)=>part.type==='link'
+      ? <a key={index} href={part.value} target="_blank" rel="noopener noreferrer">{part.value}</a>
+      : <span key={index}>{part.value}</span>)}</p>;
+  }
 
   if (!session) return <main className="viewer-shell consultation-dashboard"><section className="consult-welcome"><div className="consult-welcome-mark">P</div><h1>Pocket HR</h1>
     {checking ? <p>Loading...</p> : <form onSubmit={login} className="pocket-hr-pin-form">
@@ -198,9 +204,9 @@ export function ConsultationDashboard() {
         </nav>
         {tab === 'Conversation' && <section className="consult-timeline">
           <div className="consult-timeline-heading"><h2>Conversation</h2></div>
-          {active.description && <article className="consult-message"><div className="consult-message-author"><span className="consult-avatar">U</span><strong>{active.requesterName || 'User'} · Request</strong></div><p>{active.description}</p></article>}
-          {active.conversation?.map((entry,index)=><article className="consult-message" key={index}><strong>{entry.role==='user'?(active.requesterName || 'User'):'Consultant'}</strong><p>{entry.content}</p>{fileLinks(entry.attachments,entry.revision)}{role==='Admin'&&entry.role==='consultant'&&<button className="consult-approved" disabled>Approved ✓</button>}</article>)}
-          {active.responseApproved && <article className="consult-message consult-final"><strong>Consultant</strong><p>{active.finalAnswer}</p>{fileLinks(active.attachments,active.revision??0)}{role==='Admin'&&<button className="consult-approved" disabled>Approved ✓</button>}</article>}
+          {active.description && <article className="consult-message"><div className="consult-message-author"><span className="consult-avatar">U</span><strong>{active.requesterName || 'User'} · Request</strong></div>{messageText(active.description)}</article>}
+          {active.conversation?.map((entry,index)=><article className="consult-message" key={index}><strong>{entry.role==='user'?(active.requesterName || 'User'):'Consultant'}</strong>{messageText(entry.content)}{fileLinks(entry.attachments,entry.revision)}{role==='Admin'&&entry.role==='consultant'&&<button className="consult-approved" disabled>Approved ✓</button>}</article>)}
+          {active.responseApproved && <article className="consult-message consult-final"><strong>Consultant</strong>{messageText(active.finalAnswer)}{fileLinks(active.attachments,active.revision??0)}{role==='Admin'&&<button className="consult-approved" disabled>Approved ✓</button>}</article>}
           {role==='Admin' && !active.responseApproved && !active.closed && (editing || !!responseContent) && <article className="consult-message consult-actions">
             <strong>Response for review</strong>
             {editing ? <><label htmlFor="consult-action-draft">Edit response</label><textarea id="consult-action-draft" value={actionDraft} onChange={event=>setActionDraft(event.target.value)} maxLength={45000}/>
@@ -210,7 +216,7 @@ export function ConsultationDashboard() {
               <input id="consult-file" type="file" accept=".png,.xlsx,.pdf" disabled={uploading||attachments.length>=5||actionSubmitting} onChange={e=>{const file=e.target.files?.[0];if(file)void uploadFile(file);e.target.value='';}}/>
               {uploading&&<p role="status">Uploading…</p>}
               <ul>{attachments.map(file=><li key={file.id}>{file.name} <button type="button" disabled={uploading||actionSubmitting} onClick={()=>setAttachments(current=>current.filter(item=>item.id!==file.id))}>Remove {file.name}</button></li>)}</ul>
-            </> : <><p>{responseContent}</p>{responseOptions.length>0&&<ul>{responseOptions.map(option=><li key={option}>{option}</li>)}</ul>}</>}
+            </> : <>{messageText(responseContent)}{responseOptions.length>0&&<ul>{responseOptions.map(option=><li key={option}>{option}</li>)}</ul>}</>}
             <div className="consult-action-buttons"><button type="button" disabled={actionSubmitting || uploading || !responseContent.trim()} onClick={approveTicket}>{actionSubmitting?'Approving…':'Approve'}</button>
             {editing ? <button type="button" disabled={actionSubmitting||uploading} onClick={()=>{setEditing(false);setActionDraft('');}}>Cancel edit</button> : <button type="button" disabled={actionSubmitting} onClick={beginEdit}>Edit</button>}</div>
           </article>}

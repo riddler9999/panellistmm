@@ -8,8 +8,8 @@ Panellist ကို AI အကူအညီသုံး HR operations product အ�
 2. Product scope နှင့် requirements ကိုအတည်ပြုမည်။
 3. Discovery routing ကိုတည်ဆောက်ပြီး stabilize လုပ်မည်။
 4. HR Consultant capability ကိုတည်ဆောက်မည်။
-5. SOP generation ကိုတည်ဆောက်မည်။ Canonical diagram output သည် `.drawio` ဖြစ်ရမည်။
-6. Org Chart generation ကိုတည်ဆောက်မည်။ Canonical diagram output သည် `.drawio` ဖြစ်ရမည်။
+5. SOP generation ကိုတည်ဆောက်မည်။ Canonical delivery သည် editable `.xlsx` + viewable `.png` pair ဖြစ်ရမည်။
+6. Org Chart generation ကိုတည်ဆောက်မည်။ Canonical delivery သည် editable `.xlsx` + viewable `.png` pair ဖြစ်ရမည်။
 7. Review, audit, fallback, timeout, retry နှင့် operational safeguards များထည့်မည်။
 8. Production မတင်မီ end-to-end flow အားလုံးကို verify လုပ်မည်။
 
