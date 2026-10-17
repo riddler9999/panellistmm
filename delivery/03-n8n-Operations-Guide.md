@@ -1,5 +1,7 @@
 # 03 — n8n Workflow Operations Guide
 
+> **Consultation guidance:** Read the October 13 supersession note at the end before using older lifecycle or runtime instructions.
+
 > Panellist HR AI System · Client Delivery Package v1.0 · 2026-09-22
 
 ---
@@ -104,3 +106,6 @@ For the Phase 2 Answer Viewer, n8n remains presentation-agnostic. It must not ge
 
 Production publish/activation remains owner-gated. Before any writeback change, reconcile one canonical draft field and one canonical terminal approved status across n8n + Sheet + Glide, then rerun HITL regression/UAT.
 
+
+## Current operations warning — 2026-10-13
+**Do not execute the September 22 poller monitoring, status transitions, write-back and approval instructions above as a verified live runbook.** September 25 read-only evidence found poller `I01u0vd30Db7xSfx` inactive, `AI_Answer` draft and `Awaiting Review` status; October 13 handoff names other orchestration workflows, but current publication and field contract have not been independently verified. The `Sheet_AI_Answer`/`Pending_Review`/`Resolved` path above is historical, not authorization to rename live fields or operate the poller. Follow `project/POCKET_HR_CONTEXT_2026-10-13.md`: both AI outcomes require consultant review, multi-round clarification is required, and approved-only delivery/security must be verified end-to-end before production. Do not infer Row Owner enforcement from Glide visibility settings.

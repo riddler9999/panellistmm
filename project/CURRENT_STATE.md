@@ -107,3 +107,12 @@ Read-only live n8n inspection found material drift from older docs:
 
 Because of that drift, Phase 2 is **not production-ready** until the n8n + Sheet + Glide field/status contract is reconciled and actual Glide Web Embed UAT is completed. No production n8n, Google Sheet, Glide, Supabase, or ticket data mutation was made by the Phase 2 implementation work.
 
+
+## October 13, 2026 — current consultation decision baseline (supersedes older consultation operating instructions above)
+**Requirements approved; end-to-end implementation NOT VERIFIED / NOT READY.** Read `project/POCKET_HR_CONTEXT_2026-10-13.md` and `project/REQUIREMENTS.md` before acting on the September 16 single-pass draft path or September 25 viewer/poller observations. Those sections remain historical evidence only.
+
+Current approved consultation: AI chooses `ASK_CLARIFICATION` or `PROVIDE_ADVICE`; **both** go to consultant approve/edit/reject. Only approved questions/advice reach users. User answers trigger contextual reassessment, including repeated rounds. Final advice requires approval. Resolved tickets are read-only and follow-up consultation requires a new ticket. Consultants may view all tickets; users only their own. Category assignment is not an access filter.
+
+Glide screenshot-confirmed configuration only: `Tickets.Sheet_AI_Relation` matches `Tickets.🔒 Row ID` to `Sheet1.Row ID` with Match Multiple off; `Tickets.Ticket_Assigned` looks up `Ticket_Category_R → Helpdesk_Group`. Integrity, Row Owners, backend authorization, approval-to-delivery and multi-round E2E remain unverified. `AI_Answer` / `Sheet_AI_Answer`, `Awaiting Review` / `Pending Review`, `Delivered` / `Resolved` are historical or unresolved mappings, **not** permission to rename live fields or states.
+
+Codex A branch `fix/consultation-assessment-review-guards`, local commit `6849c34` and 43/43 tests are **reported handoff claims only**; publication, GitHub availability and real integration are unverified. Required next gates: inspect actual Glide/n8n field and status contract; verify user/consultant data-level access; implement or verify clarification submission and persistent multi-round reassessment; verify revision-safe approvals, reject/edit, idempotent delivery and failure recovery; complete isolated-account E2E UAT. Do not publish or modify production from this documentation update.
