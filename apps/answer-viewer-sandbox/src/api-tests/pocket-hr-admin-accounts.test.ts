@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import handler from './pocket-hr-admin-accounts';
-import { authenticatedPrincipal } from '../src/server/passcodeAuth';
-import { writePasscodeAccount } from '../src/server/pocketHrData';
-vi.mock('../src/server/passcodeAuth',()=>({authenticatedPrincipal:vi.fn()}));
-vi.mock('../src/server/pocketHrData',()=>({writePasscodeAccount:vi.fn()}));
+import handler from '../../api/pocket-hr-admin-accounts';
+import { authenticatedPrincipal } from '../server/passcodeAuth';
+import { writePasscodeAccount } from '../server/pocketHrData';
+vi.mock('../server/passcodeAuth',()=>({authenticatedPrincipal:vi.fn()}));
+vi.mock('../server/pocketHrData',()=>({writePasscodeAccount:vi.fn()}));
 async function request(body:unknown){
  let status=200;
  const res={status(n:number){status=n;return res;},setHeader(){},json(){}};

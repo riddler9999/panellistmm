@@ -1,13 +1,13 @@
 import {beforeEach,describe,it,expect,vi} from 'vitest';
-import handler from './consultation-file';
-import {authenticatedPrincipal} from '../src/server/passcodeAuth';
-import {db,readTickets} from '../src/server/pocketHrData';
-import {readAttachment,downloadAttachment} from '../src/server/responseAttachments';
-import {encodeResponse} from '../src/domain/reviewedResponse';
-vi.mock('../src/server/passcodeAuth',()=>({authenticatedPrincipal:vi.fn()}));
-vi.mock('../src/server/pocketHrData',()=>({db:vi.fn(),readTickets:vi.fn()}));
-vi.mock('../src/server/conversationLifecycle',()=>({readConversation:vi.fn(async()=>null),withTicketLock:async(_id:string,work:()=>Promise<unknown>)=>work()}));
-vi.mock('../src/server/responseAttachments',()=>({readAttachment:vi.fn(),downloadAttachment:vi.fn(),validateAttachment:vi.fn(),storeAttachment:vi.fn()}));
+import handler from '../../api/consultation-file';
+import {authenticatedPrincipal} from '../server/passcodeAuth';
+import {db,readTickets} from '../server/pocketHrData';
+import {readAttachment,downloadAttachment} from '../server/responseAttachments';
+import {encodeResponse} from '../domain/reviewedResponse';
+vi.mock('../server/passcodeAuth',()=>({authenticatedPrincipal:vi.fn()}));
+vi.mock('../server/pocketHrData',()=>({db:vi.fn(),readTickets:vi.fn()}));
+vi.mock('../server/conversationLifecycle',()=>({readConversation:vi.fn(async()=>null),withTicketLock:async(_id:string,work:()=>Promise<unknown>)=>work()}));
+vi.mock('../server/responseAttachments',()=>({readAttachment:vi.fn(),downloadAttachment:vi.fn(),validateAttachment:vi.fn(),storeAttachment:vi.fn()}));
 const id='00000000-0000-4000-8000-000000000001';
 const file={id,name:'chart.png',mime:'image/png',size:100,request_id:'T',object_path:id,uploaded_by:'admin@example.com'};
 async function call(method='GET'){

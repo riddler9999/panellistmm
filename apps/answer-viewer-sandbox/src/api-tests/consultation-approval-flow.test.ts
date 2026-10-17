@@ -1,12 +1,12 @@
-import { draftVersion } from '../src/server/draftVersion';
+import { draftVersion } from '../server/draftVersion';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import handler from './consultation-approve';
-import { authenticatedPrincipal } from '../src/server/passcodeAuth';
-import { db, readProof, readTickets, acknowledgeDelivery, writeTicketPublication } from '../src/server/pocketHrData';
+import handler from '../../api/consultation-approve';
+import { authenticatedPrincipal } from '../server/passcodeAuth';
+import { db, readProof, readTickets, acknowledgeDelivery, writeTicketPublication } from '../server/pocketHrData';
 
-vi.mock('../src/server/conversationLifecycle',()=>({readConversation:vi.fn(async()=>null),withTicketLock:vi.fn(async(_id:string,work:()=>Promise<unknown>)=>work())}));
-vi.mock('../src/server/passcodeAuth',()=>({authenticatedPrincipal:vi.fn()}));
-vi.mock('../src/server/pocketHrData',()=>({
+vi.mock('../server/conversationLifecycle',()=>({readConversation:vi.fn(async()=>null),withTicketLock:vi.fn(async(_id:string,work:()=>Promise<unknown>)=>work())}));
+vi.mock('../server/passcodeAuth',()=>({authenticatedPrincipal:vi.fn()}));
+vi.mock('../server/pocketHrData',()=>({
  readProof:vi.fn(async()=>({approval:null,delivery:null})),db:vi.fn(),readTickets:vi.fn(),acknowledgeDelivery:vi.fn(),writeTicketPublication:vi.fn()
 }));
 function response() {

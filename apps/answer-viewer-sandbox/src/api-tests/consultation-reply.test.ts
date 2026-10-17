@@ -1,13 +1,13 @@
-import { encodeResponse } from '../src/domain/reviewedResponse';
+import { encodeResponse } from '../domain/reviewedResponse';
 import { beforeEach,describe,it,expect,vi } from 'vitest';
-import handler from './consultation-reply';
-import { authenticatedPrincipal } from '../src/server/passcodeAuth';
-import { readTickets,readProof } from '../src/server/pocketHrData';
-import { readConversation,saveConversation,syncReply } from '../src/server/conversationLifecycle';
-vi.mock('../src/server/passcodeAuth',()=>({authenticatedPrincipal:vi.fn()}));
-vi.mock('../src/server/pocketHrData',()=>({readTickets:vi.fn(),readProof:vi.fn()}));
-vi.mock('../src/server/conversationLifecycle',async(importOriginal)=>({
- ...await importOriginal<typeof import('../src/server/conversationLifecycle')>(),
+import handler from '../../api/consultation-reply';
+import { authenticatedPrincipal } from '../server/passcodeAuth';
+import { readTickets,readProof } from '../server/pocketHrData';
+import { readConversation,saveConversation,syncReply } from '../server/conversationLifecycle';
+vi.mock('../server/passcodeAuth',()=>({authenticatedPrincipal:vi.fn()}));
+vi.mock('../server/pocketHrData',()=>({readTickets:vi.fn(),readProof:vi.fn()}));
+vi.mock('../server/conversationLifecycle',async(importOriginal)=>({
+ ...await importOriginal<typeof import('../server/conversationLifecycle')>(),
  readConversation:vi.fn(),saveConversation:vi.fn(),syncReply:vi.fn(),withTicketLock:async(_id:string,work:()=>Promise<unknown>)=>work(),
 }));
 const headers={origin:'https://example.com',host:'example.com'};

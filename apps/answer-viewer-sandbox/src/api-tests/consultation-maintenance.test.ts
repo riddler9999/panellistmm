@@ -1,10 +1,10 @@
 import { beforeEach,afterEach,describe,it,expect,vi } from 'vitest';
-import handler from './consultation-maintenance';
-import { readTickets,readProof,readProofs } from '../src/server/pocketHrData';
-import { readConversation,readConversations,saveConversation,syncReply } from '../src/server/conversationLifecycle';
-vi.mock('../src/server/pocketHrData',()=>({readTickets:vi.fn(),readProof:vi.fn(),readProofs:vi.fn()}));
-vi.mock('../src/server/conversationLifecycle',async(importOriginal)=>({
- ...await importOriginal<typeof import('../src/server/conversationLifecycle')>(),
+import handler from '../../api/consultation-maintenance';
+import { readTickets,readProof,readProofs } from '../server/pocketHrData';
+import { readConversation,readConversations,saveConversation } from '../server/conversationLifecycle';
+vi.mock('../server/pocketHrData',()=>({readTickets:vi.fn(),readProof:vi.fn(),readProofs:vi.fn()}));
+vi.mock('../server/conversationLifecycle',async(importOriginal)=>({
+ ...await importOriginal<typeof import('../server/conversationLifecycle')>(),
  readConversation:vi.fn(),readConversations:vi.fn(),saveConversation:vi.fn(),syncReply:vi.fn(),withTicketLock:async(_id:string,work:()=>Promise<unknown>)=>work(),
 }));
 const proof={approval:{requestId:'T',revision:1,approvedContent:'Answer',approvedByEmail:'admin@example.com',approvedAt:'2026-10-13T00:00:00Z'},delivery:{requestId:'T',revision:1,result:'success' as const,deliveredAt:'2026-10-13T00:00:00Z'}};

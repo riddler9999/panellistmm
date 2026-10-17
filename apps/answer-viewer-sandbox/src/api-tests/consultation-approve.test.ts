@@ -1,5 +1,5 @@
 import { describe,expect,it } from 'vitest';
-import handler from './consultation-approve';
+import handler from '../../api/consultation-approve';
 function mockResponse() {
   let status = 200;
   let body: unknown;

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import handler from './consultation';
+import handler from '../../api/consultation';
 
 function mockResponse() {
   let code = 200;
