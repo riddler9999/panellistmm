@@ -21,7 +21,7 @@ Owner ၏ 2026-10-16 တောင်းဆိုချက်အရ `ea6f22a` မ
 
 1. `20261016000000_pocket_hr_conversations.sql` ကို apply လုပ်ရမည်။ မရှိလျှင် conversation API fail closed ဖြစ်သည်။
 2. ရှိပြီးသား Upstash ကို application writes serialize လုပ်ရန်သုံးသည်။ Function timeout 60s၊ lock lease 120s ဖြစ်သည်။ External n8n writes သည် lock ကို မလိုက်နာသဖြင့် stale/duplicate callbacks ကို isolated UAT ဖြင့်စစ်ရမည်။
-3. `CRON_SECRET` နှင့် ၅ မိနစ်တစ်ကြိမ် maintenance schedule ကို configure လုပ်ရမည်။ Vercel plan ၏ schedule support ကိုစစ်ရမည်။ Paid service မဖွင့်ထားပါ။ Dashboard နှင့် reply API တွင် deadline ကိုတိုက်ရိုက်စစ်ပြီး cron မှ durable closure သိမ်းသည်။
+3. `CRON_SECRET` နှင့် daily maintenance schedule ကို configure လုပ်ရမည်။ Vercel Hobby plan သည် daily cron သာခွင့်ပြုသည်။ Dashboard နှင့် reply API တွင် 48-hour deadline ကိုတိုက်ရိုက်စစ်ပြီး cron မှ durable closure နှင့် failed sync retry ကိုသိမ်းသည်။
 4. Live n8n သည် existing request ID ၏ Submitted context အသစ်ကို ပြန် process လုပ်နိုင်ကြောင်း verify ရမည်။ Live workflow မပြောင်းထားပါ။ အလွန်ရှည်သော conversation တွင် Sheet cell-size limit ဆက်ရှိသည်။
 5. Closure/history authority သည် Supabase conversation record ဖြစ်သည်။ Sheet status သည် processing bridge ဖြစ်ပြီး Glide အဟောင်းတွင် closure overlay မပေါ်ပါ။ Existing delivered tickets များလည်း ၄၈ နာရီစည်းမျဉ်း သက်ရောက်သည်။
 6. Production migration၊ cron activation၊ deploy နှင့် live n8n E2E မလုပ်ထားပါ။

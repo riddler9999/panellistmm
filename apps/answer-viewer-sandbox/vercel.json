@@ -61,7 +61,7 @@
   "crons": [
     {
       "path": "/api/consultation-maintenance",
-      "schedule": "*/5 * * * *"
+      "schedule": "0 0 * * *"
     }
   ]
 }
