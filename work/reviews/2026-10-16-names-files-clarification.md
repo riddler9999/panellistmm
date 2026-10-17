@@ -8,13 +8,13 @@
 - Consultant သည် choices ၈ ခုအထိ ထည့်/ပြင်နိုင်သည်။ User သည် option တစ်ခုရွေး၍ အပိုစာသားထည့်နိုင်သည်၊ သို့မဟုတ် တစ်ခုမှမရွေးဘဲ ကိုယ်တိုင်ရေးဖြေနိုင်သည်။
 - n8n clarification JSON contract: `{"kind":"clarification","question":"...","options":["...","..."]}`။ Plain-text question/advice အဟောင်းကိုလည်း လက်ခံသည်။ Question တစ်ခုထက်ပိုပြီး choice တစ်စုတည်းပါလာလျှင် formatter ငြင်းပယ်သည်။
 
-## Live n8n inspection / draft change
+## Live n8n release
 
-`Panellist Unified Orchestrator` (`97Hrjp3aKOLIR4wJ`) သည် active ဖြစ်ပြီး webhook မှစတင်သည်။ HR formatter အဟောင်းသည် string question array ကိုသာလက်ခံသည်။ Org/SOP rendering တွင် Drawio nodes ဆက်ရှိသည်။
+`Panellist Unified Orchestrator` (`97Hrjp3aKOLIR4wJ`) active version `87206869-29e2-49d3-946d-0cfbe25b6500` တွင် structured clarification choices၊ consultant review guard နှင့် RAW Sheet write ပါဝင်သည်။ User သည် option ရွေးနိုင်သလို custom answer သီးသန့်ရေးနိုင်သည်။
 
-Changed draft nodes: `Call HR Consultant Agent`, `Format HR Response`။ Node schema validation PASS၊ synthetic formatter cases ၅ ခု PASS။ Patch ကို `workflows/patches/2026-10-16-clarification-choices.json` တွင်သိမ်းထားသည်။
+Changed nodes: `Call HR Consultant Agent`, `Format HR Response`, `Format Dual Response` နှင့် bridge review guards။ Node schema validation PASS၊ synthetic formatter cases ၅ ခု PASS။ Patch ကို `workflows/patches/2026-10-16-clarification-choices.json` တွင်သိမ်းထားသည်။
 
-Draft version: `978c5001-a67a-4137-8089-d3ee61671395`။ Active version: `1af405cf-b035-442e-80a7-240744e538af` မပြောင်းကြောင်း read-back verified ဖြစ်သည်။ Publish မလုပ်ထားပါ။ Existing retired node warnings ကို ဒီအလုပ်တွင် မပြောင်းထားပါ။
+`Panellist Async Request Dispatcher` (`wBJ0zhWTsPpPtcOm`) active version `897f81cd-b37e-4689-a030-291065d437c3` က new request/follow-up ကို 202 ချက်ချင်းလက်ခံပြီး canonical orchestrator သို့ forward လုပ်သည်။
 
 ## Recommended deliverable contract
 
@@ -32,14 +32,13 @@ PNG သည် preview ဖြစ်ပြီး editable source မဟုတ်�
 - TypeScript/Vite build၊ ESLint၊ git diff whitespace checks PASS။
 - 390px Chromium mocked backend: အမည်၊ file upload + approval payload၊ approved download link၊ choice မရွေးဘဲ custom answer၊ overflow/browser errors မရှိခြင်း PASS။
 - PGlite isolated test: file table/bucket migration၊ anonymous metadata access denial၊ public bucket name collision rejection PASS။ Supabase storage runtime test မဟုတ်ပါ။
-- Read-only production inspection: `pocket_hr_conversations` table မရှိသေး၊ Vercel env တွင် `CRON_SECRET` မရှိသေး။ `storage.objects` policies မရှိကြောင်း verified ဖြစ်သည်။ Production data/schema မပြောင်းထားပါ။
+- Production migrations၊ private bucket၊ `CRON_SECRET`၊ async dispatcher env နှင့် Vercel deployment ကို 2026-10-17 တွင် apply/configure လုပ်ပြီး read-back verified လုပ်ထားသည်။
 
 ## Release requirements
 
-- Previous conversation migration နှင့် new `20261016010000_pocket_hr_response_files.sql` migration ကို coordinated release တွင် apply လုပ်ရန်လိုသည်။ Names column ကို Admin ပထမဆုံး save လုပ်စဉ်သာထည့်သည်။
-- Dashboard အသစ်ဖြန့်ပြီးမှ matching n8n draft ကို publish ရမည်။ အရင် UI သို့ structured JSON ပို့လျှင် JSON စာသားအဖြစ်ပေါ်နိုင်သည်။
+- Conversation/file migrations၊ dashboard နှင့် matching n8n version ကို coordinated production release အဖြစ်ဖြန့်ပြီးဖြစ်သည်။ Names column ကို Admin ပထမဆုံး save လုပ်စဉ်သာထည့်သည်။
 - Existing standalone `/answer` viewer နှင့် Glide အဟောင်းအတွက် new file/choice UI မထည့်ထားပါ။ ယခု delivery surface သည် `/consultation` ဖြစ်သည်။
-- Follow-up bridge reset နောက် live orchestrator invocation ကို isolated end-to-end ticket ဖြင့် verify လုပ်ရန်လိုသည်။ Webhook-only orchestrator ကို Sheet Submitted ပြောင်းခြင်းတစ်ခုတည်းဖြင့် trigger ဖြစ်သည်ဟု မယူဆရ။
-- `CRON_SECRET` နှင့် scheduler၊ live upload/download၊ name editing၊ two-round n8n integration စမ်းသပ်ပြီးမှ production readiness ဆိုနိုင်သည်။
+- Follow-up bridge သည် Sheet status တစ်ခုတည်းကိုအားမကိုးဘဲ async dispatcher ကိုခေါ်သည်။ Real HR ticket/PIN မသုံးဘဲ deployment၊ auth boundary နှင့် workflow activation ကို verify လုပ်ထားသည်။
+- Live upload/download၊ requester-name editing နှင့် two-round conversation ကို owner test account ဖြင့် UAT လုပ်နိုင်သည်။
 - Draft uploads များမှာ orphan ဖြစ်နိုင်ပြီး automatic cleanup မပါသေးပါ။ Approved files ကို immutable အဖြစ်ထားသည်။
 - Rollback တွင် old dashboard သည် encoded approval snapshot ကိုမသိသဖြင့် metadata ပါသော response အသစ်ရှိပြီးနောက် blind rollback မလုပ်ရ။ Data မဖျက်ဘဲ safe-forward လုပ်သင့်သည်။
