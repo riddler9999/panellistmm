@@ -9,7 +9,8 @@ const statusClass = (status: string) => status.toLowerCase().replace(/[^a-z]+/g,
 const ticketIcons: Record<string, string> = { Submitted: '▤', 'ဖောင်ပို့ပြီး (Submitted)': '▤', 'Awaiting Review': '▧', Approved: '✓', Failed: '!' };
 const ticketIcon = (status: string) => ticketIcons[status] ?? '▣';
 
-export function ConsultationDashboard() {
+export function ConsultationDashboard({side = 'user'}: {side?: 'user'|'admin'}) {
+  const consultationUrl = '/api/consultation?side=' + side;
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<string>('All');
   const [selected, setSelected] = useState<string | null>(null);
@@ -20,16 +21,19 @@ export function ConsultationDashboard() {
   const [loggingIn, setLoggingIn] = useState(false);
   useEffect(() => {
     let active = true;
-    fetch('/api/consultation', {credentials:'include',cache:'no-store'})
+    fetch(consultationUrl, {credentials:'include',cache:'no-store'})
       .then(async response => {
-        if (!response.ok) return null;
+        if (!response.ok) {
+          if(active) setLoginError(response.status===403 && side==='admin' ? 'Consultant/Admin access required. Sign in with an administrator passcode.' : response.status===503 ? 'Requests service unavailable. Please try again.' : '');
+          return null;
+        }
         return await response.json() as {role:'Admin'|'User';tickets:ConsultationTicket[]};
       })
       .then(data => {if(active) setSession(data);})
       .catch(() => {if(active) setLoginError('Service unavailable. Please try again.');})
       .finally(() => {if(active) setChecking(false);});
     return () => {active=false;};
-  },[]);
+  },[consultationUrl,side]);
   async function login(event: React.FormEvent) {
     event.preventDefault();
     if(loggingIn) return;
@@ -37,7 +41,7 @@ export function ConsultationDashboard() {
     try {
       const response=await fetch('/api/pocket-hr-login',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify({passcode})});
       if(!response.ok){setLoginError(response.status===401?'Passcode is incorrect.':'Login unavailable.');return;}
-      const ticketsResponse=await fetch('/api/consultation',{credentials:'include',cache:'no-store'});
+      const ticketsResponse=await fetch(consultationUrl,{credentials:'include',cache:'no-store'});
       if(!ticketsResponse.ok){
         setLoginError(ticketsResponse.status===403
           ? 'Session could not be verified. Please sign in again.'
@@ -58,6 +62,7 @@ export function ConsultationDashboard() {
   const [tab, setTab] = useState<'Conversation' | 'Details' | 'Files'>('Conversation');
   const [actionDraft, setActionDraft] = useState('');
   const [editing, setEditing] = useState(false);
+  const [editingVersion, setEditingVersion] = useState<string | undefined>();
   const [reply, setReply] = useState('');
   const [requesterName,setRequesterName]=useState('');
   const [selectedOption,setSelectedOption]=useState('');
@@ -77,15 +82,15 @@ export function ConsultationDashboard() {
     if(!session || editing || actionSubmitting)return;
     let mounted=true;
     const timer=setInterval(()=>{
-      fetch('/api/consultation',{credentials:'include',cache:'no-store'})
+      fetch(consultationUrl,{credentials:'include',cache:'no-store'})
         .then(async response=>{if(response.ok&&mounted)setSession(await response.json());})
         .catch(()=>{});
     },15000);
     return ()=>{mounted=false;clearInterval(timer);};
-  },[session,editing,actionSubmitting]);
+  },[session,editing,actionSubmitting,consultationUrl]);
 
   const tickets = useMemo(() => session?.tickets ?? [], [session]);
-  const role = session?.role ?? 'User';
+  const role = side === 'admin' ? session?.role ?? 'User' : 'User';
   const visible = useMemo(() => tickets.filter(ticket =>
     (filter === 'All' || ticketStatus(ticket.status) === filter) &&
     [ticket.ticketId, ticket.title].some(value => value.toLocaleLowerCase().includes(search.trim().toLocaleLowerCase()))
@@ -104,10 +109,10 @@ export function ConsultationDashboard() {
     try {
       const response = await fetch('/api/consultation-approve', {
         method:'POST',credentials:'include',headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({action:'approve',requestId:active.ticketId,expectedRevision:active.revision ?? 0,content:responseContent,draftVersion:active.draftVersion,options:responseOptions,attachmentIds:responseAttachments.map(file=>file.id)})
+        body:JSON.stringify({action:'approve',requestId:active.ticketId,expectedRevision:active.revision ?? 0,content:responseContent,draftVersion:editing ? editingVersion : active.draftVersion,options:responseOptions,attachmentIds:responseAttachments.map(file=>file.id)})
       });
       if (!response.ok) { setActionError(response.status===409?'This request changed. Reload and review again.':'Approval was not published. Retry after checking the request.'); return; }
-      const refreshed = await fetch('/api/consultation',{credentials:'include',cache:'no-store'});
+      const refreshed = await fetch(consultationUrl,{credentials:'include',cache:'no-store'});
       if (!refreshed.ok) throw new Error('refresh_failed');
       setSession(await refreshed.json() as {role:'Admin'|'User';tickets:ConsultationTicket[]});
       setActionDraft(''); setEditing(false);setAttachments([]);setOptionsText('');
@@ -116,7 +121,7 @@ export function ConsultationDashboard() {
   }
 
   async function refreshTickets(){
-    const response=await fetch('/api/consultation',{credentials:'include',cache:'no-store'});
+    const response=await fetch(consultationUrl,{credentials:'include',cache:'no-store'});
     if(!response.ok)throw new Error('refresh_failed');
     setSession(await response.json() as {role:'Admin'|'User';tickets:ConsultationTicket[]});
   }
@@ -154,7 +159,7 @@ export function ConsultationDashboard() {
   }
 
   function beginEdit(){
-    setActionDraft(responseContent);setOptionsText((active?.draftOptions??[]).join('\n'));
+    setEditingVersion(active?.draftVersion);setActionDraft(responseContent);setOptionsText((active?.draftOptions??[]).join('\n'));
     setAttachments(active?.draftAttachments??[]);setEditing(true);
   }
   async function uploadFile(file:File){
@@ -224,7 +229,7 @@ export function ConsultationDashboard() {
           {actionError && <p role="alert">{actionError}</p>}
           {active.closed ? <p className="consult-empty">Ticket closed</p> : role==='User' && <section className="consult-actions state-card">
             {active.responseApproved && <>{!!active.options?.length&&<fieldset className="consult-choices"><legend>Choose an answer or write your own</legend>{active.options.map(option=><label key={option}><input type="radio" name="clarification-choice" checked={selectedOption===option} onChange={()=>setSelectedOption(option)}/>{option}</label>)}<label><input type="radio" name="clarification-choice" checked={!selectedOption} onChange={()=>setSelectedOption('')}/>Write my own answer</label></fieldset>}<label htmlFor="consult-reply">{active.options?.length ? 'Your answer / additional details' : 'Follow-up question'}</label><textarea id="consult-reply" maxLength={10000} value={reply} onChange={e=>setReply(e.target.value)}/><button disabled={actionSubmitting||(!reply.trim()&&!selectedOption)} onClick={()=>userAction('reply')}>Send follow-up</button></>}
-            <button disabled={actionSubmitting} onClick={()=>userAction('close')}>Close ticket</button>
+            <button disabled={actionSubmitting} onClick={()=>userAction('close')}>End This Request</button>
             {active.autoCloseAt && <p>This ticket closes automatically 48 hours after the latest approved response unless you send a follow-up.</p>}
           </section>}
         </section>}

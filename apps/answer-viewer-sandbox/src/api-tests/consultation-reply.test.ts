@@ -29,12 +29,16 @@ describe('owner reply and close',()=>{
   expect(saveConversation).toHaveBeenCalledWith(expect.objectContaining({original_request:'Initial request',reply_revision:1,pending_sync:true,entries:[{role:'consultant',content:'Approved reply',revision:1},{role:'user',content:'Follow-up',revision:1}]}));
   expect(vi.mocked(saveConversation).mock.invocationCallOrder[0]).toBeLessThan(vi.mocked(syncReply).mock.invocationCallOrder[0]);
  });
- it('denies another owner and Admin closing through this endpoint',async()=>{
+ it('denies another owner, including Admin, closing through this endpoint',async()=>{
   vi.mocked(authenticatedPrincipal).mockResolvedValue({role:'User',email:'other@example.com'});
   expect(await call({action:'close',requestId:'T-1'})).toBe(404);
   vi.mocked(authenticatedPrincipal).mockResolvedValue({role:'Admin',email:'admin@example.com'});
-  expect(await call({action:'close',requestId:'T-1'})).toBe(403);
+  expect(await call({action:'close',requestId:'T-1'})).toBe(404);
   expect(saveConversation).not.toHaveBeenCalled();
+ });
+ it('allows Admin to close only their own request from My Requests',async()=>{
+  vi.mocked(authenticatedPrincipal).mockResolvedValue({role:'Admin',email:'user@example.com'});
+  expect(await call({action:'close',requestId:'T-1'})).toBe(200);
  });
  it('allows owner to close without an approved response',async()=>{
   vi.mocked(readTickets).mockResolvedValue([{'Row ID':'T-1',Owner_Email:'user@example.com',Ticket_Status:'Submitted'}]);

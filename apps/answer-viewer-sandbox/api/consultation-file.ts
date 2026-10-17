@@ -19,14 +19,16 @@ export default async function handler(req:Req,res:Res){
    if(principal.role!=='Admin')return res.status(403).json({error:'access_denied'});
    const input=req.body as {requestId?:unknown;name?:unknown;base64?:unknown}|undefined;
    if(!input||typeof input.requestId!=='string'||!input.requestId||input.requestId.length>256)return res.status(400).json({error:'invalid_file'});
-   return await withTicketLock(input.requestId,async()=>{
+   const result=(status:number)=>({json:(body:unknown)=>({status,body})});
+  const outcome = await withTicketLock(input.requestId,async()=>{
     const ticket=(await readTickets()).find(row=>row['Row ID']===input.requestId);
-    if(!ticket)return res.status(404).json({error:'ticket_not_found'});
+    if(!ticket)return result(404).json({error:'ticket_not_found'});
     const state=await readConversation(input.requestId as string);
-    if(state?.closed_at||state?.pending_sync||['Approved','Delivered','Closed','Resolved','Delivery Pending'].includes(String(ticket.Ticket_Status)))return res.status(409).json({error:'response_not_editable'});
-    let file;try{file=await validateAttachment(input.name,input.base64);}catch{return res.status(400).json({error:'invalid_file'});}
-    return res.status(201).json(await storeAttachment(input.requestId as string,principal.email,file));
+    if(state?.closed_at||state?.pending_sync||['Approved','Delivered','Closed','Resolved','Delivery Pending'].includes(String(ticket.Ticket_Status)))return result(409).json({error:'response_not_editable'});
+    let file;try{file=await validateAttachment(input.name,input.base64);}catch{return result(400).json({error:'invalid_file'});}
+    return result(201).json(await storeAttachment(input.requestId as string,principal.email,file));
    });
+  return res.status(outcome.status).json(outcome.body);
   }
   const id=req.query?.id, revision=Number(req.query?.revision);
   if(typeof id!=='string'||!Number.isSafeInteger(revision)||revision<1)return res.status(404).json({error:'file_not_found'});
