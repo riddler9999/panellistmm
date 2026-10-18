@@ -92,12 +92,12 @@ export function ConsultationDashboard({side = 'user'}: {side?: 'user'|'admin'}) 
   const tickets = useMemo(() => session?.tickets ?? [], [session]);
   const role = side === 'admin' ? session?.role ?? 'User' : 'User';
   const visible = useMemo(() => tickets.filter(ticket =>
-    (filter === 'All' || ticketStatus(ticket.status) === filter) &&
+    (filter === 'All' || ticketStatus(ticket.status, side) === filter) &&
     [ticket.ticketId, ticket.title].some(value => value.toLocaleLowerCase().includes(search.trim().toLocaleLowerCase()))
   ), [tickets, filter, search]);
   const active = tickets.find(ticket => ticket.ticketId === selected);
   // Derive filter labels from actual ticket statuses; never invent workflow states.
-  const filters = ['All', ...Array.from(new Set(tickets.map(ticket => ticketStatus(ticket.status)).filter(Boolean)))];
+  const filters = ['All', ...Array.from(new Set(tickets.map(ticket => ticketStatus(ticket.status, side)).filter(Boolean)))];
 
   const responseOptions = editing ? optionsText.split('\n').map(value=>value.trim()).filter(Boolean) : active?.draftOptions ?? [];
   const responseAttachments = editing ? attachments : active?.draftAttachments ?? [];
@@ -196,12 +196,12 @@ export function ConsultationDashboard({side = 'user'}: {side?: 'user'|'admin'}) 
 
   return <main className="viewer-shell consultation-dashboard">
     
-    {session && <div className="consult-preview-banner"><span>{role === 'Admin' ? 'Consultant Dashboard' : 'My Requests'}</span><button type="button" onClick={logout} disabled={uploading||actionSubmitting}>Log out</button></div>}
+    {session && <div className="consult-preview-banner"><span>{role === 'Admin' ? 'Consultant Dashboard' : 'My Requests'}</span></div>}
     {active ? <>
         <button type="button" className="consult-back" disabled={uploading||actionSubmitting} onClick={() => setSelected(null)} aria-label="Back to requests">‹</button>
         <section className="consult-detail-head">
           <span className={`consult-request-icon tone-${statusClass(active.status)}`} aria-hidden="true">{ticketIcon(active.status)}</span>
-          <div className="consult-detail-title"><small>{active.ticketId}{active.createdAt ? ` · ${active.createdAt}` : ''}</small><h1>{active.title}</h1>{active.category && <small>{active.category}</small>}</div><span className={`consult-badge tone-${statusClass(active.status)}`}>{ticketStatus(active.status)}</span>
+          <div className="consult-detail-title"><small>{active.ticketId}{active.createdAt ? ` · ${active.createdAt}` : ''}</small><h1>{active.title}</h1>{active.category && <small>{active.category}</small>}</div><span className={`consult-badge tone-${statusClass(active.status)}`}>{ticketStatus(active.status, side)}</span>
         </section>
         <nav className="consult-detail-tabs" aria-label="Request details">
           {(['Conversation', 'Details', 'Files'] as const).map(name =>
@@ -233,15 +233,15 @@ export function ConsultationDashboard({side = 'user'}: {side?: 'user'|'admin'}) 
             {active.autoCloseAt && <p>This ticket closes automatically 48 hours after the latest approved response unless you send a follow-up.</p>}
           </section>}
         </section>}
-        {tab === 'Details' && <section className="state-card consult-details"><h2>Request Details</h2>{role==='Admin'&&active.requesterEmail&&<div className="consult-actions"><label htmlFor="requester-name">Requester name</label><input id="requester-name" maxLength={120} value={requesterName} onChange={e=>setRequesterName(e.target.value)}/><button disabled={actionSubmitting||!requesterName.trim()} onClick={saveRequesterName}>Save name</button>{actionError&&<p role="alert">{actionError}</p>}</div>}<dl><div><dt>Request ID</dt><dd>{active.ticketId}</dd></div><div><dt>Subject</dt><dd>{active.title}</dd></div><div><dt>Status</dt><dd><span className={`consult-badge tone-${statusClass(active.status)}`}>{ticketStatus(active.status)}</span></dd></div>{active.category && <div><dt>Category</dt><dd>{active.category}</dd></div>}{active.createdAt && <div><dt>Created</dt><dd>{active.createdAt}</dd></div>}{active.description && <div><dt>Description</dt><dd>{active.description}</dd></div>}{role === 'Admin' && active.reviewStatus && <div><dt>Review Status</dt><dd>{active.reviewStatus}</dd></div>}{role === 'Admin' && active.processingStatus && <div><dt>Processing Status</dt><dd>{active.processingStatus}</dd></div>}{role === 'Admin' && active.artifact?.status && <div><dt>Artifact Status</dt><dd>{active.artifact.status}</dd></div>}</dl></section>}
+        {tab === 'Details' && <section className="state-card consult-details"><h2>Request Details</h2>{role==='Admin'&&active.requesterEmail&&<div className="consult-actions"><label htmlFor="requester-name">Requester name</label><input id="requester-name" maxLength={120} value={requesterName} onChange={e=>setRequesterName(e.target.value)}/><button disabled={actionSubmitting||!requesterName.trim()} onClick={saveRequesterName}>Save name</button>{actionError&&<p role="alert">{actionError}</p>}</div>}<dl><div><dt>Request ID</dt><dd>{active.ticketId}</dd></div><div><dt>Subject</dt><dd>{active.title}</dd></div><div><dt>Status</dt><dd><span className={`consult-badge tone-${statusClass(active.status)}`}>{ticketStatus(active.status, side)}</span></dd></div>{active.category && <div><dt>Category</dt><dd>{active.category}</dd></div>}{active.createdAt && <div><dt>Created</dt><dd>{active.createdAt}</dd></div>}{active.description && <div><dt>Description</dt><dd>{active.description}</dd></div>}{role === 'Admin' && active.reviewStatus && <div><dt>Review Status</dt><dd>{active.reviewStatus}</dd></div>}{role === 'Admin' && active.processingStatus && <div><dt>Processing Status</dt><dd>{active.processingStatus}</dd></div>}{role === 'Admin' && active.artifact?.status && <div><dt>Artifact Status</dt><dd>{active.artifact.status}</dd></div>}</dl></section>}
         {tab === 'Files' && <section className="state-card consult-files"><div className="consult-file-icon">▤</div>{fileLinks(active.attachments,active.revision??0)}{active.conversation?.map((entry,index)=><div key={index}>{fileLinks(entry.attachments,entry.revision)}</div>)}{role === 'Admin' && active.artifact?.title ? <><h2>{active.artifact.title}</h2><p>{[active.artifact.type, active.artifact.format, active.artifact.status].filter(Boolean).join(' · ')}</p></> : <><h2>{active.attachments?.length||active.conversation?.some(entry=>entry.attachments?.length)?'Approved files':'No files available'}</h2><p>Only verified, authorized attachments will appear here.</p></>}</section>}
       </> : <>
         <div className="consult-list-heading"><h1>{role === 'Admin' ? 'All Requests' : 'My Requests'}</h1><p>{tickets.length} requests</p></div>
         <div className="consult-toolbar">
           <input aria-label="Search requests" type="search" placeholder="Search requests, subject, or ID..." value={search} onChange={event => setSearch(event.target.value)} />
-          <button type="button" className="consult-new" onClick={()=>setCreating(true)}>＋ New Request</button>
+          {side === 'user' && <button type="button" className="consult-new" onClick={()=>setCreating(true)}>＋ New Request</button>}
         </div>
-        {creating && <form className="state-card" onSubmit={createRequest}>
+        {side === 'user' && creating && <form className="state-card" onSubmit={createRequest}>
           <h2>New Request</h2>
           <label htmlFor="new-request-title">Title</label>
           <input id="new-request-title" required maxLength={160} value={newTitle} onChange={e=>setNewTitle(e.target.value)}/>
@@ -254,13 +254,13 @@ export function ConsultationDashboard({side = 'user'}: {side?: 'user'|'admin'}) 
           <button type="button" onClick={()=>setCreating(false)}>Cancel</button>
         </form>}
         <div className="consult-filters" aria-label="Filter requests">
-          {filters.map(status => <button type="button" key={status} className={filter === status ? 'active' : ''} aria-pressed={filter === status} onClick={() => setFilter(status)}>{status} ({status === 'All' ? tickets.length : tickets.filter(ticket => ticketStatus(ticket.status) === status).length})</button>)}
+          {filters.map(status => <button type="button" key={status} className={filter === status ? 'active' : ''} aria-pressed={filter === status} onClick={() => setFilter(status)}>{status} ({status === 'All' ? tickets.length : tickets.filter(ticket => ticketStatus(ticket.status, side) === status).length})</button>)}
         </div>
         {visible.length === 0 ? <section className="state-card">Request မရှိသေးပါ။</section> :
           <div className="consult-list">{visible.map(ticket => <button type="button" className="consult-request" key={ticket.ticketId} onClick={() => { setSelected(ticket.ticketId); setTab('Conversation'); setEditing(false); setActionDraft(''); setActionError(''); setReply('');setSelectedOption('');setAttachments([]);setOptionsText('');setRequesterName(ticket.requesterName??''); }}>
             <span className={`consult-request-icon tone-${statusClass(ticket.status)}`} aria-hidden="true">{ticketIcon(ticket.status)}</span>
             <span className="consult-request-copy"><small>{ticket.ticketId}</small><strong>{ticket.title}</strong></span>
-            <span className={`consult-badge tone-${statusClass(ticket.status)}`}>{ticketStatus(ticket.status)}</span><span className="consult-chevron" aria-hidden="true">›</span>
+            <span className={`consult-badge tone-${statusClass(ticket.status)}`}>{ticketStatus(ticket.status, side)}</span><span className="consult-chevron" aria-hidden="true">›</span>
           </button>)}</div>}
       </>}
   </main>;
