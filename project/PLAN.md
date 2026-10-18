@@ -1,5 +1,7 @@
 # Project Plan
 
+> **Consultation guidance:** Read the October 13 supersession note at the end before using older lifecycle or runtime instructions.
+
 ## ရည်ရွယ်ချက်
 Panellist ကို AI အကူအညီသုံး HR operations product အဖြစ်တည်ဆောက်မည်။ Agent workflow များကိုထိန်းချုပ်ထားပြီး human approval gate များ၊ ပြန်လည်စစ်ဆေးနိုင်သော engineering process များနှင့် production-safe architecture ကိုအသုံးပြုမည်။
 
@@ -23,3 +25,6 @@ Panellist ကို AI အကူအညီသုံး HR operations product အ�
 - Secrets / credentials ဆိုင်ရာပြောင်းလဲမှု
 - Destructive Git / database / infrastructure operation
 - External communication သို့မဟုတ် paid service ကို activate လုပ်ခြင်း
+
+## Current consultation priority — 2026-10-13
+The numbered delivery sequence above is an original roadmap, not a claim of current completion or an instruction to prioritize Discovery before HITL. Current approved Pocket HR consultation requirements: `project/POCKET_HR_CONTEXT_2026-10-13.md` and `project/REQUIREMENTS.md`. First verify Glide/Sheet/n8n contract and access enforcement; then implement/verify consultant-gated clarification rounds, final approval and delivery; finally complete isolated-user end-to-end UAT. Do not deploy as part of documentation reconciliation.

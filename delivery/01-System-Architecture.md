@@ -1,5 +1,7 @@
 # 01 — System Architecture
 
+> **Consultation guidance:** Read the October 13 supersession note at the end before using older lifecycle or runtime instructions.
+
 > Panellist HR AI System · Client Delivery Package v1.0 · 2026-09-22
 
 ---
@@ -140,3 +142,6 @@ The signed viewer credential is placed in the URL fragment (`/answer#access=...`
 
 No production n8n/Glide/Sheet mutation is authorized by this documentation update. Contract reconciliation and Glide UAT remain rollout gates.
 
+
+## Current consultation supersession — 2026-10-13
+**The September 22 topology, 5-minute poller, `Sheet_AI_Answer` write-back, single-pass approve/edit-to-resolved diagram and Supabase ticket-state description above are historical delivery assumptions, NOT verified current operating instructions.** The October 13 approved consultation lifecycle in `project/POCKET_HR_CONTEXT_2026-10-13.md` and `project/REQUIREMENTS.md` overrides those assumptions. AI may ask clarification or provide advice; either requires consultant approve/edit/reject; approved clarification can repeat after user replies; approved final advice alone is delivered; resolved tickets become read-only. Actual field/status mapping, ticket persistence, Row Owners and n8n publication remain unverified. Preserve SOP/Org Chart contracts.
