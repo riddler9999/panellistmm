@@ -66,10 +66,6 @@ export function ConsultationDashboard({side = 'user'}: {side?: 'user'|'admin'}) 
     }catch{setLoginError('Network error. Try again.');}
     finally{setLoggingIn(false);}
   }
-  async function logout() {
-    try {await fetch('/api/pocket-hr-session',{method:'POST',credentials:'include'});} catch { /* clear local UI even if offline */ }
-    setSession(null);setSelected(null);setPasscode('');
-  }
   const [tab, setTab] = useState<'Conversation' | 'Details' | 'Files'>('Conversation');
   const [actionDraft, setActionDraft] = useState('');
   const [editing, setEditing] = useState(false);
@@ -207,7 +203,7 @@ export function ConsultationDashboard({side = 'user'}: {side?: 'user'|'admin'}) 
 
   return <main className="viewer-shell consultation-dashboard">
     
-    {session && <div className="consult-preview-banner"><span>{role === 'Admin' ? 'Consultant Dashboard' : 'My Requests'}</span><button type="button" onClick={logout} disabled={uploading||actionSubmitting}>Log out</button></div>}
+    {session && <div className="consult-preview-banner"><span>{role === 'Admin' ? 'Consultant Dashboard' : 'My Requests'}</span></div>}
     {active ? <>
         <button type="button" className="consult-back" disabled={uploading||actionSubmitting} onClick={() => setSelected(null)} aria-label="Back to requests"><ConsultationIcon name="back"/></button>
         <section className="consult-detail-head">
@@ -246,7 +242,7 @@ export function ConsultationDashboard({side = 'user'}: {side?: 'user'|'admin'}) 
         </section>}
         {tab === 'Details' && <section className="state-card consult-details"><h2>Request Details</h2>{role==='Admin'&&active.requesterEmail&&<div className="consult-actions"><label htmlFor="requester-name">Requester name</label><input id="requester-name" maxLength={120} value={requesterName} onChange={e=>setRequesterName(e.target.value)}/><button disabled={actionSubmitting||!requesterName.trim()} onClick={saveRequesterName}>Save name</button>{actionError&&<p role="alert">{actionError}</p>}</div>}<dl><div><dt>Request ID</dt><dd>{active.ticketId}</dd></div><div><dt>Subject</dt><dd>{active.title}</dd></div><div><dt>Status</dt><dd><span className={`consult-badge tone-${statusClass(active.status)}`}>{ticketStatus(active.status, role)}</span></dd></div>{active.category && <div><dt>Category</dt><dd>{active.category}</dd></div>}{active.createdAt && <div><dt>Created</dt><dd>{active.createdAt}</dd></div>}{active.description && <div><dt>Description</dt><dd>{active.description}</dd></div>}{role === 'Admin' && active.reviewStatus && <div><dt>Review Status</dt><dd>{active.reviewStatus}</dd></div>}{role === 'Admin' && active.processingStatus && <div><dt>Processing Status</dt><dd>{active.processingStatus}</dd></div>}{role === 'Admin' && active.artifact?.status && <div><dt>Artifact Status</dt><dd>{active.artifact.status}</dd></div>}</dl></section>}
         {tab === 'Files' && <section className="state-card consult-files"><div className="consult-file-icon"><ConsultationIcon name="files"/></div>{fileLinks(active.attachments,active.revision??0)}{active.conversation?.map((entry,index)=><div key={index}>{fileLinks(entry.attachments,entry.revision)}</div>)}{role === 'Admin' && active.artifact?.title ? <><h2>{active.artifact.title}</h2><p>{[active.artifact.type, active.artifact.format, active.artifact.status].filter(Boolean).join(' · ')}</p></> : <><h2>{active.attachments?.length||active.conversation?.some(entry=>entry.attachments?.length)?'Approved files':'No files available'}</h2><p>Only verified, authorized attachments will appear here.</p></>}</section>}
-      </> : creating ? <section className="consult-compose">
+      </> : (side === 'user' && creating) ? <section className="consult-compose">
         <div className="consult-compose-heading"><h1>New Request</h1><p>Tell us what you need help with.</p></div>
         <form className="state-card consult-request-form" onSubmit={createRequest}>
           <fieldset disabled={requestBusy}>
@@ -270,7 +266,7 @@ export function ConsultationDashboard({side = 'user'}: {side?: 'user'|'admin'}) 
         <div className="consult-list-heading"><h1>{role === 'Admin' ? 'All Requests' : 'My Requests'}</h1><p>{tickets.length} requests</p></div>
         <div className="consult-toolbar">
           <input aria-label="Search requests" type="search" placeholder="Search requests, subject, or ID..." value={search} onChange={event => setSearch(event.target.value)} />
-          <button type="button" className="consult-new" onClick={()=>setCreating(true)}>＋ New Request</button>
+          {side === 'user' && <button type="button" className="consult-new" onClick={()=>setCreating(true)}>＋ New Request</button>}
         </div>
         <div className="consult-filters" aria-label="Filter requests">
           {filters.map(status => <button type="button" key={status} className={filter === status ? 'active' : ''} aria-pressed={filter === status} onClick={() => setFilter(status)}>{status} ({status === 'All' ? tickets.length : tickets.filter(ticket => ticketStatus(ticket.status, role) === status).length})</button>)}
