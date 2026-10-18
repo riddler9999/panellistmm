@@ -1,5 +1,7 @@
 # Project Scope
 
+> **Consultation guidance:** Read the October 13 supersession note at the end before using older lifecycle or runtime instructions.
+
 ## Scope ထဲပါဝင်သည်
 - HR consultation workflows
 - Discovery နှင့် intent routing
@@ -25,3 +27,6 @@
 
 ## Scope Guard
 Active task သည် `PLAN.md`, `SCOPE.md`, `REQUIREMENTS.md` တို့နှင့်မကိုက်ပါက implementation မစရ။ Scope အသစ်ဖြစ်ပါက owner approval တောင်းရမည်။
+
+## Consultation-specific scope clarification — 2026-10-13
+All Pocket HR AI consultation assessments (both `ASK_CLARIFICATION` and `PROVIDE_ADVICE`) require consultant approve/edit/reject. Repeated clarification and reassessment, approved-only delivery, resolved read-only tickets, consultant access to all tickets and normal-user own-ticket restriction are in scope. Category-based assignment does not restrict consultant access. This does not authorize multi-company isolation, schema changes or production publication. See `project/POCKET_HR_CONTEXT_2026-10-13.md`.

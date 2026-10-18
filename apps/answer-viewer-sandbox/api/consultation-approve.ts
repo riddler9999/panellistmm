@@ -25,27 +25,28 @@ export default async function handler(req:Req,res:Res) {
   if(principal?.role!=='Admin') return res.status(403).json({error:'access_denied'});
   const input=validateConsultantAction(req.body);
   if(!input || input.action!=='approve') return res.status(400).json({error:'invalid_action'});
-  return await withTicketLock(input.requestId,async()=>{
+  const result=(status:number)=>({json:(body:unknown)=>({status,body})});
+  const outcome = await withTicketLock(input.requestId,async()=>{
   const conversation=await readConversation(input.requestId);
-  if(conversation?.closed_at || conversation?.pending_sync) return res.status(409).json({error:'ticket_closed_or_syncing'});
+  if(conversation?.closed_at || conversation?.pending_sync) return result(409).json({error:'ticket_closed_or_syncing'});
   const rows=await readTickets();
   const ticket=rows.find(row=>String(row['Row ID']).trim()===input.requestId);
-  if(!ticket) return res.status(404).json({error:'ticket_not_found'});
-  if((req.body as {draftVersion?:unknown}).draftVersion!==draftVersion(ticket)) return res.status(409).json({error:'draft_changed'});
+  if(!ticket) return result(404).json({error:'ticket_not_found'});
+  if((req.body as {draftVersion?:unknown}).draftVersion!==draftVersion(ticket)) return result(409).json({error:'draft_changed'});
   if(['resolved','closed'].includes(String(ticket.Ticket_Status).trim().toLowerCase()))
-    return res.status(409).json({error:'request_already_final'});
+    return result(409).json({error:'request_already_final'});
   const proof=await readProof(input.requestId);
   if(['Approved','Delivered'].includes(String(ticket.Ticket_Status)))
-    return res.status(409).json({error:'response_already_approved'});
+    return result(409).json({error:'response_already_approved'});
   const body=req.body as {options?:unknown;attachmentIds?:unknown};
   const options=validateOptions(body.options);
-  if(!options)return res.status(400).json({error:'invalid_options'});
+  if(!options)return result(400).json({error:'invalid_options'});
   let attachments;
-  try {attachments=await selectAttachments(input.requestId,body.attachmentIds);}catch{return res.status(400).json({error:'invalid_attachments'});}
+  try {attachments=await selectAttachments(input.requestId,body.attachmentIds);}catch{return result(400).json({error:'invalid_attachments'});}
   const content=encodeResponse({text:input.content!,options,attachments});
-  if(content.length>50000)return res.status(400).json({error:'response_too_long'});
+  if(content.length>50000)return result(400).json({error:'response_too_long'});
   const pending = proof.approval && (conversation?.reply_revision??0)<proof.approval.revision ? proof.approval : null;
-  if(pending && (pending.approvedContent!==content || ![pending.revision,pending.revision-1].includes(input.expectedRevision))) return res.status(409).json({error:'response_already_approved'});
+  if(pending && (pending.approvedContent!==content || ![pending.revision,pending.revision-1].includes(input.expectedRevision))) return result(409).json({error:'response_already_approved'});
   let revision:number;
   try {
    revision=pending?.revision ?? await db<number>('rpc/pocket_hr_approve_snapshot','POST',{
@@ -54,7 +55,7 @@ export default async function handler(req:Req,res:Res) {
    });
   } catch(e) {
    if(e instanceof Error && e.message==='storage_request_failed' && (e as Error & {status?:number}).status===400)
-      return res.status(409).json({error:'revision_conflict'});
+      return result(409).json({error:'revision_conflict'});
    throw e;
   }
   // Sheet status is one user-facing release condition. Keep it non-approved
@@ -62,10 +63,11 @@ export default async function handler(req:Req,res:Res) {
   await writeTicketPublication(input.requestId,{C:'Delivery Pending',Y:'Delivery Pending'});
   await writeTicketPublication(input.requestId,{H:input.content!});
   if(!await acknowledgeDelivery(input.requestId,revision))
-    return res.status(503).json({error:'delivery_ack_pending',revision});
+    return result(503).json({error:'delivery_ack_pending',revision});
   await writeTicketPublication(input.requestId,{C:'Approved',Y:'Approved'});
-  return res.status(200).json({ok:true,revision,state:'published'});
+  return result(200).json({ok:true,revision,state:'published'});
   });
+  return res.status(outcome.status).json(outcome.body);
  } catch {
   return res.status(503).json({error:'approval_unavailable'});
  }

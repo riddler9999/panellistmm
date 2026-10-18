@@ -1,5 +1,7 @@
 # TASK-002 — HR Consultant RAG Foundation
 
+> **Consultation guidance:** Read the October 13 supersession note at the end before using older lifecycle or runtime instructions.
+
 ## Status
 ACTIVE — reconciliation complete; one acceptance criterion still lacks direct rerun evidence
 
@@ -76,3 +78,6 @@ Production HR consultation remains 100% HITL:
 `User request -> grounded AI draft -> consultant review/edit/approve -> final delivery`
 
 Direct AI-to-client publishing is not authorized by TASK-002 completion.
+
+## October 13 consultation reconciliation note
+This ticket remains ACTIVE with its explicit dedup rerun unverified; historical single-pass HITL text above is not the current consultation requirement. Current next-product requirements are consultant-gated `ASK_CLARIFICATION` / `PROVIDE_ADVICE`, repeated user clarification/reassessment, approval before final delivery and resolved read-only. See `project/POCKET_HR_CONTEXT_2026-10-13.md`. The historical workflow IDs, routes and publication statement in this ticket refer to September 16 evidence, not current live behavior. Do not mark TASK-003 or integration complete based on this ticket.

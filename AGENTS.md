@@ -31,3 +31,6 @@ This repository uses a plan-first, evidence-first workflow.
 
 ## Execution
 Follow `agent/WORKFLOW.md` and `agent/RULES.md`.
+
+## Pocket HR consultation — mandatory current baseline (2026-10-13)
+For any consultation, HITL, Glide ticket, n8n consultation or delivery change, read `project/POCKET_HR_CONTEXT_2026-10-13.md` and `project/REQUIREMENTS.md` before historical specs, tickets, plans or delivery guides. October 13 owner-approved behavior overrides conflicting earlier single-pass consultation instructions. `project/CURRENT_STATE.md` tracks evidence and unresolved gates; neither a document nor a local handoff proves deployed behavior. `work/specs/SPEC-002-hr-consultant-hitl-learning.md` contains historical proposals, not approved live schema or statuses. Do not infer field mappings or production readiness. Never expose unapproved drafts; consultants see all tickets and users only their own, subject to verified backend/Row Owner enforcement. No production changes without explicit authorization.

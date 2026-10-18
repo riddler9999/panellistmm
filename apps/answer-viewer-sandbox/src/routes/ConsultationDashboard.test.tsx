@@ -36,7 +36,7 @@ describe('review conversation UI',()=>{
    if(url==='/api/consultation-approve'){approved=true;return {ok:true};}
    return {ok:true,json:async()=>({role:'Admin',tickets:[{ticketId:'1',title:'Test request',status:approved?'Approved':'Awaiting Review',description:'Original question',history:[{type:'ADVICE',content:'Proposed response',round:0}],responseApproved:approved,finalAnswer:approved?'Proposed response':undefined}]})};
   });
-  vi.stubGlobal('fetch',fetchMock);render(<ConsultationDashboard/>);
+  vi.stubGlobal('fetch',fetchMock);render(<ConsultationDashboard side="admin"/>);
   await user.click(await screen.findByText('Test request'));
   const articles=screen.getAllByRole('article');expect(articles[0]).toHaveTextContent('Original question');
   expect(articles[1]).toHaveTextContent('Proposed response');
@@ -109,5 +109,22 @@ describe('new request form',()=>{
   const sent=calls.find(call=>call[0]==='/api/consultation-create');
   expect(JSON.parse(sent![1].body as string)).toEqual({title:'Team structure',category:'Organization Chart / Structure',description:'Please help structure our sales team.'});
   expect(await screen.findByLabelText('Search requests')).toBeInTheDocument();
+ });
+});
+
+describe('separate portal controls',()=>{
+ it('keeps admin controls off the user URL even with an admin response',async()=>{
+  const {default:userEvent}=await import('@testing-library/user-event');const user=userEvent.setup();
+  const fetchMock=vi.fn(async()=>({ok:true,json:async()=>({role:'Admin',tickets:[{ticketId:'T',title:'Own request',status:'Approved',history:[{type:'ADVICE',content:'PRIVATE DRAFT',round:0}],description:'My question',responseApproved:true,finalAnswer:'Approved answer',revision:1}]})}));
+  vi.stubGlobal('fetch',fetchMock);render(<ConsultationDashboard side="user"/>);
+  await user.click(await screen.findByText('Own request'));
+  expect(fetchMock).toHaveBeenCalledWith('/api/consultation?side=user',expect.anything());
+  expect(screen.getByText('Approved answer')).toBeInTheDocument();
+  expect(screen.queryByText('Consultant Dashboard')).not.toBeInTheDocument();
+  expect(screen.queryByRole('button',{name:'Approve'})).not.toBeInTheDocument();
+  expect(screen.queryByRole('button',{name:'Edit'})).not.toBeInTheDocument();
+  expect(screen.queryByText('PRIVATE DRAFT')).not.toBeInTheDocument();
+  await user.click(screen.getByRole('button',{name:'End This Request'}));
+  expect(fetchMock).toHaveBeenCalledWith('/api/consultation-reply',expect.objectContaining({body:expect.stringContaining('"action":"close"')}));
  });
 });
