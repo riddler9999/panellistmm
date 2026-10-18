@@ -11,7 +11,7 @@ export default async function handler(req:Req,res:Res){
   return res.status(403).json({error:'access_denied'});
  try{
   const principal=await authenticatedPrincipal(req.headers);
-  if(!principal)return res.status(403).json({error:'access_denied'});
+  if(!principal || principal.role !== 'User')return res.status(403).json({error:'access_denied'});
   const body=req.body && typeof req.body==='object'?req.body as Record<string,unknown>:{};
   const title=typeof body.title==='string'?body.title.trim():'';
   const category=typeof body.category==='string'?body.category.trim():'';
