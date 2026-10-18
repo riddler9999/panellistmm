@@ -13,14 +13,14 @@ CSS source of truth: `apps/answer-viewer-sandbox/src/styles.css` ၏ `.consultat
 | Role | Color | အသုံးပြုပုံ |
 |---|---|---|
 | Primary | `#6023f2` | New Request၊ Submit၊ Approve၊ Send |
-| Primary hover | `#4c1dca` | Primary action hover |
-| Primary soft / text | `#f3efff` / `#4c1d95` | Selected filter၊ user message၊ active navigation |
-| Surface / subtle | `#ffffff` / `#f8fafc` | Form၊ card၊ consultant message |
-| Text / secondary | `#0f172a` / `#475569` | Main text၊ helper text၊ metadata |
-| Border / input border | `#e2e8f0` / `#8490a3` | Card separation / input boundary |
-| Success | `#166534` on `#f0fdf4` | Approved / delivered status |
-| Warning | `#92400e` on `#fffbeb` | Review / clarification status |
-| Error | `#991b1b` on `#fef2f2` | Failed status / error text |
+| Primary hover | `#5723d8` | Primary action hover |
+| Primary soft / text | `#f1edff` / `#5d29d8` | Selected filter၊ user message၊ active navigation |
+| Surface / subtle | `#ffffff` / `#f6f7fb` | Form၊ card၊ consultant message |
+| Text / secondary | `#171a2c` / `#56617d` | Main text၊ helper text၊ metadata |
+| Border / input border | `#e9eaf1` / `#697591` | Card separation / input boundary |
+| Success | `#16713b` on `#e0faea` | Approved / delivered status |
+| Warning | `#56617d` on `#fff3df` | Review / clarification status |
+| Error | `#b42318` on `#ffe8ec` | Failed status / error text |
 
 - Status ကို label ဖြင့်ပါ ဖော်ပြရမည်။ အရောင်တစ်ခုတည်းဖြင့် မခွဲရ။
 - Request icon အားလုံး neutral ဖြစ်ရမည်။ Status အရောင်ကို badge တွင်သာ သုံးရမည်။
@@ -38,3 +38,7 @@ CSS source of truth: `apps/answer-viewer-sandbox/src/styles.css` ၏ `.consultat
 - Light theme အတွက်သာ စစ်ဆေးထားသည်။ Live deployment နှင့် live n8n data submission မလုပ်ထားပါ။
 
 Browser verification ပြန်လုပ်ရန် Playwright နှင့် Chromium ရှိသည့် environment တွင် Vite ကို run ပြီး `node scripts/verify-consultation-theme.mjs` ကို app directory မှ run ပါ။ လိုအပ်လျှင် `CHROMIUM_PATH`, `UI_BASE_URL`, `UI_EVIDENCE_DIR` သတ်မှတ်နိုင်သည်။
+
+## 2026-10-18 owner အတည်ပြုချက်
+
+မူရင်း UI အရောင်များကိုသာသုံးပြီး live တင်ရန် owner က အတည်ပြုထားသည်။ အထက်ပါ palette ကို production CSS (`32da6e4`) ရှိ အရောင်များဖြင့် ပြန်ညှိထားသည်။ Header `#f4efff`၊ active filter `#e9e0ff`၊ message `#f1edff` နှင့် primary `#6023f2` ကို ပြန်သုံးသည်။ Existing color များမှ readable foreground ကိုရွေးထားသည်။

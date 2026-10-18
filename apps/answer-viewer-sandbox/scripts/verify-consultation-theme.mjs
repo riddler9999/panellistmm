@@ -21,7 +21,7 @@ function contrast(a,b) {const x=luminance(a),y=luminance(b);return (Math.max(x,y
 try {
  for(const [width,height] of [[375,812],[768,1024],[1024,768],[1440,1000],[812,375]]) {
   const page=await browser.newPage({viewport:{width,height},reducedMotion:'reduce'});
-  await page.route('**/api/consultation',route=>route.fulfill({json:{role:'User',tickets}}));
+  await page.route('**/api/consultation?side=*',route=>route.fulfill({json:{role:'User',tickets}}));
   await page.goto(base+'/consultation');
   await page.getByText('Organization Chart',{exact:true}).waitFor();
   const tokens=await page.locator('main').evaluate(el=>{

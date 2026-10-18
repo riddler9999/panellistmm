@@ -4,22 +4,24 @@
 /* Pocket HR: one shared palette for list, form, conversation and sign-in. */
 .consultation-dashboard {
   --hr-primary: #6023f2;
-  --hr-primary-hover: #4c1dca;
-  --hr-primary-soft: #f3efff;
-  --hr-primary-text: #4c1d95;
+  --hr-primary-hover: #5723d8;
+  --hr-header: #f4efff;
+  --hr-selected: #e9e0ff;
+  --hr-primary-soft: #f1edff;
+  --hr-primary-text: #5d29d8;
   --hr-surface: #ffffff;
-  --hr-subtle: #f8fafc;
-  --hr-muted: #f1f5f9;
-  --hr-text: #0f172a;
-  --hr-secondary: #475569;
-  --hr-border: #e2e8f0;
-  --hr-input-border: #8490a3;
-  --hr-success: #166534;
-  --hr-success-soft: #f0fdf4;
-  --hr-warning: #92400e;
-  --hr-warning-soft: #fffbeb;
-  --hr-danger: #991b1b;
-  --hr-danger-soft: #fef2f2;
+  --hr-subtle: #f6f7fb;
+  --hr-muted: #f6f6fa;
+  --hr-text: #171a2c;
+  --hr-secondary: #56617d;
+  --hr-border: #e9eaf1;
+  --hr-input-border: #697591;
+  --hr-success: #16713b;
+  --hr-success-soft: #e0faea;
+  --hr-warning: #56617d;
+  --hr-warning-soft: #fff3df;
+  --hr-danger: #b42318;
+  --hr-danger-soft: #ffe8ec;
   --hr-radius: 16px;
   --hr-control-radius: 10px;
   --hr-shadow: 0 2px 8px rgb(15 23 42 / 4%);
@@ -35,7 +37,7 @@
 .consultation-dashboard [role=alert] { color: var(--hr-danger); font-size: .875rem; }
 .consultation-dashboard .state-card { background: var(--hr-surface); border-color: var(--hr-border); border-radius: var(--hr-radius); box-shadow: var(--hr-shadow); }
 .consult-icon { width: 20px; height: 20px; flex-shrink: 0; vertical-align: middle; }
-.consult-preview-banner { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 12px 0 20px; margin-bottom: 28px; border-bottom: 1px solid var(--hr-border); color: var(--hr-primary-text); font-size: .875rem; font-weight: 700; }
+.consult-preview-banner { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 12px 16px; margin-bottom: 28px; border-radius: 12px; background: var(--hr-header); color: var(--hr-primary-text); font-size: .875rem; font-weight: 700; }
 .consult-preview-banner button,.consult-cancel,.consult-actions button.consult-secondary { min-height: 44px; padding: 10px 16px; border: 1px solid var(--hr-border); border-radius: var(--hr-control-radius); background: var(--hr-surface); color: var(--hr-secondary); box-shadow: none; }
 .consult-preview-banner button:hover,.consult-cancel:hover,.consult-actions button.consult-secondary:hover { background: var(--hr-muted); border-color: var(--hr-input-border); }
 .consult-list-heading { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-bottom: 24px; }
@@ -50,7 +52,7 @@
 .consult-filters { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 24px; }
 .consult-filters button { min-height: 44px; padding: 8px 14px; border: 1px solid transparent; border-radius: var(--hr-control-radius); background: var(--hr-subtle); color: var(--hr-secondary); font-size: .875rem; }
 .consult-filters button:hover { background: var(--hr-muted); }
-.consult-filters button.active { background: var(--hr-primary-soft); color: var(--hr-primary-text); border-color: var(--hr-primary); font-weight: 600; }
+.consult-filters button.active { background: var(--hr-selected); color: var(--hr-primary-text); border-color: var(--hr-primary); font-weight: 600; }
 .consult-list { display: grid; gap: 12px; }
 .consult-request { width: 100%; display: flex; align-items: center; gap: 16px; min-height: 96px; padding: 20px; border: 1px solid var(--hr-border); border-radius: var(--hr-radius); background: var(--hr-surface); color: var(--hr-text); text-align: left; }
 .consult-request:hover { background: var(--hr-subtle); border-color: var(--hr-input-border); }
@@ -132,7 +134,7 @@
 @media (min-width: 900px) { .consultation-dashboard { padding: 32px 48px 72px; } }
 @media (max-width: 640px) {
   .consultation-dashboard { padding: 16px 16px 40px; }
-  .consult-preview-banner { margin-bottom: 24px; padding-top: 0; }
+  .consult-preview-banner { margin-bottom: 24px; }
   .consult-list-heading h1,.consult-compose-heading h1 { font-size: 1.375rem; }
   .consult-toolbar { flex-direction: column; gap: 12px; }
   .consult-toolbar .consult-new { width: 100%; }
