@@ -1,139 +1,162 @@
 :root{font-family:"Noto Sans Myanmar","Pyidaungsu",system-ui,sans-serif;color:#17212b;background:#f4f7f7;font-synthesis:none}*{box-sizing:border-box}html,body,#root{margin:0;min-height:100%;max-width:100%}body{background:#f4f7f7}a{color:inherit}.viewer-shell{width:100%;max-width:760px;margin:0 auto;padding:20px 16px 32px;min-width:0;overflow-wrap:anywhere}.brand{font-size:.82rem;font-weight:800;letter-spacing:.04em;color:#147a77;margin-bottom:16px}header{padding:8px 2px 18px;min-width:0}h1{font-size:1.45rem;line-height:1.55;margin:0 0 12px}.status{display:inline-flex;padding:6px 10px;border-radius:999px;background:#e4efee;font-size:.76rem;text-transform:capitalize}.answer-card,.state-card{background:#fff;border:1px solid #e2e9e9;border-radius:18px;padding:18px;box-shadow:0 8px 30px rgba(20,50,50,.05);min-width:0}.eyebrow{font-size:.78rem;font-weight:800;color:#147a77;text-transform:uppercase;letter-spacing:.03em}.answer-content{font-size:.98rem;line-height:1.9;min-width:0;overflow-wrap:anywhere}.answer-content h2,.answer-content h3{line-height:1.55;margin-top:1.4em}.answer-content pre,.answer-content table{max-width:100%}.answer-content table{border-collapse:collapse;width:100%}.answer-content th,.answer-content td{border:1px solid #dce5e5;padding:8px;text-align:left;overflow-wrap:anywhere}.table-scroll{max-width:100%;overflow-x:auto}.artifacts{margin-top:22px;min-width:0}.artifacts h2{font-size:1rem}.artifact-card{display:flex;gap:12px;align-items:center;justify-content:space-between;background:#fff;border:1px solid #e2e9e9;border-radius:14px;padding:14px;margin-top:10px;min-width:0}.artifact-card>div{min-width:0}.artifact-card h3{font-size:.92rem;line-height:1.55;margin:4px 0;overflow-wrap:anywhere}.artifact-kind{font-size:.7rem;text-transform:uppercase;color:#607070}.artifact-action{flex:0 0 auto;text-decoration:none;border:1px solid #147a77;border-radius:10px;padding:10px 12px;font-size:.78rem;font-weight:700;color:#116b68}.artifact-unavailable{font-size:.75rem;color:#7b8585}footer{display:flex;flex-wrap:wrap;gap:8px 16px;margin-top:20px;color:#6b7676;font-size:.72rem}@media(max-width:360px){.viewer-shell{padding:14px 10px 24px}.artifact-card{align-items:flex-start;flex-direction:column}.artifact-action{width:100%;text-align:center}}@media(min-width:768px){.viewer-shell{padding:36px 24px 48px}.answer-card,.state-card{padding:26px}}.consultation-dashboard{max-width:1080px}.dashboard-caption{color:#607070;font-weight:700}.consultation-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,290px),1fr));gap:16px}.ticket-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}.ticket-heading h2{font-size:1rem;line-height:1.6;margin:0}.consultation-draft{white-space:pre-wrap}.consultant-draft{border-top:1px solid #e2e9e9;padding-top:12px;white-space:pre-wrap}.ticket-heading .status{flex-shrink:0}@media(max-width:420px){.ticket-heading{flex-direction:column}} 
 
 
-/* Pocket HR consultation screens; scoped to avoid Answer Viewer regressions. */
-.consultation-dashboard{max-width:1100px;color:#171c30;background:#fff;min-height:100vh}
-.consult-toolbar{display:flex;gap:18px;margin:12px 0 22px}
-.consult-toolbar input{min-width:0;flex:1;border:1px solid #e4e6f0;border-radius:17px;padding:18px 22px;font:inherit;color:#20243d;background:#fff}
-.consult-new{border:0;border-radius:15px;padding:16px 28px;background:#6027ee;color:white;font:inherit;white-space:nowrap}
-.consult-new:disabled{opacity:.5;cursor:not-allowed}
-.consult-filters{display:flex;gap:12px;overflow-x:auto;padding-bottom:18px}
-.consult-filters button{border:0;border-radius:14px;background:#f4f5fa;padding:13px 17px;white-space:nowrap;color:#53607b;font:inherit;cursor:pointer}
-.consult-filters button.active{background:#e9e0ff;color:#5925d9;font-weight:700}
-.consult-list{display:grid;gap:12px}
-.consult-request{width:100%;display:flex;align-items:center;text-align:left;gap:18px;border:1px solid #e9eaf3;border-radius:21px;background:white;padding:20px 24px;color:#56617d;cursor:pointer;font:inherit}
-.consult-request:hover,.consult-request:focus-visible{border-color:#aa8aff}
-.consult-request-icon{width:65px;height:65px;border-radius:15px;background:#f0eaff;color:#6225e8;display:grid;place-items:center;font-size:32px;flex-shrink:0}
-.consult-request-copy{display:grid;gap:4px;flex:1;min-width:0}
-.consult-request-copy small,.consult-detail-head small{color:#697591;font-size:.88rem}
-.consult-request-copy strong{font-size:1.06rem;color:#171b2b;overflow-wrap:anywhere}
-.consult-badge{background:#eee7ff;color:#6125dc;border-radius:13px;padding:10px 15px;font-size:.88rem;white-space:nowrap}
-.consult-back{border:0;background:none;color:#5e2add;padding:12px 0;cursor:pointer;font:inherit}
-.consult-detail-head{border:1px solid #e9eaf3;border-radius:20px;padding:24px;margin:12px 0 20px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
-.consult-detail-head h1{font-size:1.3rem;margin:0;flex:1;min-width:180px}
-.consult-detail-tabs{display:flex;border-bottom:1px solid #e5e7ef;gap:8px;margin-bottom:20px}
-.consult-detail-tabs button{flex:1;border:0;background:none;color:#56617d;padding:17px 8px;font:inherit;cursor:pointer}
-.consult-detail-tabs button.active{color:#6125dc;border-bottom:3px solid #6125dc;font-weight:700}
-.consult-timeline{display:grid;gap:18px}
-.consult-message{border:1px solid #e9eaf3;border-radius:18px;padding:18px 22px}
-.consult-message p{background:#f2efff;border-radius:14px;padding:18px;white-space:pre-wrap;line-height:1.85;overflow-wrap:anywhere}
-.consult-final{background:#edfbf3}
-.consult-final p{background:white}
-.consult-details p{display:flex;gap:14px;flex-wrap:wrap}
-.consult-empty{color:#697591}
-@media(max-width:600px){.consult-toolbar{gap:9px;flex-wrap:wrap}.consult-toolbar input{flex-basis:100%}.consult-new{width:100%}.consult-request{padding:12px;gap:10px}.consult-request-icon{width:48px;height:48px;font-size:24px}.consult-request-copy strong{font-size:.9rem}.consult-badge{padding:8px;font-size:.72rem}.consult-detail-head{padding:16px}}
-
-
-/* Pocket HR reference-aligned UI; scoped so the Answer Viewer is unchanged. */
-.consultation-dashboard{max-width:1180px;padding:28px 28px 60px;background:#fff;color:#171a2c}
-.consult-toolbar{margin:8px 0 24px;gap:24px}
-.consult-toolbar input{min-height:68px;border:1px solid #e5e7ef;border-radius:19px;padding:18px 25px 18px 54px;font-size:1rem;background:linear-gradient(90deg,#fff,#fcfcff);box-shadow:0 2px 10px #171a2c05}
-.consult-new{min-height:68px;border-radius:15px;background:#6023f2;font-weight:650;box-shadow:0 7px 16px #6327f01c}
-.consult-new:disabled{opacity:1;background:#6125ed9c;cursor:not-allowed}
-.consult-filters{gap:12px;margin-bottom:6px;padding-bottom:18px;scrollbar-width:thin}
-.consult-filters button{background:#f6f6fa;color:#56617d;padding:14px 20px;border-radius:15px;font-size:.94rem}
-.consult-filters button.active{background:#e9e0ff;color:#5723d8}
-.consult-list{gap:13px}
-.consult-request{min-height:116px;padding:18px 23px;border-color:#e9eaf1;border-radius:21px;gap:21px;box-shadow:0 3px 13px #26325b05}
-.consult-request-icon{width:72px;height:72px;font-size:35px;font-weight:750;border-radius:17px;background:#f0eaff;color:#6225e8}
-.consult-request-copy{gap:6px}
-.consult-request-copy small,.consult-detail-head small{font-size:.94rem;color:#64708c}
-.consult-request-copy strong{font-size:1.13rem;font-weight:700;line-height:1.5}
-.consult-badge{font-weight:550;padding:12px 17px;min-width:120px;text-align:center}
-.consult-chevron{font-size:2rem;color:#64708c;margin-left:4px;line-height:1}
-.tone-submitted{background:#e5f3ff;color:#0082dc}
-.tone-awaiting-review{background:#fff3df;color:#dc8a0b}
-.tone-editing,.tone-in-progress{background:#eee6ff;color:#6527e4}
-.tone-approved{background:#e0faea;color:#08a850}
-.tone-failed{background:#ffe8ec;color:#e32b4b}
-.consult-request-icon.tone-submitted{background:#e5f3ff;color:#168bff}
-.consult-request-icon.tone-awaiting-review{background:#e5f3ff;color:#168bff}
-.consult-request-icon.tone-editing,.consult-request-icon.tone-in-progress{background:#f0e9ff;color:#6327ee}
-.consult-request-icon.tone-approved{background:#e0faea;color:#08b75a}
-.consult-request-icon.tone-failed{background:#ffe8ec;color:#f0234a}
-.consult-back{font-size:2.4rem;line-height:1;padding:0 12px 12px 0;color:#56617d}
-.consult-detail-head{margin:0 0 12px;padding:22px 24px;gap:22px;flex-wrap:nowrap;border-radius:20px}
-.consult-detail-title{min-width:0;flex:1}
-.consult-detail-title h1{margin:4px 0 0;font-size:1.35rem;line-height:1.5}
-.consult-detail-tabs{background:#f6f7fb;border-radius:17px;overflow:hidden;border:0;gap:0;margin:0 0 24px}
-.consult-detail-tabs button{padding:18px 10px;font-size:1.02rem;border-bottom:4px solid transparent}
-.consult-detail-tabs button.active{background:#fff;color:#6024e8;border-color:#6024e8}
-.consult-detail-tabs button span{margin-right:7px}
-.consult-timeline{gap:18px}
-.consult-message{border-color:#e9eaf2;border-radius:18px;background:#fff}
-.consult-message p{background:#f1edff;line-height:1.9}
-.consult-final{background:#eafbf1}
-.consult-final p{background:#fff}
-@media(max-width:640px){
- .consultation-dashboard{padding:14px 12px 32px}
- .consult-toolbar{gap:10px;margin:4px 0 14px}
- .consult-toolbar input{min-height:54px;padding:12px 16px;flex-basis:100%;font-size:.87rem}
- .consult-new{min-height:48px;width:100%;font-size:.9rem}
- .consult-filters{gap:8px;margin-bottom:2px}
- .consult-filters button{padding:11px 13px;font-size:.82rem}
- .consult-request{min-height:90px;padding:12px;gap:11px;border-radius:17px}
- .consult-request-icon{width:49px;height:49px;font-size:24px;border-radius:12px}
- .consult-request-copy small{font-size:.72rem}
- .consult-request-copy strong{font-size:.86rem}
- .consult-badge{min-width:0;font-size:.7rem;padding:8px 9px;border-radius:10px}
- .consult-chevron{font-size:1.5rem;margin-left:0}
- .consult-detail-head{padding:14px;gap:10px;flex-wrap:wrap}
- .consult-detail-title h1{font-size:1rem}
- .consult-detail-tabs button{font-size:.83rem;padding:13px 4px}
- .consult-detail-tabs button span{margin-right:3px}
+/* Pocket HR: one shared palette for list, form, conversation and sign-in. */
+.consultation-dashboard {
+  --hr-primary: #6023f2;
+  --hr-primary-hover: #4c1dca;
+  --hr-primary-soft: #f3efff;
+  --hr-primary-text: #4c1d95;
+  --hr-surface: #ffffff;
+  --hr-subtle: #f8fafc;
+  --hr-muted: #f1f5f9;
+  --hr-text: #0f172a;
+  --hr-secondary: #475569;
+  --hr-border: #e2e8f0;
+  --hr-input-border: #8490a3;
+  --hr-success: #166534;
+  --hr-success-soft: #f0fdf4;
+  --hr-warning: #92400e;
+  --hr-warning-soft: #fffbeb;
+  --hr-danger: #991b1b;
+  --hr-danger-soft: #fef2f2;
+  --hr-radius: 16px;
+  --hr-control-radius: 10px;
+  --hr-shadow: 0 2px 8px rgb(15 23 42 / 4%);
+  width: 100%; max-width: 1180px; min-height: 100vh;
+  margin: 0 auto; padding: 32px 32px 64px;
+  background: var(--hr-surface); color: var(--hr-text); line-height: 1.6;
+  color-scheme: light;
 }
-@media(max-width:380px){.consult-request{gap:7px}.consult-request-icon{width:42px;height:42px}.consult-badge{font-size:.64rem;padding:7px}.consult-chevron{font-size:1.2rem}}
-
-/* Reference preview and detail content */
-.consult-welcome{max-width:560px;margin:clamp(40px,10vh,130px) auto;padding:36px;text-align:center;background:#fff;border:1px solid #e9eaf3;border-radius:24px;box-shadow:0 14px 50px #23235b0b;display:flex;align-items:center;flex-direction:column;gap:16px}
-.consult-welcome-mark{height:60px;width:60px;border-radius:17px;background:#6428eb;color:white;display:grid;place-items:center;font-size:2rem;font-weight:800}
-.consult-welcome h1{margin:0;font-size:1.8rem}.consult-welcome p{line-height:1.9;color:#59647c;margin:0}.consult-welcome small{color:#718098;font-size:.78rem}.consult-welcome .consult-new{cursor:pointer;opacity:1;min-height:50px}
-.consult-preview-banner{display:flex;align-items:center;justify-content:space-between;gap:12px;background:#f4efff;color:#5d29d8;padding:11px 16px;border-radius:12px;margin-bottom:24px;font-size:.8rem;font-weight:800;letter-spacing:.02em}
-.consult-preview-banner button{border:1px solid #cab5ff;background:white;color:#5d29d8;padding:8px 12px;border-radius:9px;font:inherit;cursor:pointer}
-.consult-list-heading{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:18px}.consult-list-heading h1{margin:0;font-size:1.6rem}.consult-list-heading p{color:#748098;margin:0}
-.consult-timeline-heading{display:flex;align-items:center;justify-content:space-between;gap:12px}.consult-timeline-heading h2{font-size:1.12rem;margin:0}.consult-timeline-heading span{color:#7c879e;font-size:.85rem}
-.consult-message-author{display:flex;align-items:center;gap:12px}.consult-message-author small{margin-left:auto;color:#7d8799}.consult-avatar{display:grid;place-items:center;width:38px;height:38px;border-radius:50%;background:#eae2ff;color:#6025e9;font-weight:800}
-.consult-message p{margin:14px 0 0}.consult-details h2,.consult-files h2{font-size:1.1rem;margin:0 0 18px}.consult-details dl{margin:0;display:grid;gap:0}.consult-details dl>div{display:grid;grid-template-columns:minmax(100px,1fr) 2fr;gap:12px;padding:17px 0;border-bottom:1px solid #e9eaf3}.consult-details dl>div:last-child{border-bottom:0}.consult-details dt{color:#78839a}.consult-details dd{margin:0;color:#1e263b;font-weight:650}.consult-files{text-align:center;padding:50px 20px}.consult-files p{color:#7c8799;line-height:1.8}.consult-file-icon{width:62px;height:62px;border-radius:17px;background:#f1edff;color:#672de6;display:grid;place-items:center;margin:0 auto 18px;font-size:2rem}
-@media(max-width:640px){.consult-welcome{margin:30px auto;padding:24px 18px}.consult-preview-banner{font-size:.7rem}.consult-list-heading h1{font-size:1.25rem}.consult-list-heading p{font-size:.75rem}.consult-details dl>div{grid-template-columns:1fr;gap:5px}}
-
-/* Pocket HR final responsive UI refinement */
-.consultation-dashboard{width:100%;max-width:1180px;margin:0 auto}
-.consultation-dashboard button:focus-visible,.consultation-dashboard input:focus-visible{outline:3px solid #a98cff;outline-offset:3px}
-.consult-list-heading{flex-wrap:wrap}
-.consult-request{transition:border-color .15s ease,box-shadow .15s ease,transform .15s ease}
-.consult-request:hover{box-shadow:0 10px 25px #26325b12;transform:translateY(-1px)}
-.consult-request-copy{overflow:hidden}
-.consult-request-copy strong{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-.consult-detail-title{overflow-wrap:anywhere}
-.consult-details dd,.consult-message p{white-space:pre-wrap;overflow-wrap:anywhere}
-.consult-filters button{flex-shrink:0}
-.consult-files{overflow-wrap:anywhere}
-@media(min-width:900px){.consultation-dashboard{padding:38px 48px 72px}.consult-list{gap:15px}}
-@media(max-width:640px){.consultation-dashboard{padding:16px 14px 34px}.consult-list-heading{align-items:center}.consult-list-heading h1{font-size:1.25rem}.consult-toolbar input{background:#fff;padding:13px 15px}.consult-request{width:100%}.consult-request-copy{flex:1}.consult-detail-head{align-items:flex-start}.consult-detail-title{flex-basis:calc(100% - 65px)}.consult-detail-head>.consult-badge{margin-left:59px}.consult-detail-tabs{position:sticky;top:0;z-index:2}.consult-message{padding:14px}.consult-message p{padding:14px}.consult-timeline-heading{flex-wrap:wrap}}
-@media(max-width:360px){.consult-request-icon{width:40px;height:40px}.consult-request{gap:8px}.consult-request-copy strong{font-size:.8rem}.consult-chevron{display:none}.consult-detail-tabs button{font-size:.76rem}}
-@media(prefers-reduced-motion:reduce){.consult-request{transition:none}.consult-request:hover{transform:none}}
-
-
-/* Pocket HR passcode sign-in: explicit responsive form layout */
-.consult-welcome{width:100%;min-width:0}
-.consult-welcome .pocket-hr-pin-form{display:flex;flex-direction:column;align-items:stretch;gap:10px;width:100%;max-width:420px;min-width:0;text-align:left}
-.pocket-hr-pin-form>p:first-child{text-align:center;margin:0 0 12px}
-.pocket-hr-pin-form label{display:block;font-size:.9rem;font-weight:650;color:#27304b;margin-top:5px}
-.pocket-hr-pin-form input{display:block;width:100%;min-width:0;max-width:100%;height:48px;border:1px solid #d9dcea;border-radius:12px;padding:10px 14px;background:#fff;color:#20243d;font:inherit}
-.pocket-hr-pin-form .consult-new{display:block;width:100%;margin-top:12px;white-space:normal}
-.pocket-hr-pin-form [role=alert]{color:#b42318;text-align:left;font-size:.85rem}
-.consult-welcome .pocket-hr-preview{border:1px solid #e2d9fb;border-radius:12px;background:#f5f1ff;color:#5f28d7;font:inherit;font-weight:650;padding:12px 18px;cursor:pointer}
-@media(max-width:640px){.consult-welcome{padding:26px 20px;margin:32px auto;gap:16px}.consult-welcome .pocket-hr-pin-form{max-width:100%}.consult-welcome h1{font-size:1.65rem}}
-
-.consult-actions textarea{display:block;width:100%;min-height:180px;padding:14px;margin:12px 0;border:1px solid #d8d2e5;border-radius:12px;font:inherit;line-height:1.9;resize:vertical}.consult-actions label{display:block;margin-top:12px}.consult-actions button{padding:12px 20px;border:1px solid #6b22dc;border-radius:10px;background:#6b22dc;color:white;font:inherit;cursor:pointer;margin:6px 8px 6px 0}.consult-actions button:disabled{opacity:.6;cursor:default}.consult-action-buttons{display:flex;flex-wrap:wrap;gap:8px}.consult-approved,.consult-actions .consult-approved{background:#e0f5e6;color:#16713b;border:1px solid #b1dfbf;border-radius:10px;padding:10px 18px;font:inherit;opacity:1;cursor:default}.consult-message p{white-space:pre-wrap;overflow-wrap:anywhere}
-.consult-choices{border:1px solid #ddd5eb;border-radius:12px;padding:14px;margin:12px 0}.consult-choices label{display:flex;align-items:flex-start;gap:10px;padding:8px 0}.consult-choices input{width:auto;flex-shrink:0;margin-top:7px}.consult-attachments{padding-left:22px;overflow-wrap:anywhere}.consult-attachments li{padding:8px 0}.consult-attachments a{color:#5820bd;text-decoration:underline}.consult-actions input[type=file]{max-width:100%;margin:12px 0}
+.consultation-dashboard button { font: inherit; cursor: pointer; touch-action: manipulation; transition: background-color 160ms ease, border-color 160ms ease; }
+.consultation-dashboard button:disabled { cursor: not-allowed; }
+.consultation-dashboard :is(button,input,select,textarea):focus-visible { outline: 3px solid var(--hr-primary); outline-offset: 3px; }
+.consultation-dashboard :is(input,textarea,select) { accent-color: var(--hr-primary); }
+.consultation-dashboard [role=alert] { color: var(--hr-danger); font-size: .875rem; }
+.consultation-dashboard .state-card { background: var(--hr-surface); border-color: var(--hr-border); border-radius: var(--hr-radius); box-shadow: var(--hr-shadow); }
+.consult-icon { width: 20px; height: 20px; flex-shrink: 0; vertical-align: middle; }
+.consult-preview-banner { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 12px 0 20px; margin-bottom: 28px; border-bottom: 1px solid var(--hr-border); color: var(--hr-primary-text); font-size: .875rem; font-weight: 700; }
+.consult-preview-banner button,.consult-cancel,.consult-actions button.consult-secondary { min-height: 44px; padding: 10px 16px; border: 1px solid var(--hr-border); border-radius: var(--hr-control-radius); background: var(--hr-surface); color: var(--hr-secondary); box-shadow: none; }
+.consult-preview-banner button:hover,.consult-cancel:hover,.consult-actions button.consult-secondary:hover { background: var(--hr-muted); border-color: var(--hr-input-border); }
+.consult-list-heading { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-bottom: 24px; }
+.consult-list-heading h1,.consult-compose-heading h1 { margin: 0; font-size: 1.5rem; line-height: 1.5; }
+.consult-list-heading p { margin: 0; color: var(--hr-secondary); font-size: .875rem; }
+.consult-toolbar { display: flex; gap: 16px; margin-bottom: 24px; }
+.consult-toolbar input { flex: 1; min-width: 0; min-height: 52px; padding: 12px 16px; border: 1px solid var(--hr-input-border); border-radius: var(--hr-control-radius); background: var(--hr-surface); color: var(--hr-text); font: inherit; }
+.consultation-dashboard :is(input,textarea)::placeholder { color: var(--hr-secondary); opacity: 1; }
+.consult-new,.consult-actions button { min-height: 48px; border: 1px solid var(--hr-primary); border-radius: var(--hr-control-radius); padding: 12px 24px; background: var(--hr-primary); color: var(--hr-surface); font-weight: 600; white-space: nowrap; box-shadow: none; }
+.consult-new:not(:disabled):hover,.consult-actions button:not(:disabled):not(.consult-secondary):hover { background: var(--hr-primary-hover); border-color: var(--hr-primary-hover); }
+.consult-new:disabled,.consult-actions button:disabled:not(.consult-approved),.consult-cancel:disabled { background: var(--hr-muted); color: var(--hr-secondary); border-color: var(--hr-border); }
+.consult-filters { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 24px; }
+.consult-filters button { min-height: 44px; padding: 8px 14px; border: 1px solid transparent; border-radius: var(--hr-control-radius); background: var(--hr-subtle); color: var(--hr-secondary); font-size: .875rem; }
+.consult-filters button:hover { background: var(--hr-muted); }
+.consult-filters button.active { background: var(--hr-primary-soft); color: var(--hr-primary-text); border-color: var(--hr-primary); font-weight: 600; }
+.consult-list { display: grid; gap: 12px; }
+.consult-request { width: 100%; display: flex; align-items: center; gap: 16px; min-height: 96px; padding: 20px; border: 1px solid var(--hr-border); border-radius: var(--hr-radius); background: var(--hr-surface); color: var(--hr-text); text-align: left; }
+.consult-request:hover { background: var(--hr-subtle); border-color: var(--hr-input-border); }
+.consult-request-icon { width: 48px; height: 48px; flex-shrink: 0; display: grid; place-items: center; border-radius: 12px; background: var(--hr-muted); color: var(--hr-secondary); }
+.consult-request-icon .consult-icon { width: 24px; height: 24px; }
+.consult-request-copy { display: grid; gap: 4px; flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.consult-request-copy small,.consult-detail-title small { color: var(--hr-secondary); font-size: .75rem; }
+.consult-request-copy strong { font-size: 1rem; line-height: 1.65; }
+.consult-badge { display: inline-flex; align-items: center; justify-content: center; padding: 6px 10px; border-radius: 8px; background: var(--hr-muted); color: var(--hr-secondary); font-size: .75rem; font-weight: 600; line-height: 1.6; text-align: center; }
+.consult-badge:is(.tone-awaiting-review,.tone-pending-review,.tone-needs-clarification) { color: var(--hr-warning); background: var(--hr-warning-soft); }
+.consult-badge:is(.tone-approved,.tone-delivered) { color: var(--hr-success); background: var(--hr-success-soft); }
+.consult-badge.tone-failed { color: var(--hr-danger); background: var(--hr-danger-soft); }
+.consult-chevron { color: var(--hr-secondary); display: flex; }
+.consult-back { display: inline-flex; justify-content: center; align-items: center; width: 44px; height: 44px; border: 1px solid var(--hr-border); border-radius: var(--hr-control-radius); margin-bottom: 16px; padding: 8px; background: var(--hr-surface); color: var(--hr-secondary); }
+.consult-back:hover { background: var(--hr-muted); }
+.consult-detail-head { display: flex; align-items: center; gap: 16px; padding: 24px; margin-bottom: 24px; border: 1px solid var(--hr-border); border-radius: var(--hr-radius); }
+.consult-detail-title { min-width: 0; flex: 1; overflow-wrap: anywhere; }
+.consult-detail-title h1 { margin: 4px 0; font-size: 1.25rem; line-height: 1.6; }
+.consult-detail-tabs { display: flex; gap: 8px; margin-bottom: 28px; border-bottom: 1px solid var(--hr-border); background: var(--hr-surface); }
+.consult-detail-tabs button { display: flex; align-items: center; justify-content: center; gap: 8px; flex: 1; min-height: 52px; padding: 12px 8px; border: 0; border-bottom: 3px solid transparent; background: transparent; color: var(--hr-secondary); }
+.consult-detail-tabs button.active { color: var(--hr-primary-text); border-bottom-color: var(--hr-primary); font-weight: 700; }
+.consult-detail-tabs button:hover { background: var(--hr-subtle); }
+.consult-timeline { display: grid; gap: 20px; }
+.consult-timeline-heading h2 { margin: 0 0 4px; font-size: 1.125rem; }
+.consult-message { min-width: 0; padding: 20px; border: 1px solid var(--hr-border); border-radius: var(--hr-radius); background: var(--hr-subtle); }
+.consult-message p { margin: 12px 0 0; padding: 0; background: transparent; white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.9; }
+.consult-message strong { font-size: .875rem; }
+.consult-message-author { display: flex; align-items: center; gap: 10px; }
+.consult-avatar { display: grid; place-items: center; width: 32px; height: 32px; flex-shrink: 0; border-radius: 50%; color: var(--hr-primary-text); background: var(--hr-surface); font-size: .875rem; font-weight: 700; }
+.consult-message-own,.consult-message-incoming { width: fit-content; max-width: min(88%,720px); }
+.consult-message-own { justify-self: end; background: var(--hr-primary-soft); }
+.consult-message-own .consult-message-author { justify-content: flex-end; }
+.consult-message-own>strong { display: block; text-align: right; }
+.consult-message-incoming { justify-self: start; }
+.consult-empty { color: var(--hr-secondary); margin: 4px 0; }
+.consult-actions label { display: block; margin-top: 12px; }
+.consult-actions textarea,.consult-actions input:not([type=radio]):not([type=file]),.pocket-hr-pin-form input,.consult-request-form :is(input,select,textarea) { display: block; width: 100%; min-width: 0; padding: 12px 14px; border: 1px solid var(--hr-input-border); border-radius: var(--hr-control-radius); color: var(--hr-text); background: var(--hr-surface); font: inherit; }
+.consult-actions textarea { min-height: 160px; margin: 12px 0; line-height: 1.9; resize: vertical; }
+.consult-actions button { margin: 8px 8px 0 0; }
+.consult-action-buttons { display: flex; flex-wrap: wrap; gap: 8px; }
+.consult-approved,.consult-actions .consult-approved { display: inline-flex; padding: 6px 10px; margin-top: 12px; border: 0; border-radius: 8px; background: var(--hr-success-soft); color: var(--hr-success); font: inherit; font-size: .875rem; cursor: default; }
+.consult-choices { margin: 12px 0; padding: 16px; border: 1px solid var(--hr-border); border-radius: 12px; }
+.consult-choices label { display: flex; align-items: flex-start; gap: 12px; min-height: 44px; padding: 8px 0; margin: 0; }
+.consult-choices input { flex-shrink: 0; margin-top: 8px; }
+.consult-attachments { padding-left: 20px; overflow-wrap: anywhere; }
+.consult-attachments li { padding: 8px 0; }
+.consult-attachments a,.consult-message a { color: var(--hr-primary-text); text-decoration: underline; }
+.consult-actions input[type=file] { max-width: 100%; margin: 12px 0; }
+.consult-details h2,.consult-files h2 { font-size: 1.125rem; margin: 0 0 20px; }
+.consult-details dl { margin: 0; }
+.consult-details dl>div { display: grid; grid-template-columns: minmax(100px,1fr) 2fr; gap: 16px; padding: 16px 0; border-bottom: 1px solid var(--hr-border); }
+.consult-details dl>div:last-child { border-bottom: 0; }
+.consult-details dt { color: var(--hr-secondary); }
+.consult-details dd { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.consult-files { text-align: center; padding: 48px 24px; overflow-wrap: anywhere; }
+.consult-files p { color: var(--hr-secondary); }
+.consult-file-icon { display: grid; place-items: center; width: 48px; height: 48px; margin: 0 auto 16px; border-radius: 12px; background: var(--hr-muted); color: var(--hr-secondary); }
+.consult-welcome { display: flex; align-items: center; flex-direction: column; gap: 20px; width: 100%; max-width: 520px; margin: clamp(24px,10vh,120px) auto; padding: 32px; border: 1px solid var(--hr-border); border-radius: var(--hr-radius); background: var(--hr-surface); box-shadow: var(--hr-shadow); text-align: center; }
+.consult-welcome-mark { display: grid; place-items: center; width: 56px; height: 56px; border-radius: 12px; background: var(--hr-primary); color: var(--hr-surface); font-size: 1.75rem; font-weight: 700; }
+.consult-welcome h1 { margin: 0; font-size: 1.75rem; }
+.consult-welcome p { margin: 0; color: var(--hr-secondary); }
+.pocket-hr-pin-form { display: grid; gap: 12px; width: 100%; min-width: 0; text-align: left; }
+.pocket-hr-pin-form>p:first-child { text-align: center; margin-bottom: 8px; }
+.pocket-hr-pin-form label { font-size: .875rem; font-weight: 600; }
+.pocket-hr-pin-form .consult-new { width: 100%; margin-top: 8px; white-space: normal; }
+.consult-compose { max-width: 720px; margin: 0 auto; }
+.consult-compose-heading { margin-bottom: 24px; }
+.consult-compose-heading p { margin: 8px 0 0; color: var(--hr-secondary); }
+.consult-request-form { padding: 28px; }
+.consult-request-form fieldset { border: 0; padding: 0; margin: 0; min-width: 0; display: grid; gap: 24px; }
+.consult-form-field { display: grid; gap: 8px; min-width: 0; }
+.consult-form-field label { font-size: .875rem; font-weight: 600; }
+.consult-form-field label span { color: var(--hr-secondary); font-weight: 400; }
+.consult-form-field small { color: var(--hr-secondary); font-size: .8125rem; line-height: 1.6; }
+.consult-request-form :is(input,select) { min-height: 52px; }
+.consult-request-form textarea { min-height: 176px; resize: vertical; line-height: 1.8; }
+.consult-request-form-buttons { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 12px; margin-top: 28px; padding-top: 24px; border-top: 1px solid var(--hr-border); }
+.consult-request-form-buttons .consult-new { width: auto; min-width: 160px; padding: 12px 20px; font-size: .875rem; }
+@media (min-width: 900px) { .consultation-dashboard { padding: 32px 48px 72px; } }
+@media (max-width: 640px) {
+  .consultation-dashboard { padding: 16px 16px 40px; }
+  .consult-preview-banner { margin-bottom: 24px; padding-top: 0; }
+  .consult-list-heading h1,.consult-compose-heading h1 { font-size: 1.375rem; }
+  .consult-toolbar { flex-direction: column; gap: 12px; }
+  .consult-toolbar .consult-new { width: 100%; }
+  .consult-filters { gap: 8px; }
+  .consult-filters button { padding: 8px 12px; font-size: .8125rem; }
+  .consult-request { display: grid; grid-template-columns: 40px minmax(0,1fr) 20px; gap: 8px 12px; padding: 16px; }
+  .consult-request-icon { width: 40px; height: 40px; grid-row: 1 / 3; align-self: start; }
+  .consult-request-copy { grid-column: 2; }
+  .consult-request .consult-badge { grid-column: 2; justify-self: start; }
+  .consult-chevron { grid-column: 3; grid-row: 1 / 3; }
+  .consult-request-copy strong { font-size: .9375rem; }
+  .consult-detail-head { flex-wrap: wrap; align-items: flex-start; padding: 16px; gap: 12px; }
+  .consult-detail-title { flex-basis: calc(100% - 60px); }
+  .consult-detail-title h1 { font-size: 1.125rem; }
+  .consult-detail-head>.consult-badge { margin-left: 60px; }
+  .consult-detail-tabs { gap: 0; }
+  .consult-detail-tabs button { font-size: .8125rem; gap: 6px; padding: 12px 4px; }
+  .consult-detail-tabs .consult-icon { width: 16px; height: 16px; }
+  .consult-message { padding: 16px; }
+  .consult-message-own,.consult-message-incoming { max-width: 92%; }
+  .consult-details dl>div { grid-template-columns: 1fr; gap: 4px; }
+  .consult-request-form { padding: 20px 16px; }
+  .consult-request-form fieldset { gap: 20px; }
+  .consult-request-form-buttons { gap: 8px; margin-top: 24px; padding-top: 20px; }
+  .consult-welcome { padding: 24px 20px; }
+}
+@media (prefers-reduced-motion: reduce) { .consultation-dashboard button { transition: none; } }
