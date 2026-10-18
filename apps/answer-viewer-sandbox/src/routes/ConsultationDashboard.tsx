@@ -90,7 +90,7 @@ export function ConsultationDashboard({side = 'user'}: {side?: 'user'|'admin'}) 
   const visible = useMemo(() => tickets.filter(ticket =>
     (filter === 'All' || ticketStatus(ticket.status, side) === filter) &&
     [ticket.ticketId, ticket.title].some(value => value.toLocaleLowerCase().includes(search.trim().toLocaleLowerCase()))
-  ), [tickets, filter, search]);
+  ), [tickets, filter, search, side]);
   const active = tickets.find(ticket => ticket.ticketId === selected);
   // Derive filter labels from actual ticket statuses; never invent workflow states.
   const filters = ['All', ...Array.from(new Set(tickets.map(ticket => ticketStatus(ticket.status, side)).filter(Boolean)))];
