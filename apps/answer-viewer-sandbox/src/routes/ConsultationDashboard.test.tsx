@@ -79,3 +79,20 @@ describe('separate portal controls',()=>{
   expect(fetchMock).toHaveBeenCalledWith('/api/consultation-reply',expect.objectContaining({body:expect.stringContaining('"action":"close"')}));
  });
 });
+
+
+describe('portal controls by role',()=>{
+ it('does not show create or logout controls on the admin portal',async()=>{
+  vi.stubGlobal('fetch',vi.fn(async()=>({ok:true,json:async()=>({role:'Admin',tickets:[]})})));
+  render(<ConsultationDashboard side="admin"/>);
+  expect(await screen.findByText('All Requests')).toBeInTheDocument();
+  expect(screen.queryByRole('button',{name:/new request/i})).not.toBeInTheDocument();
+  expect(screen.queryByRole('button',{name:/log out|logout/i})).not.toBeInTheDocument();
+ });
+ it('keeps request creation only on the user portal without logout',async()=>{
+  vi.stubGlobal('fetch',vi.fn(async()=>({ok:true,json:async()=>({role:'User',tickets:[]})})));
+  render(<ConsultationDashboard side="user"/>);
+  expect(await screen.findByRole('button',{name:/new request/i})).toBeInTheDocument();
+  expect(screen.queryByRole('button',{name:/log out|logout/i})).not.toBeInTheDocument();
+ });
+});
