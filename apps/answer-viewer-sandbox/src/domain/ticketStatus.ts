@@ -1,10 +1,10 @@
 /** Display aliases only; preserve upstream workflow values in storage. */
-export function ticketStatus(status: string): string {
+export function ticketStatus(status: string, side: 'admin' | 'user' = 'user'): string {
   const value = status.trim();
   if (value === 'Submitted' || value === 'ဖောင်ပို့ပြီး (Submitted)') return 'Processing';
-  if (['Awaiting Review', 'Pending_Review'].includes(value)) return 'Needs approval';
-  if (['Approved', 'Delivered'].includes(value)) return 'Waiting for user';
-  if (value === 'Needs Clarification') return 'Waiting for user';
+  if (['Awaiting Review', 'Pending_Review'].includes(value)) return side === 'admin' ? 'Needs approval' : 'Consultant reviewing';
+  if (['Approved', 'Delivered'].includes(value)) return side === 'admin' ? 'Response delivered' : 'Consultant replied';
+  if (value === 'Needs Clarification') return side === 'admin' ? 'Waiting for user response' : 'Your response is needed';
   if (['Resolved', 'Closed'].includes(value)) return 'Closed';
   if (value === 'Failed') return 'Processing failed';
   return value || 'Processing';
