@@ -1,0 +1,22 @@
+{
+  "decision": "ADR-005",
+  "renderer": {
+    "workflow_id": "LgeDMpvKmDho8GQ3",
+    "name": "Panellist Excel PNG Renderer",
+    "active_version_id": "a5506d53-0198-4bf2-97d2-849d43c17014",
+    "formats": ["xlsx", "png"],
+    "document_types": ["sop", "org_chart"]
+  },
+  "routes": [
+    {
+      "workflow_id": "97Hrjp3aKOLIR4wJ",
+      "active_version_id": "abff2ed3-098b-43e5-a7e2-176c8a7825c2"
+    },
+    {
+      "workflow_id": "tyGUPkBhNvx3C4wv",
+      "active_version_id": "44330cc9-9a46-44ba-959b-53fc150fe69e"
+    }
+  ],
+  "deactivated": ["y05dDLnUrz69g7FM", "3oSfcPn3ZAfMkzXg"],
+  "historical_download_compatibility": "6uhGYKTdbDrS6V2u"
+}

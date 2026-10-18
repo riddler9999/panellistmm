@@ -2,7 +2,7 @@
 
 လက်ရှိ n8n instance ပေါ်တွင်ရှိသော Panellist workflow များ၏ verified snapshot။ ဤ repo သည် ကာလတစ်ခုအထိ ဤ implementation layer ကို မှတ်တမ်းမတင်ခဲ့ပါ — `agent/RULES.md` ၏ "Repository state ... outrank summaries" invariant အရ **n8n instance သည် workflow behavior အတွက် ground truth ဖြစ်ပြီး ဤဖိုင်သည် index သာဖြစ်သည်**။
 
-**Last verified**: 2026-09-15
+**Last verified**: 2026-10-17 (SOP/Org renderer routes)
 **Project folder**: `pqhGc7TBjp6NzsbX`
 
 ## Part 1 — HR Consultant / RAG
@@ -18,10 +18,12 @@
 
 | Workflow | ID | Active | မှတ်ချက် |
 |---|---|---|---|
-| `Panellist Document Architect v3` | `gB6WtsJVibehCAot` | ✅ | Contract-first Telegram workflow — discovery, SOP/Org `.drawio`, HR Form `.xlsx` |
-| `Panellist Drawio Renderer — Agent Tool` | `y05dDLnUrz69g7FM` | ✅ | Contract validation → Draw.io XML → artifact storage → `.drawio` links |
-| `Panellist Drawio Artifact Download` | `fl1FjM3XlBi7RMQW` | ✅ | Opaque-key download endpoint |
-| `Panellist SOP — Render PNG & Send Telegram` | `iM2xp8YzretxNBVq` | ✅ | ⚠️ PNG render — ADR-001 နှင့်ဆက်စပ်၍ အောက်တွင်ကြည့်ပါ |
+| `Panellist Unified Orchestrator` | `97Hrjp3aKOLIR4wJ` | ✅ | SOP/Org ready contracts ကို Excel + PNG renderer သို့ route လုပ်သည် |
+| `Panellist Artifact Architect API` | `tyGUPkBhNvx3C4wv` | ✅ | SOP/Org ကို Excel + PNG၊ HR Form ကို editable XLSX ထုတ်သည် |
+| `Panellist Excel PNG Renderer` | `LgeDMpvKmDho8GQ3` | ✅ | Strict contract validation → paired XLSX/PNG → opaque-key storage; နှစ်ဖိုင်လုံးအောင်မြင်မှ ready |
+| `Panellist Drawio Renderer — Agent Tool` | `y05dDLnUrz69g7FM` | ❌ | 2026-10-16 owner decision အရ generation ခေတ္တပိတ်ထားသည် |
+| `Panellist Excel Org Renderer` | `3oSfcPn3ZAfMkzXg` | ❌ | Org-only scaffold ကို paired renderer ဖြင့်အစားထိုးထားသည် |
+| `Panellist Drawio Artifact Download` | `6uhGYKTdbDrS6V2u` | ✅ | ရှိပြီးသား historical `.drawio` links မပျက်စေရန် read-only compatibility endpoint |
 | `Panellist SOP/Org — Discovery Agent (build/test)` | `jiHDDozQlmwcVayU` | ✅ | build/test, dummy data |
 | `Panellist SOP/Org Generator` | `ZdpBh1GCKZW7iVTC` | ❌ | Part 3 generation tester |
 | `Panellist Business Discovery → SOP/OG/Form (v2)` | `EBkA5VBqMKJcuk0V` | ❌ | |
@@ -66,11 +68,9 @@ Credentials wired: `Google Drive account 2` (`bHh55IupgMJpCVKl`), `mhtet` google
 ### Verified working (execution `62223`)
 DB write မှလွဲ၍ pipeline တစ်ခုလုံးအောင်မြင်သည် — Drive docx copy/export, bilingual split, Zawgyi detect/convert + NFC normalize, chunk + sha256, `gemini-embedding-001` @1536 embedding အားလုံး error မရှိ。
 
-## ⚠️ ADR-001 နှင့် ဆက်စပ်၍ စစ်ဆေးရန်
+## ADR-005 renderer decision
 
-`Panellist SOP — Render PNG & Send Telegram` သည် active ဖြစ်ပြီး PNG render လုပ်သည်။ ADR-001 က `.drawio` ကို canonical အဖြစ်သတ်မှတ်ပြီး "PNG generation သည် default production path မဟုတ်ရ" ဟုဆိုထားသည်။
-
-`Panellist Drawio Renderer` နှင့် `Drawio Artifact Download` လည်း active ဖြစ်နေသဖြင့် — PNG သည် ADR-001 ခွင့်ပြုထားသော **secondary derived artifact** ဖြစ်နေခြင်းလား၊ သို့မဟုတ် **parallel canonical path** ဖြစ်နေခြင်းလား ဆုံးဖြတ်ရန်လိုအပ်သည်။ ဒုတိယဖြစ်ပါက ADR-001 ချိုးဖောက်မှုဖြစ်သည်。
+Owner ၏ 2026-10-16 explicit instruction အရ `ADR-001` ကို `ADR-005` ဖြင့် supersede လုပ်ထားသည်။ SOP/Org production path သည် `.xlsx` + `.png` pair ဖြစ်ပြီး Draw.io generation inactive ဖြစ်သည်။ Historical download endpoint ကို generation မလုပ်ဘဲ ရှိပြီးသား links compatibility အတွက်သာ active ထားသည်။
 
 ## Terminology
 

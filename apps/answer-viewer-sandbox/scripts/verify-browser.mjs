@@ -26,7 +26,7 @@ const viewports = [
 ];
 
 await mkdir('browser-evidence', { recursive: true });
-const browser = await chromium.launch({ headless: true });
+const browser = await chromium.launch({ headless: true, executablePath: process.env.CHROMIUM_PATH || undefined });
 
 async function installApiRoute(page, mode = 'success') {
   await page.route('**/api/answer-viewer', async route => {
