@@ -55,10 +55,6 @@ export function ConsultationDashboard({side = 'user'}: {side?: 'user'|'admin'}) 
     }catch{setLoginError('Network error. Try again.');}
     finally{setLoggingIn(false);}
   }
-  async function logout() {
-    try {await fetch('/api/pocket-hr-session',{method:'POST',credentials:'include'});} catch { /* clear local UI even if offline */ }
-    setSession(null);setSelected(null);setPasscode('');
-  }
   const [tab, setTab] = useState<'Conversation' | 'Details' | 'Files'>('Conversation');
   const [actionDraft, setActionDraft] = useState('');
   const [editing, setEditing] = useState(false);
