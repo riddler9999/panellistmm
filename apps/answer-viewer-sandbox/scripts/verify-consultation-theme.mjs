@@ -14,7 +14,9 @@ const tickets = [
   {ticketId:'REQ-004',title:'Employee handbook',status:'Failed',history:[]},
 ];
 function luminance(hex) {
-  const c=hex.trim().replace('#','').match(/../g).map(v=>parseInt(v,16)/255).map(v=>v<=.04045?v/12.92:((v+.055)/1.055)**2.4);
+  const raw=hex.trim().replace('#','');
+  const normalized=raw.length===3 ? [...raw].map(c=>c+c).join('') : raw;
+  const c=normalized.match(/../g).map(v=>parseInt(v,16)/255).map(v=>v<=.04045?v/12.92:((v+.055)/1.055)**2.4);
   return .2126*c[0]+.7152*c[1]+.0722*c[2];
 }
 function contrast(a,b) {const x=luminance(a),y=luminance(b);return (Math.max(x,y)+.05)/(Math.min(x,y)+.05);}
