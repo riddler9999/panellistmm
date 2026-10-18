@@ -66,10 +66,6 @@ export function ConsultationDashboard({side = 'user'}: {side?: 'user'|'admin'}) 
     }catch{setLoginError('Network error. Try again.');}
     finally{setLoggingIn(false);}
   }
-  async function logout() {
-    try {await fetch('/api/pocket-hr-session',{method:'POST',credentials:'include'});} catch { /* clear local UI even if offline */ }
-    setSession(null);setSelected(null);setPasscode('');
-  }
   const [tab, setTab] = useState<'Conversation' | 'Details' | 'Files'>('Conversation');
   const [actionDraft, setActionDraft] = useState('');
   const [editing, setEditing] = useState(false);
@@ -207,7 +203,7 @@ export function ConsultationDashboard({side = 'user'}: {side?: 'user'|'admin'}) 
 
   return <main className="viewer-shell consultation-dashboard">
     
-    {session && <div className="consult-preview-banner"><span>{role === 'Admin' ? 'Consultant Dashboard' : 'My Requests'}</span><button type="button" onClick={logout} disabled={uploading||actionSubmitting}>Log out</button></div>}
+    {session && <div className="consult-preview-banner"><span>{role === 'Admin' ? 'Consultant Dashboard' : 'My Requests'}</span></div>}
     {active ? <>
         <button type="button" className="consult-back" disabled={uploading||actionSubmitting} onClick={() => setSelected(null)} aria-label="Back to requests"><ConsultationIcon name="back"/></button>
         <section className="consult-detail-head">
@@ -270,7 +266,7 @@ export function ConsultationDashboard({side = 'user'}: {side?: 'user'|'admin'}) 
         <div className="consult-list-heading"><h1>{role === 'Admin' ? 'All Requests' : 'My Requests'}</h1><p>{tickets.length} requests</p></div>
         <div className="consult-toolbar">
           <input aria-label="Search requests" type="search" placeholder="Search requests, subject, or ID..." value={search} onChange={event => setSearch(event.target.value)} />
-          <button type="button" className="consult-new" onClick={()=>setCreating(true)}>＋ New Request</button>
+          {side === 'user' && <button type="button" className="consult-new" onClick={()=>setCreating(true)}>＋ New Request</button>}
         </div>
         <div className="consult-filters" aria-label="Filter requests">
           {filters.map(status => <button type="button" key={status} className={filter === status ? 'active' : ''} aria-pressed={filter === status} onClick={() => setFilter(status)}>{status} ({status === 'All' ? tickets.length : tickets.filter(ticket => ticketStatus(ticket.status, role) === status).length})</button>)}
