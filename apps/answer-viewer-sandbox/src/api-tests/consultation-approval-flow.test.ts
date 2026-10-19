@@ -42,6 +42,7 @@ describe('approval publication ordering',()=>{
   await handler(req,res);
   expect(result().status).toBe(503);
   expect(writeTicketPublication).toHaveBeenCalledTimes(2);
+  expect(writeTicketPublication).not.toHaveBeenCalledWith('T-1',{C:'Approved',Y:'Approved'});
  });
  it('denies role spoofing without snapshot creation',async()=>{
   vi.mocked(authenticatedPrincipal).mockResolvedValue({email:'user@example.com',role:'User'});
