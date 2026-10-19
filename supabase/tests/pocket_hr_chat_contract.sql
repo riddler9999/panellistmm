@@ -2,7 +2,7 @@
 -- No production data should be used or modified.
 begin;
 do $$
-declare r text:='chat-contract-'||gen_random_uuid()::text; m uuid; v integer; n integer;
+declare r text:='chat-contract-'||gen_random_uuid()::text; m uuid; m2 uuid; v integer; n integer;
 begin
  insert into public.pocket_hr_conversations(request_id,original_request) values(r,'Synthetic request');
  insert into public.pocket_hr_messages(request_id,sender,content,review_state)
@@ -23,6 +23,24 @@ begin
  then raise exception 'duplicate_approval_failed'; end if;
  if (select count(*) from public.pocket_hr_approvals where request_id=r)<>1
  then raise exception 'duplicate_approval_created'; end if;
+ if not exists(select 1 from public.pocket_hr_messages where message_id=m and message_revision=2 and publication_revision=1)
+ then raise exception 'message_publication_revisions_not_separated'; end if;
+ insert into public.pocket_hr_messages(request_id,sender,content,review_state)
+ values(r,'agent','Second AI draft','pending_review') returning message_id into m2;
+ if public.pocket_hr_approve_message(m2,1,'Second approved answer','reviewer@example.com')<>2
+ then raise exception 'second_publication_revision_failed'; end if;
+ if not exists(select 1 from public.pocket_hr_messages where message_id=m2 and message_revision=2 and publication_revision=2)
+ then raise exception 'second_message_revision_corrupted'; end if;
+ if public.pocket_hr_approve_message(m2,1,'Second approved answer','reviewer@example.com')<>2
+ then raise exception 'second_idempotent_retry_failed'; end if;
+ if (select count(*) from public.pocket_hr_approvals where request_id=r)<>2
+ then raise exception 'duplicate_or_missing_publication'; end if;
+ begin
+   perform public.pocket_hr_approve_message(m2,1,'Changed answer','reviewer@example.com');
+   raise exception 'conflicting_retry_accepted';
+ exception when sqlstate 'P0001' then
+   if sqlerrm='conflicting_retry_accepted' then raise; end if;
+ end;
 end $$;
 -- Direct anon/authenticated access must remain disabled.
 do $$
