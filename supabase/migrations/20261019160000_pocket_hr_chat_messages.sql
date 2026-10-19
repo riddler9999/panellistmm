@@ -25,7 +25,7 @@ revoke all on public.pocket_hr_messages from public,anon,authenticated;
 grant select,insert,update on public.pocket_hr_messages to service_role;
 
 -- Message revision tracks one message; publication revision tracks request-wide approvals.
--- Lock the message row. Successful approval and immutable ledger/outbox insertion
+-- Lock the message row. The existing snapshot RPC owns ledger/outbox insertion
 -- commit together; failed work rolls the transaction back.
 create or replace function public.pocket_hr_approve_message(
   p_message_id uuid, p_expected_revision integer, p_approved_content text,
@@ -62,12 +62,11 @@ begin
   perform pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended(m.request_id,8492));
   select coalesce(max(revision),0) into v_current
     from public.pocket_hr_approvals where request_id=m.request_id;
-  v_revision:=v_current+1;
-  insert into public.pocket_hr_approvals
-    (request_id,revision,approved_content,approved_by_email)
-  values (m.request_id,v_revision,p_approved_content,p_approved_by_email);
-  insert into public.pocket_hr_deliveries(request_id,revision,result)
-  values(m.request_id,v_revision,'pending');
+  -- Reuse the existing canonical approval/outbox transaction and revision allocator.
+  -- The request advisory lock is transaction-scoped and reentrant for this session.
+  v_revision:=public.pocket_hr_approve_snapshot(
+    m.request_id,v_current,p_approved_content,p_approved_by_email
+  );
   update public.pocket_hr_messages set review_state='approved',
     approved_content=p_approved_content,approved_at=clock_timestamp(),
     message_revision=m.message_revision+1,
