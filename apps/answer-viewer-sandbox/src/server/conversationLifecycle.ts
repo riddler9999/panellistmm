@@ -50,7 +50,12 @@ export async function syncReply(state: ConversationState): Promise<void> {
  // Stable message ID makes retries safe after partial failures.
  const hex=createHash('sha256').update(state.request_id+':user:'+state.reply_revision).digest('hex');
  const messageId=[hex.slice(0,8),hex.slice(8,12),'4'+hex.slice(13,16),'8'+hex.slice(17,20),hex.slice(20,32)].join('-');
- await db('pocket_hr_messages?on_conflict=message_id','POST',{
+ const saved=await db<Array<{content:string;request_id:string}>>(
+  'pocket_hr_messages?select=content,request_id&message_id=eq.'+messageId
+ );
+ if(saved.length>1 || (saved.length===1 && (saved[0].content!==last.content || saved[0].request_id!==state.request_id)))
+  throw new Error('reply_message_conflict');
+ if(!saved.length) await db('pocket_hr_messages','POST',{
   message_id:messageId,request_id:state.request_id,sender:'user',
   content:last.content,revision:state.reply_revision+1,review_state:'approved',
  });
