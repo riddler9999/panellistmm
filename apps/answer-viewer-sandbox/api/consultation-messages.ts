@@ -34,10 +34,11 @@ export default async function handler(req:Req,res:Res) {
    messageId:m.message_id,sender:m.sender,content:m.content,reviewState:m.review_state,
    approvedContent:m.approved_content,publicationRevision:m.publication_revision,createdAt:m.created_at
   }))});
+  const sheetPublished=['Approved','Delivered','Resolved','Closed'].includes(String(matches[0].Ticket_Status??'').trim());
   const approved=messages.filter(m=>m.sender==='agent' && m.review_state==='approved' && Number.isSafeInteger(m.publication_revision) && (m.publication_revision??0)>0);
   const revisions=[...new Set(approved.map(m=>m.publication_revision as number))];
   let released=new Set<number>();
-  if(revisions.length) {
+  if(sheetPublished && revisions.length) {
    const [approvals,deliveries]=await Promise.all([
     db<Approval[]>('pocket_hr_approvals?select=request_id,revision,approved_content,approved_by_email,approved_at&request_id=eq.'+query(requestId)+'&revision=in.('+revisions.join(',')+')'),
     db<Delivery[]>('pocket_hr_deliveries?select=request_id,revision,result,delivered_at&request_id=eq.'+query(requestId)+'&revision=in.('+revisions.join(',')+')')
