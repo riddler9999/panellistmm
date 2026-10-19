@@ -1,5 +1,6 @@
 export type UnifiedDispatchInput = {
   requestId: string;
+  revision: number;
   ownerEmail?: string;
   title?: string;
   category?: string;
@@ -19,6 +20,7 @@ export async function dispatchUnifiedRequest(input: UnifiedDispatchInput): Promi
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       request_id: input.requestId,
+      revision: input.revision,
       company_id: null,
       user_id: input.ownerEmail?.trim() || null,
       subject: input.title?.trim() || '',

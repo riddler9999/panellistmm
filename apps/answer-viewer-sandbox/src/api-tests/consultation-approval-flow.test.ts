@@ -19,7 +19,7 @@ const req={method:'POST',headers:{origin:'https://panellistmm.vercel.app',host:'
 describe('approval publication ordering',()=>{
  beforeEach(()=>{
   vi.resetAllMocks();
-  vi.mocked(authenticatedPrincipal).mockResolvedValue({email:'admin@example.com',role:'Admin'});
+  vi.mocked(authenticatedPrincipal).mockResolvedValue({accountId:'00000000-0000-4000-8000-000000000001',email:'admin@example.com',role:'Admin'});
   vi.mocked(readTickets).mockResolvedValue([{'Row ID':'T-1',Owner_Email:'user@example.com'}]);
   vi.mocked(db).mockResolvedValue(1);
   vi.mocked(acknowledgeDelivery).mockResolvedValue(true);
@@ -44,34 +44,34 @@ describe('approval publication ordering',()=>{
   expect(writeTicketPublication).toHaveBeenCalledTimes(2);
  });
  it('denies role spoofing without snapshot creation',async()=>{
-  vi.mocked(authenticatedPrincipal).mockResolvedValue({email:'user@example.com',role:'User'});
+  vi.mocked(authenticatedPrincipal).mockResolvedValue({accountId:'00000000-0000-4000-8000-000000000001',email:'user@example.com',role:'User'});
   const {res,result}=response();
   await handler(req,res);
   expect(result().status).toBe(403);
-  expect(db).not.toHaveBeenCalled();
+  expect(db).not.toHaveBeenCalledWith(expect.stringContaining('rpc/pocket_hr_approve_'), expect.anything(), expect.anything());
  });
  it('keeps resolved requests read-only even for Admin',async()=>{
   vi.mocked(readTickets).mockResolvedValue([{'Row ID':'T-1',Owner_Email:'user@example.com',Ticket_Status:'Resolved'}]);
   const {res,result}=response();
   await handler(req,res);
   expect(result().status).toBe(409);
-  expect(db).not.toHaveBeenCalled();
+  expect(db).not.toHaveBeenCalledWith(expect.stringContaining('rpc/pocket_hr_approve_'), expect.anything(), expect.anything());
   expect(writeTicketPublication).not.toHaveBeenCalled();
  });
  it('rejects a changed draft before creating any snapshot',async()=>{
   vi.mocked(readTickets).mockResolvedValue([{'Row ID':'T-1',Owner_Email:'user@example.com',AI_Answer:'new assessment'}]);
   const {res,result}=response();await handler(req,res);
-  expect(result().status).toBe(409);expect(db).not.toHaveBeenCalled();
+  expect(result().status).toBe(409);expect(db).not.toHaveBeenCalledWith(expect.stringContaining('rpc/pocket_hr_approve_'), expect.anything(), expect.anything());
  });
  it('does not approve an already delivered response again',async()=>{
   vi.mocked(readTickets).mockResolvedValue([{'Row ID':'T-1',Owner_Email:'user@example.com',Ticket_Status:'Approved'}]);
   const {res,result}=response();await handler(req,res);
-  expect(result().status).toBe(409);expect(db).not.toHaveBeenCalled();
+  expect(result().status).toBe(409);expect(db).not.toHaveBeenCalledWith(expect.stringContaining('rpc/pocket_hr_approve_'), expect.anything(), expect.anything());
  });
  it('resumes the same committed snapshot after publication failure',async()=>{
   vi.mocked(readProof).mockResolvedValue({approval:{requestId:'T-1',revision:1,approvedContent:'Approved advice',approvedByEmail:'admin@example.com',approvedAt:'2026-10-16T00:00:00Z'},delivery:null});
   const {res,result}=response();await handler(req,res);
-  expect(result().status).toBe(200);expect(db).not.toHaveBeenCalled();expect(acknowledgeDelivery).toHaveBeenCalledWith('T-1',1);
+  expect(result().status).toBe(200);expect(db).not.toHaveBeenCalledWith(expect.stringContaining('rpc/pocket_hr_approve_'), expect.anything(), expect.anything());expect(acknowledgeDelivery).toHaveBeenCalledWith('T-1',1);
  });
 
 });

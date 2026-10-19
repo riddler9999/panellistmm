@@ -18,7 +18,7 @@ async function call(input:unknown=body){
 }
 beforeEach(()=>{
  vi.resetAllMocks();
- vi.mocked(authenticatedPrincipal).mockResolvedValue({role:'User',email:'user@example.com'});
+ vi.mocked(authenticatedPrincipal).mockResolvedValue({accountId:'00000000-0000-4000-8000-000000000001',role:'User',email:'user@example.com'});
  vi.mocked(readTickets).mockResolvedValue([{'Row ID':'T-1',Owner_Email:'user@example.com',Ticket_Status:'Approved',Request_Text:'Initial request'}]);
  vi.mocked(readConversation).mockResolvedValue(null);
  vi.mocked(readProof).mockResolvedValue({approval:{requestId:'T-1',revision:1,approvedContent:'Approved reply',approvedByEmail:'admin@example.com',approvedAt:new Date().toISOString()},delivery:{requestId:'T-1',revision:1,result:'success',deliveredAt:new Date().toISOString()}});
@@ -30,14 +30,14 @@ describe('owner reply and close',()=>{
   expect(vi.mocked(saveConversation).mock.invocationCallOrder[0]).toBeLessThan(vi.mocked(syncReply).mock.invocationCallOrder[0]);
  });
  it('denies another owner, including Admin, closing through this endpoint',async()=>{
-  vi.mocked(authenticatedPrincipal).mockResolvedValue({role:'User',email:'other@example.com'});
+  vi.mocked(authenticatedPrincipal).mockResolvedValue({accountId:'00000000-0000-4000-8000-000000000001',role:'User',email:'other@example.com'});
   expect(await call({action:'close',requestId:'T-1'})).toBe(404);
-  vi.mocked(authenticatedPrincipal).mockResolvedValue({role:'Admin',email:'admin@example.com'});
+  vi.mocked(authenticatedPrincipal).mockResolvedValue({accountId:'00000000-0000-4000-8000-000000000001',role:'Admin',email:'admin@example.com'});
   expect(await call({action:'close',requestId:'T-1'})).toBe(404);
   expect(saveConversation).not.toHaveBeenCalled();
  });
  it('allows Admin to close only their own request from My Requests',async()=>{
-  vi.mocked(authenticatedPrincipal).mockResolvedValue({role:'Admin',email:'user@example.com'});
+  vi.mocked(authenticatedPrincipal).mockResolvedValue({accountId:'00000000-0000-4000-8000-000000000001',role:'Admin',email:'user@example.com'});
   expect(await call({action:'close',requestId:'T-1'})).toBe(200);
  });
  it('allows owner to close without an approved response',async()=>{

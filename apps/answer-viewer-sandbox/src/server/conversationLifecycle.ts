@@ -56,6 +56,7 @@ export async function syncReply(state: ConversationState): Promise<void> {
  }
  await dispatchUnifiedRequest({
   requestId: state.request_id,
+  revision: state.reply_revision + 1,
   ownerEmail: String(current.Owner_Email??''),
   title: String(current.Ticket_Title??''),
   category: String(current.Ticket_Category??''),

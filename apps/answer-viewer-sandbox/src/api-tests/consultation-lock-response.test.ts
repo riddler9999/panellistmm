@@ -16,7 +16,7 @@ const file={id:'00000000-0000-4000-8000-000000000001',name:'answer.pdf',mime:'ap
 const headers={origin:'https://example.com',host:'example.com'};
 function response(){let status=200;const res={status(n:number){status=n;return res;},setHeader(){},json:vi.fn(),send:vi.fn()};return {res,status:()=>status};}
 beforeEach(()=>{
- vi.resetAllMocks();vi.mocked(authenticatedPrincipal).mockResolvedValue({email:'admin@example.com',role:'Admin'});
+ vi.resetAllMocks();vi.mocked(authenticatedPrincipal).mockResolvedValue({accountId:'00000000-0000-4000-8000-000000000001',email:'admin@example.com',role:'Admin'});
  vi.mocked(readTickets).mockResolvedValue([ticket]);vi.mocked(readProof).mockResolvedValue({approval:null,delivery:null});
  vi.mocked(db).mockResolvedValue(1);vi.mocked(acknowledgeDelivery).mockResolvedValue(true);
  vi.mocked(selectAttachments).mockResolvedValue([file]);vi.mocked(storeAttachment).mockResolvedValue(file);
@@ -35,8 +35,9 @@ describe('upload and approval response lifecycle',()=>{
    else await approve({method:'POST',headers,body:{action:'approve',requestId:'T',expectedRevision:0,draftVersion:draftVersion(ticket),content:'Edited answer',options:[],attachmentIds:[file.id]}},res);
    expect(res.json).toHaveBeenCalledTimes(1);expect(status()).toBe(cleanupFails?503:operation==='upload'?201:200);
    if(operation==='approve'){
-    const input=vi.mocked(db).mock.calls[0][2] as {p_content:string};
-    expect(decodeResponse(input.p_content)).toEqual({text:'Edited answer',options:[],attachments:[file]});
+    const approvalCall=vi.mocked(db).mock.calls.find(([path])=>String(path).startsWith('rpc/pocket_hr_approve_'));
+    const input=approvalCall?.[2] as {p_approved_content?:string;p_content?:string};
+    expect(decodeResponse(input.p_approved_content ?? input.p_content!)).toEqual({text:'Edited answer',options:[],attachments:[file]});
     expect(writeTicketPublication).toHaveBeenLastCalledWith('T',{C:'Approved',Y:'Approved'});
    }
   });

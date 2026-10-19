@@ -1,7 +1,7 @@
 import type { ResponseAttachment } from '../domain/reviewedResponse';
 import { messageParts } from '../domain/messageParts';
 import { ticketStatus } from '../domain/ticketStatus';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ConsultationTicket } from '../server/consultationAccess';
 
 
@@ -22,10 +22,11 @@ function ConsultationIcon({name}: {name: 'request'|'conversation'|'details'|'fil
 
 export function ConsultationDashboard({side = 'user'}: {side?: 'user'|'admin'}) {
   const consultationUrl = '/api/consultation?side=' + side;
+  const createRequestKey=useRef<string|null>(null);
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<string>('All');
   const [selected, setSelected] = useState<string | null>(null);
-  const [session, setSession] = useState<{role:'Admin'|'User';tickets:ConsultationTicket[]}|null>(null);
+  const [session, setSession] = useState<{role:'Admin'|'Consultant'|'User';tickets:ConsultationTicket[]}|null>(null);
   const [checking, setChecking] = useState(true);
   const [passcode, setPasscode] = useState('');
   const [loginError, setLoginError] = useState('');
@@ -38,7 +39,7 @@ export function ConsultationDashboard({side = 'user'}: {side?: 'user'|'admin'}) 
           if(active) setLoginError(response.status===403 && side==='admin' ? 'Consultant/Admin access required. Sign in with an administrator passcode.' : response.status===503 ? 'Requests service unavailable. Please try again.' : '');
           return null;
         }
-        return await response.json() as {role:'Admin'|'User';tickets:ConsultationTicket[]};
+        return await response.json() as {role:'Admin'|'Consultant'|'User';tickets:ConsultationTicket[]};
       })
       .then(data => {if(active) setSession(data);})
       .catch(() => {if(active) setLoginError('Service unavailable. Please try again.');})
@@ -61,7 +62,7 @@ export function ConsultationDashboard({side = 'user'}: {side?: 'user'|'admin'}) 
             : 'Could not load requests. Please retry.');
         return;
       }
-      setSession(await ticketsResponse.json() as {role:'Admin'|'User';tickets:ConsultationTicket[]});
+      setSession(await ticketsResponse.json() as {role:'Admin'|'Consultant'|'User';tickets:ConsultationTicket[]});
       setPasscode('');
     }catch{setLoginError('Network error. Try again.');}
     finally{setLoggingIn(false);}
@@ -111,7 +112,7 @@ export function ConsultationDashboard({side = 'user'}: {side?: 'user'|'admin'}) 
   const responseContent = editing ? actionDraft : active?.history.at(-1)?.content ?? '';
 
   async function approveTicket() {
-    if (!active || actionSubmitting || role !== 'Admin') return;
+    if (!active || actionSubmitting || role === 'User') return;
     setActionSubmitting(true); setActionError('');
     try {
       const response = await fetch('/api/consultation-approve', {
@@ -121,7 +122,7 @@ export function ConsultationDashboard({side = 'user'}: {side?: 'user'|'admin'}) 
       if (!response.ok) { setActionError(response.status===409?'This request changed. Reload and review again.':'Approval was not published. Retry after checking the request.'); return; }
       const refreshed = await fetch(consultationUrl,{credentials:'include',cache:'no-store'});
       if (!refreshed.ok) throw new Error('refresh_failed');
-      setSession(await refreshed.json() as {role:'Admin'|'User';tickets:ConsultationTicket[]});
+      setSession(await refreshed.json() as {role:'Admin'|'Consultant'|'User';tickets:ConsultationTicket[]});
       setActionDraft(''); setEditing(false);setAttachments([]);setOptionsText('');
     } catch { setActionError('Could not refresh the approved request.'); }
     finally { setActionSubmitting(false); }
@@ -130,16 +131,17 @@ export function ConsultationDashboard({side = 'user'}: {side?: 'user'|'admin'}) 
   async function refreshTickets(){
     const response=await fetch(consultationUrl,{credentials:'include',cache:'no-store'});
     if(!response.ok)throw new Error('refresh_failed');
-    setSession(await response.json() as {role:'Admin'|'User';tickets:ConsultationTicket[]});
+    setSession(await response.json() as {role:'Admin'|'Consultant'|'User';tickets:ConsultationTicket[]});
   }
   async function createRequest(event:React.FormEvent){
     event.preventDefault();if(requestBusy)return;
     setRequestBusy(true);setRequestError('');
     try{
+      createRequestKey.current??=crypto.randomUUID();
       const response=await fetch('/api/consultation-create',{method:'POST',credentials:'include',
-        headers:{'Content-Type':'application/json'},body:JSON.stringify({title:newTitle,category:newCategory,description:newDescription})});
+        headers:{'Content-Type':'application/json','Idempotency-Key':createRequestKey.current},body:JSON.stringify({title:newTitle,category:newCategory,description:newDescription})});
       if(!response.ok)throw new Error('create_failed');
-      await refreshTickets();setCreating(false);setNewTitle('');setNewCategory('');setNewDescription('');
+      await refreshTickets();createRequestKey.current=null;setCreating(false);setNewTitle('');setNewCategory('');setNewDescription('');
     }catch{setRequestError('Could not submit request. Please retry.');}
     finally{setRequestBusy(false);}
   }
@@ -203,7 +205,7 @@ export function ConsultationDashboard({side = 'user'}: {side?: 'user'|'admin'}) 
 
   return <main className="viewer-shell consultation-dashboard">
     
-    {session && <div className="consult-preview-banner"><span>{role === 'Admin' ? 'Consultant Dashboard' : 'My Requests'}</span></div>}
+    {session && <div className="consult-preview-banner"><span>{role !== 'User' ? 'Consultant Dashboard' : 'My Requests'}</span></div>}
     {active ? <>
         <button type="button" className="consult-back" disabled={uploading||actionSubmitting} onClick={() => setSelected(null)} aria-label="Back to requests"><ConsultationIcon name="back"/></button>
         <section className="consult-detail-head">
@@ -217,9 +219,9 @@ export function ConsultationDashboard({side = 'user'}: {side?: 'user'|'admin'}) 
         {tab === 'Conversation' && <section className="consult-timeline">
           <div className="consult-timeline-heading"><h2>Conversation</h2></div>
           {active.description && <article className={`consult-message${role === 'User' ? ' consult-message-own' : ''}`}><div className="consult-message-author"><span className="consult-avatar">U</span><strong>{active.requesterName || 'User'} · Request</strong></div>{messageText(active.description)}</article>}
-          {active.conversation?.map((entry,index)=><article className={`consult-message${role === 'User' ? (entry.role === 'user' ? ' consult-message-own' : ' consult-message-incoming') : ''}`} key={index}><strong>{entry.role==='user'?(active.requesterName || 'User'):'Consultant'}</strong>{messageText(entry.content)}{fileLinks(entry.attachments,entry.revision)}{role==='Admin'&&entry.role==='consultant'&&<button className="consult-approved" disabled>Approved ✓</button>}</article>)}
-          {active.responseApproved && <article className={`consult-message consult-final${role === 'User' ? ' consult-message-incoming' : ''}`}><strong>Consultant</strong>{messageText(active.finalAnswer)}{fileLinks(active.attachments,active.revision??0)}{role==='Admin'&&<button className="consult-approved" disabled>Approved ✓</button>}</article>}
-          {role==='Admin' && !active.responseApproved && !active.closed && (editing || !!responseContent) && <article className="consult-message consult-actions">
+          {active.conversation?.map((entry,index)=><article className={`consult-message${role === 'User' ? (entry.role === 'user' ? ' consult-message-own' : ' consult-message-incoming') : ''}`} key={index}><strong>{entry.role==='user'?(active.requesterName || 'User'):'Consultant'}</strong>{messageText(entry.content)}{fileLinks(entry.attachments,entry.revision)}{role!=='User'&&entry.role==='consultant'&&<button className="consult-approved" disabled>Approved ✓</button>}</article>)}
+          {active.responseApproved && <article className={`consult-message consult-final${role === 'User' ? ' consult-message-incoming' : ''}`}><strong>Consultant</strong>{messageText(active.finalAnswer)}{fileLinks(active.attachments,active.revision??0)}{role!=='User'&&<button className="consult-approved" disabled>Approved ✓</button>}</article>}
+          {role!=='User' && !active.responseApproved && !active.closed && (editing || !!responseContent) && <article className="consult-message consult-actions">
             <strong>Response for review</strong>
             {editing ? <><label htmlFor="consult-action-draft">Edit response</label><textarea id="consult-action-draft" value={actionDraft} onChange={event=>setActionDraft(event.target.value)} maxLength={45000}/>
               <label htmlFor="consult-options">Multiple-choice answers (optional, up to 8, one per line)</label><textarea id="consult-options" value={optionsText} onChange={e=>setOptionsText(e.target.value)} placeholder="Leave empty for a written answer"/>
@@ -232,7 +234,7 @@ export function ConsultationDashboard({side = 'user'}: {side?: 'user'|'admin'}) 
             <div className="consult-action-buttons"><button type="button" disabled={actionSubmitting || uploading || !responseContent.trim()} onClick={approveTicket}>{actionSubmitting?'Approving…':'Approve'}</button>
             {editing ? <button type="button" className="consult-secondary" disabled={actionSubmitting||uploading} onClick={()=>{setEditing(false);setActionDraft('');}}>Cancel edit</button> : <button type="button" className="consult-secondary" disabled={actionSubmitting} onClick={beginEdit}>Edit</button>}</div>
           </article>}
-          {!active.responseApproved && !active.closed && !(role==='Admin'&&responseContent) && <p className="consult-empty">{active.syncPending?'Sending your follow-up…':'Waiting for a reviewed response.'}</p>}
+          {!active.responseApproved && !active.closed && !(role!=='User'&&responseContent) && <p className="consult-empty">{active.syncPending?'Sending your follow-up…':'Waiting for a reviewed response.'}</p>}
           {actionError && <p role="alert">{actionError}</p>}
           {active.closed ? <p className="consult-empty">Ticket closed</p> : role==='User' && <section className="consult-actions state-card">
             {active.responseApproved && <>{!!active.options?.length&&<fieldset className="consult-choices"><legend>Choose an answer or write your own</legend>{active.options.map(option=><label key={option}><input type="radio" name="clarification-choice" checked={selectedOption===option} onChange={()=>setSelectedOption(option)}/>{option}</label>)}<label><input type="radio" name="clarification-choice" checked={!selectedOption} onChange={()=>setSelectedOption('')}/>Write my own answer</label></fieldset>}<label htmlFor="consult-reply">{active.options?.length ? 'Your answer / additional details' : 'Follow-up question'}</label><textarea id="consult-reply" maxLength={10000} value={reply} onChange={e=>setReply(e.target.value)}/><button disabled={actionSubmitting||(!reply.trim()&&!selectedOption)} onClick={()=>userAction('reply')}>Send follow-up</button></>}
@@ -240,8 +242,8 @@ export function ConsultationDashboard({side = 'user'}: {side?: 'user'|'admin'}) 
             {active.autoCloseAt && <p>This ticket closes automatically 48 hours after the latest approved response unless you send a follow-up.</p>}
           </section>}
         </section>}
-        {tab === 'Details' && <section className="state-card consult-details"><h2>Request Details</h2>{role==='Admin'&&active.requesterEmail&&<div className="consult-actions"><label htmlFor="requester-name">Requester name</label><input id="requester-name" maxLength={120} value={requesterName} onChange={e=>setRequesterName(e.target.value)}/><button disabled={actionSubmitting||!requesterName.trim()} onClick={saveRequesterName}>Save name</button>{actionError&&<p role="alert">{actionError}</p>}</div>}<dl><div><dt>Request ID</dt><dd>{active.ticketId}</dd></div><div><dt>Subject</dt><dd>{active.title}</dd></div><div><dt>Status</dt><dd><span className={`consult-badge tone-${statusClass(active.status)}`}>{ticketStatus(active.status, role)}</span></dd></div>{active.category && <div><dt>Category</dt><dd>{active.category}</dd></div>}{active.createdAt && <div><dt>Created</dt><dd>{active.createdAt}</dd></div>}{active.description && <div><dt>Description</dt><dd>{active.description}</dd></div>}{role === 'Admin' && active.reviewStatus && <div><dt>Review Status</dt><dd>{active.reviewStatus}</dd></div>}{role === 'Admin' && active.processingStatus && <div><dt>Processing Status</dt><dd>{active.processingStatus}</dd></div>}{role === 'Admin' && active.artifact?.status && <div><dt>Artifact Status</dt><dd>{active.artifact.status}</dd></div>}</dl></section>}
-        {tab === 'Files' && <section className="state-card consult-files"><div className="consult-file-icon"><ConsultationIcon name="files"/></div>{fileLinks(active.attachments,active.revision??0)}{active.conversation?.map((entry,index)=><div key={index}>{fileLinks(entry.attachments,entry.revision)}</div>)}{role === 'Admin' && active.artifact?.title ? <><h2>{active.artifact.title}</h2><p>{[active.artifact.type, active.artifact.format, active.artifact.status].filter(Boolean).join(' · ')}</p></> : <><h2>{active.attachments?.length||active.conversation?.some(entry=>entry.attachments?.length)?'Approved files':'No files available'}</h2><p>Only verified, authorized attachments will appear here.</p></>}</section>}
+        {tab === 'Details' && <section className="state-card consult-details"><h2>Request Details</h2>{role!=='User'&&active.requesterEmail&&<div className="consult-actions"><label htmlFor="requester-name">Requester name</label><input id="requester-name" maxLength={120} value={requesterName} onChange={e=>setRequesterName(e.target.value)}/><button disabled={actionSubmitting||!requesterName.trim()} onClick={saveRequesterName}>Save name</button>{actionError&&<p role="alert">{actionError}</p>}</div>}<dl><div><dt>Request ID</dt><dd>{active.ticketId}</dd></div><div><dt>Subject</dt><dd>{active.title}</dd></div><div><dt>Status</dt><dd><span className={`consult-badge tone-${statusClass(active.status)}`}>{ticketStatus(active.status, role)}</span></dd></div>{active.category && <div><dt>Category</dt><dd>{active.category}</dd></div>}{active.createdAt && <div><dt>Created</dt><dd>{active.createdAt}</dd></div>}{active.description && <div><dt>Description</dt><dd>{active.description}</dd></div>}{role !== 'User' && active.reviewStatus && <div><dt>Review Status</dt><dd>{active.reviewStatus}</dd></div>}{role !== 'User' && active.processingStatus && <div><dt>Processing Status</dt><dd>{active.processingStatus}</dd></div>}{role !== 'User' && active.artifact?.status && <div><dt>Artifact Status</dt><dd>{active.artifact.status}</dd></div>}</dl></section>}
+        {tab === 'Files' && <section className="state-card consult-files"><div className="consult-file-icon"><ConsultationIcon name="files"/></div>{fileLinks(active.attachments,active.revision??0)}{active.conversation?.map((entry,index)=><div key={index}>{fileLinks(entry.attachments,entry.revision)}</div>)}{role !== 'User' && active.artifact?.title ? <><h2>{active.artifact.title}</h2><p>{[active.artifact.type, active.artifact.format, active.artifact.status].filter(Boolean).join(' · ')}</p></> : <><h2>{active.attachments?.length||active.conversation?.some(entry=>entry.attachments?.length)?'Approved files':'No files available'}</h2><p>Only verified, authorized attachments will appear here.</p></>}</section>}
       </> : (side === 'user' && creating) ? <section className="consult-compose">
         <div className="consult-compose-heading"><h1>New Request</h1><p>Tell us what you need help with.</p></div>
         <form className="state-card consult-request-form" onSubmit={createRequest}>
@@ -263,7 +265,7 @@ export function ConsultationDashboard({side = 'user'}: {side?: 'user'|'admin'}) 
           </div>
         </form>
       </section> : <>
-        <div className="consult-list-heading"><h1>{role === 'Admin' ? 'All Requests' : 'My Requests'}</h1><p>{tickets.length} requests</p></div>
+        <div className="consult-list-heading"><h1>{role !== 'User' ? 'All Requests' : 'My Requests'}</h1><p>{tickets.length} requests</p></div>
         <div className="consult-toolbar">
           <input aria-label="Search requests" type="search" placeholder="Search requests, subject, or ID..." value={search} onChange={event => setSearch(event.target.value)} />
           {side === 'user' && <button type="button" className="consult-new" onClick={()=>setCreating(true)}>＋ New Request</button>}

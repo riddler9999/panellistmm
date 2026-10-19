@@ -1,6 +1,8 @@
 import type { TicketRow } from './ticketRow';
 import type { ApprovalProof, DeliveryProof } from './deliveryPolicy';
-import { createSign, randomUUID } from 'node:crypto';
+import { createSign, randomBytes, randomUUID, scrypt as scryptCallback, timingSafeEqual } from 'node:crypto';
+import { promisify } from 'node:util';
+const scrypt = promisify(scryptCallback);
 
 const config = () => {
   const url = process.env.SUPABASE_URL;
@@ -64,23 +66,30 @@ export async function googleAccessToken(): Promise<string> {
   if (!result.access_token) throw new Error('sheet_token_missing');
   return result.access_token;
 }
-/** Admin-managed PIN register. Never expose its rows to the browser. */
-export async function readPasscodeAccounts(): Promise<Array<{email:string;role:string;passcode:string;status:string;sheetRow:number;name?:string}>> {
- const id = process.env.POCKET_HR_SHEET_ID;
- if (!id) throw new Error('sheet_not_configured');
- const token = await googleAccessToken();
- const url = 'https://sheets.googleapis.com/v4/spreadsheets/' + encodeURIComponent(id)
-  + '/values/' + encodeURIComponent("'Pocket HR PINs'!A1:E1001");
- const response = await fetch(url,{headers:{Authorization:'Bearer '+token},cache:'no-store'});
- if (!response.ok) return googleFailure(response, 'pin_sheet_unavailable');
- const values = (await response.json() as {values?:unknown[][]}).values ?? [];
- const [header,...rows] = values;
- if (!header || ['Email','Role','Passcode','Status'].some((v,i)=>header[i]!==v)) throw new Error('pin_sheet_headers_invalid');
- return rows.map((row,index)=>({sheetRow:index+2,
-  ...(header[4]==='Name' && String(row[4]??'').trim() ? {name:String(row[4]).trim().slice(0,120)} : {}),
-  email:String(row[0]??'').trim().toLowerCase(),role:String(row[1]??'').trim(),
-  passcode:String(row[2]??'').trim(),status:String(row[3]??'').trim(),
- })).filter(row=>row.email.length>0);
+/** Account identities and PIN hashes are read only from the existing Supabase account table. */
+type PinAccount = {id:string;email:string;role:string;pin_hash:string|null;disabled_at:string|null;locked_until:string|null;display_name:string|null};
+export async function readPasscodeAccounts(): Promise<Array<{email:string;role:string;status:string;name?:string}>> {
+ const accounts=await db<PinAccount[]>('pocket_hr_accounts?select=id,email,role,pin_hash,disabled_at,locked_until,display_name&limit=1000');
+ return accounts.map(account=>({email:account.email.toLowerCase(),role:account.role,status:account.disabled_at?'Disabled':'Active',...(account.display_name?.trim()?{name:account.display_name.trim()}: {})}));
+}
+
+async function verifyStoredPin(pin:string,encoded:string|null):Promise<boolean>{
+ const match=encoded?.match(/^scrypt:([0-9a-f]{32}):([0-9a-f]{64})$/);
+ if(!match)return false;
+ const expected=Buffer.from(match[2],'hex');
+ const actual=await scrypt(pin,Buffer.from(match[1],'hex'),expected.length) as Buffer;
+ return timingSafeEqual(actual,expected);
+}
+async function hashPin(pin:string):Promise<string>{
+ const salt=randomBytes(16);
+ const hash=await scrypt(pin,salt,32) as Buffer;
+ return 'scrypt:'+salt.toString('hex')+':'+hash.toString('hex');
+}
+async function assertPinUnique(pin:string,accounts:PinAccount[],excludeId?:string):Promise<void>{
+ for(const account of accounts){
+  if(account.id===excludeId||account.disabled_at||!account.pin_hash)continue;
+  if(await verifyStoredPin(pin,account.pin_hash))throw new Error('pin_collision');
+ }
 }
 
 export async function readTickets(): Promise<TicketRow[]> {
@@ -174,47 +183,53 @@ export async function writeTicketPublication(requestId: string, updates: Record<
  if(!response.ok) throw new Error('sheet_write_failed');
 }
 
-/** Manage exactly the four verified PIN registry columns; never expose rows to clients. */
+/** Manage existing account rows in Supabase; PIN values never leave this server function. */
 export async function writePasscodeAccount(action:'create'|'reset'|'disable', email:string, pin?:string, role?:string):Promise<void> {
- const id=process.env.POCKET_HR_SHEET_ID;
- if(!id) throw new Error('sheet_not_configured');
- const accounts=await readPasscodeAccounts();
- const matched=accounts.filter(a=>a.email===email);
+ const accounts=await db<PinAccount[]>('pocket_hr_accounts?select=id,email,role,pin_hash,disabled_at,locked_until,display_name&limit=1000');
+ const normalized=email.trim().toLowerCase();
+ const matched=accounts.filter(a=>a.email===normalized);
  if(matched.length>1) throw new Error('duplicate_account');
  if(action==='create' && matched.length) throw new Error('account_exists');
  if(action!=='create' && matched.length!==1) throw new Error('account_not_found');
- if(action!=='disable') {
-  if(!pin || !/^\d{4}$/.test(pin)) throw new Error('invalid_pin');
-  if(accounts.some(a=>a.passcode===pin && a.email!==email)) throw new Error('pin_collision');
+ if(action==='create'){
+  if(!['Admin','Consultant','User'].includes(String(role)))throw new Error('invalid_role');
+  if(!pin||!/^\d{4}$/.test(pin))throw new Error('invalid_pin');
+  await assertPinUnique(pin,accounts);
+  const payload={identity_provider:'verified_admin_provisioning',external_subject:randomUUID(),email:normalized,role,pin_hash:await hashPin(pin),pin_set_at:new Date().toISOString()};
+  try{await db('pocket_hr_accounts','POST',payload);}catch(error){if(error instanceof Error&&(error as Error&{status?:number}).status===409)throw new Error('account_exists',{cause:error});throw error;}
+  return;
  }
- const token=await googleAccessToken();
- const base='https://sheets.googleapis.com/v4/spreadsheets/'+encodeURIComponent(id)+'/values/';
- let url:string;let body:unknown;
- if(action==='create') {
-  url=base+encodeURIComponent("'Pocket HR PINs'!A:D")+':append?valueInputOption=RAW&insertDataOption=INSERT_ROWS';
-  body={values:[[email,role,pin,'Active']]};
- } else {
-  const cell=(action==='disable'?'D':'C')+matched[0].sheetRow;
-  url=base+encodeURIComponent("'Pocket HR PINs'!"+cell)+'?valueInputOption=RAW';
-  body={values:[[action==='disable'?'Disabled':pin]]};
+ const account=matched[0];
+ if(action==='disable'){
+  await db('pocket_hr_accounts?id=eq.'+encodeURIComponent(account.id),'PATCH',{disabled_at:new Date().toISOString(),updated_at:new Date().toISOString()});
+ }else{
+  if(!pin||!/^\d{4}$/.test(pin))throw new Error('invalid_pin');
+  await assertPinUnique(pin,accounts,account.id);
+  await db('pocket_hr_accounts?id=eq.'+encodeURIComponent(account.id),'PATCH',{pin_hash:await hashPin(pin),pin_set_at:new Date().toISOString(),failed_attempts:0,locked_until:null,updated_at:new Date().toISOString()});
  }
- const response=await fetch(url,{
-  method:action==='create'?'POST':'PUT',
-  headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},
-  body:JSON.stringify(body),cache:'no-store'
- });
- if(!response.ok) throw new Error('pin_sheet_write_failed');
- // Revoke sessions when status or PIN is changed.
- if(action!=='create') { const { invalidateAccountSessions } = await import('./passcodeAuth.js'); await invalidateAccountSessions(email); }
+ const { invalidateAccountSessions } = await import('./passcodeAuth.js');
+ await invalidateAccountSessions(normalized);
 }
 
 /** Append a new request to the existing Sheet1 bridge. Owner is derived from session. */
 export async function createSheetRequest(ownerEmail:string,title:string,category:string,description:string):Promise<string>{
+ return createSheetRequestWithId(randomUUID(),ownerEmail,title,category,description);
+}
+/** Retry-safe Sheet bridge append using the server-issued idempotency key as Row ID. */
+export async function createSheetRequestWithId(requestId:string,ownerEmail:string,title:string,category:string,description:string):Promise<string>{
  const id=process.env.POCKET_HR_SHEET_ID;
  if(!id) throw new Error('sheet_not_configured');
- const requestId=randomUUID();
  const rows=await readTickets();
- if(rows.some(row=>row['Row ID']===requestId)) throw new Error('request_id_collision');
+ const existing=rows.filter(row=>String(row['Row ID']??'').trim()===requestId);
+ if(existing.length>1) throw new Error('request_id_duplicate');
+ if(existing.length===1) {
+  const row=existing[0];
+  if(String(row.Owner_Email??'').trim().toLowerCase()!==ownerEmail.trim().toLowerCase()
+   || String(row.Ticket_Title??'').trim()!==title
+   || String(row.Ticket_Category??'').trim()!==category
+   || String(row.Request_Text??'').trim()!==description) throw new Error('request_id_conflict');
+  return requestId;
+ }
  const values=Array(34).fill('');
  values[0]=requestId;values[1]=title;values[2]='Submitted';values[3]=category;
  values[4]=description;values[8]=new Date().toISOString();values[31]=ownerEmail;
@@ -251,17 +266,7 @@ export async function updateSheetRequest(requestId:string,values:Record<string,s
 /** Optional fifth PIN registry column, separate from credentials and authorization. */
 export async function writeAccountName(email:string,name:string):Promise<void>{
  if(!name.trim()||name.length>120||Array.from(name).some(character=>character.charCodeAt(0)<32))throw new Error('invalid_name');
- const accounts=await readPasscodeAccounts();
- const matches=accounts.filter(account=>account.email===email);
+ const matches=await db<Array<{id:string}>>('pocket_hr_accounts?select=id&email=eq.'+encodeURIComponent(email.trim().toLowerCase())+'&limit=2');
  if(matches.length!==1)throw new Error('account_not_found');
- const id=process.env.POCKET_HR_SHEET_ID;
- if(!id)throw new Error('sheet_not_configured');
- const token=await googleAccessToken();
- const base='https://sheets.googleapis.com/v4/spreadsheets/'+encodeURIComponent(id);
- const headerResponse=await fetch(base+'/values/'+encodeURIComponent("'Pocket HR PINs'!E1"),{headers:{Authorization:'Bearer '+token},cache:'no-store'});
- if(!headerResponse.ok)throw new Error('pin_sheet_unavailable');
- const header=(await headerResponse.json() as {values?:string[][]}).values?.[0]?.[0];
- if(header && header!=='Name')throw new Error('name_column_unavailable');
- const response=await fetch(base+'/values:batchUpdate',{method:'POST',headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify({valueInputOption:'RAW',data:[{range:"'Pocket HR PINs'!E1",values:[['Name']]},{range:"'Pocket HR PINs'!E"+matches[0].sheetRow,values:[[name.trim()]]}]})});
- if(!response.ok)throw new Error('pin_sheet_write_failed');
+ await db('pocket_hr_accounts?id=eq.'+encodeURIComponent(matches[0].id),'PATCH',{display_name:name.trim(),updated_at:new Date().toISOString()});
 }

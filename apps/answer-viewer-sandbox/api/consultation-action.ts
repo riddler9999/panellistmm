@@ -14,7 +14,7 @@ export default async function handler(req:Req,res:Res){
   return res.status(403).json({error:'access_denied'});
  try{
   const principal=await authenticatedPrincipal(req.headers);
-  if(principal?.role!=='Admin')return res.status(403).json({error:'access_denied'});
+  if(!principal || principal.role==='User')return res.status(403).json({error:'access_denied'});
   const input=validateConsultantAction(req.body);
   if(!input||input.action==='approve')return res.status(400).json({error:'invalid_action'});
   const result=(status:number)=>({json:(body:unknown)=>({status,body})});

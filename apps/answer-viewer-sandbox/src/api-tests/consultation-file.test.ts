@@ -15,14 +15,14 @@ async function call(method='GET'){
  await handler({method,headers:{origin:'https://example.com',host:'example.com'},query:{id,revision:'1'},body:{requestId:'T'}},res);return {status,res,headers};
 }
 beforeEach(()=>{
- vi.resetAllMocks();vi.mocked(authenticatedPrincipal).mockResolvedValue({role:'User',email:'owner@example.com'});
+ vi.resetAllMocks();vi.mocked(authenticatedPrincipal).mockResolvedValue({accountId:'00000000-0000-4000-8000-000000000001',role:'User',email:'owner@example.com'});
  vi.mocked(readTickets).mockResolvedValue([{'Row ID':'T',Owner_Email:'owner@example.com',Ticket_Status:'Approved'}]);
  vi.mocked(readAttachment).mockResolvedValue(file);vi.mocked(downloadAttachment).mockResolvedValue(Buffer.from('PNG'));
  vi.mocked(db).mockImplementation(async(path)=>path.startsWith('pocket_hr_approvals')?[{approved_content:encodeResponse({text:'Approved',options:[],attachments:[file]})}]:[{result:'success'}]);
 });
 describe('attachment access',()=>{
  it('serves only an owner-authorized approved attachment',async()=>{const result=await call();expect(result.status).toBe(200);expect(result.res.send).toHaveBeenCalled();expect(result.headers['Content-Disposition']).toContain('attachment;');expect(result.headers['Cache-Control']).toContain('no-store');});
- it('denies cross-ticket owner access',async()=>{vi.mocked(authenticatedPrincipal).mockResolvedValue({role:'User',email:'other@example.com'});expect((await call()).status).toBe(404);expect(downloadAttachment).not.toHaveBeenCalled();});
+ it('denies cross-ticket owner access',async()=>{vi.mocked(authenticatedPrincipal).mockResolvedValue({accountId:'00000000-0000-4000-8000-000000000001',role:'User',email:'other@example.com'});expect((await call()).status).toBe(404);expect(downloadAttachment).not.toHaveBeenCalled();});
  it('denies files absent from approval or pending publication',async()=>{
   vi.mocked(db).mockResolvedValue([]);expect((await call()).status).toBe(404);
   vi.mocked(readTickets).mockResolvedValue([{'Row ID':'T',Owner_Email:'owner@example.com',Ticket_Status:'Delivery Pending'}]);expect((await call()).status).toBe(404);expect(downloadAttachment).not.toHaveBeenCalled();

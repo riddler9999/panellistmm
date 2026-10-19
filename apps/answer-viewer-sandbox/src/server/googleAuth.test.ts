@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { googleAccessToken, readPasscodeAccounts } from './pocketHrData';
 
 afterEach(() => { vi.unstubAllEnvs(); vi.unstubAllGlobals(); vi.restoreAllMocks(); });
-describe('Google account configuration and diagnostics', () => {
+describe('Google Sheet bridge configuration and account source separation', () => {
   const key = generateKeyPairSync('rsa', { modulusLength: 2048 }).privateKey.export({type:'pkcs8',format:'pem'}).toString();
   function configure() {
     vi.stubEnv('GOOGLE_SERVICE_ACCOUNT_EMAIL','test@test.iam.gserviceaccount.com');
@@ -16,12 +16,16 @@ describe('Google account configuration and diagnostics', () => {
     await expect(googleAccessToken()).rejects.toThrow('sheet_identity_invalid');
     expect(fetcher).not.toHaveBeenCalled();
   });
-  it('records only safe status and reason codes for a Sheets API failure', async () => {
-    configure(); const log=vi.spyOn(console,'error').mockImplementation(()=>{});
-    vi.stubGlobal('fetch',vi.fn().mockResolvedValueOnce(new Response(JSON.stringify({access_token:'secret-token'})))
-      .mockResolvedValueOnce(new Response(JSON.stringify({error:{status:'PERMISSION_DENIED',message:'secret upstream data',details:[{reason:'SERVICE_DISABLED'},{reason:'secret'}]}}),{status:403})));
-    await expect(readPasscodeAccounts()).rejects.toThrow('pin_sheet_unavailable');
-    expect(log).toHaveBeenCalledWith('pocket_hr_google_failure',{stage:'pin_sheet_unavailable',status:403,reasons:['PERMISSION_DENIED','SERVICE_DISABLED']});
-    expect(JSON.stringify(log.mock.calls)).not.toContain('secret');
+  it('loads PIN account identity from Supabase without calling Google Sheets', async () => {
+    vi.stubEnv('SUPABASE_URL','https://example.supabase.co');
+    vi.stubEnv('SUPABASE_SERVICE_ROLE_KEY','test-service-role');
+    const fetcher=vi.fn<typeof fetch>().mockResolvedValue(new Response(JSON.stringify([
+      {id:'internal',email:'user@example.com',role:'User',pin_hash:'redacted',disabled_at:null,locked_until:null,display_name:'User'}
+    ])));
+    vi.stubGlobal('fetch',fetcher);
+    await expect(readPasscodeAccounts()).resolves.toEqual([{email:'user@example.com',role:'User',status:'Active',name:'User'}]);
+    expect(String(fetcher.mock.calls[0][0])).toContain('/rest/v1/pocket_hr_accounts');
+    expect(String(fetcher.mock.calls[0][0])).not.toContain('sheets.googleapis.com');
+    expect(JSON.stringify(fetcher.mock.calls)).not.toContain('redacted');
   });
 });
