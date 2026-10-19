@@ -42,7 +42,6 @@ export default async function handler(req:Req,res:Res) {
    'pocket_hr_messages?select=content&request_id=eq.'+encodeURIComponent(input.requestId)+'&sender=eq.user&order=created_at.asc&limit=1'
   );
   const ticket={Request_Text:userMessages[0]?.content??'',Consultant_Answer:'',Clarification_Question:'',AI_Answer:'',Sheet_AI_Answer:'',Review_Status:''};
-  if((req.body as {draftVersion?:unknown}).draftVersion!==draftVersion(ticket,messageDraft?.content)) return result(409).json({error:'draft_changed'});
   const proof=await readProof(input.requestId);
   const body=req.body as {options?:unknown;attachmentIds?:unknown};
   const options=validateOptions(body.options);
@@ -52,7 +51,12 @@ export default async function handler(req:Req,res:Res) {
   const content=encodeResponse({text:input.content!,options,attachments});
   if(content.length>50000)return result(400).json({error:'response_too_long'});
   const pending = proof.approval && (conversation?.reply_revision??0)<proof.approval.revision ? proof.approval : null;
-  if(pending && (pending.approvedContent!==content || ![pending.revision,pending.revision-1].includes(input.expectedRevision))) return result(409).json({error:'response_already_approved'});
+  if(pending) {
+   if(pending.approvedContent!==content || input.expectedRevision!==pending.revision-1)
+    return result(409).json({error:'response_already_approved'});
+  } else if((req.body as {draftVersion?:unknown}).draftVersion!==draftVersion(ticket,messageDraft?.content)) {
+   return result(409).json({error:'draft_changed'});
+  }
   let revision:number;
   try {
    revision=pending?.revision ?? (messageDraft
@@ -71,9 +75,10 @@ export default async function handler(req:Req,res:Res) {
   }
   // The approval RPC creates a pending delivery. Only the delivery RPC releases it.
   try {
-   await db('rpc/pocket_hr_record_delivery_result','POST',{
+   const delivery=await db<string>('rpc/pocket_hr_record_delivery_result','POST',{
     p_request_id:input.requestId,p_revision:revision,p_success:true,p_error:null,
    });
+   if(delivery!=='success') return result(503).json({error:'delivery_ack_pending',revision});
   } catch { return result(503).json({error:'delivery_ack_pending',revision}); }
   return result(200).json({ok:true,revision,state:'published'});
   });
