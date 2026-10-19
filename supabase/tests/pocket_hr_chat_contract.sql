@@ -99,7 +99,19 @@ begin
          where request_id=r and revision=v and result='pending') <> 1
   then raise exception 'recovery_created_duplicate_records'; end if;
 
+  -- Successful publication is idempotent and cannot create a second delivery row.
+  if not public.pocket_hr_acknowledge_publication(r,v) then
+    raise exception 'publication_ack_failed'; end if;
+  if not public.pocket_hr_acknowledge_publication(r,v) then
+    raise exception 'publication_ack_retry_failed'; end if;
+  if (select count(*) from public.pocket_hr_deliveries where request_id=r and revision=v)<>1
+  then raise exception 'publication_ack_duplicated_delivery'; end if;
+
   -- A failed delivery must never be treated as a successful publication.
+  -- Use a fresh pending publication; successful publications must not be downgraded.
+  insert into public.pocket_hr_messages(request_id,sender,content,review_state)
+  values(r,'agent','Retry candidate','pending_review') returning message_id into m;
+  v := public.pocket_hr_approve_message(m,1,'Retry answer','reviewer@example.com');
   update public.pocket_hr_deliveries set result='failed'
   where request_id=r and revision=v;
   if public.pocket_hr_acknowledge_publication(r,v)
