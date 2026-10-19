@@ -1,6 +1,7 @@
 import { authenticatedPrincipal } from '../src/server/passcodeAuth.js';
-import { createSheetRequestWithId, db } from '../src/server/pocketHrData.js';
-import { readConversation, syncReply, type ConversationState } from '../src/server/conversationLifecycle.js';
+import { db } from '../src/server/pocketHrData.js';
+import { readConversation, saveConversation, type ConversationState } from '../src/server/conversationLifecycle.js';
+import { dispatchUnifiedRequest } from '../src/server/unifiedDispatch.js';
 type Req={method?:string;headers:Record<string,string|string[]|undefined>;body?:unknown};
 type Res={status(n:number):Res;setHeader(k:string,v:string):void;json(v:unknown):void};
 export default async function handler(req:Req,res:Res){
@@ -27,11 +28,23 @@ export default async function handler(req:Req,res:Res){
   const created=await db<boolean>('rpc/pocket_hr_create_request', 'POST', {
    p_request_id:requestId,p_owner_account_id:principal.accountId,p_content:description,
   });
-  await createSheetRequestWithId(requestId,principal.email,title,category,description);
+  // The transactional RPC has already committed the request, user message,
+  // and retryable conversation state. Legacy Google Sheets is not required.
   let dispatchPending=false;
-  const savedConversation=created?null:await readConversation(requestId);
-  if(created || savedConversation?.pending_sync) {
-   try{await syncReply(state);}catch{dispatchPending=true;}
+  const savedConversation=created?state:await readConversation(requestId);
+  if(savedConversation?.pending_sync) {
+   try {
+    await dispatchUnifiedRequest({
+     requestId, revision:savedConversation.reply_revision+1,
+     ownerEmail:principal.email, title, category,
+     description:savedConversation.original_request,
+    });
+    await saveConversation({...savedConversation,pending_sync:false});
+   } catch(error) {
+    // Preserve the committed request and pending_sync for a safe retry.
+    console.error('pocket_hr_dispatch_pending', {code:error instanceof Error?error.message:'unknown'});
+    dispatchPending=true;
+   }
   }
   return res.status(created?201:200).json({ok:true,requestId,dispatchPending});
  }catch{return res.status(503).json({error:'request_creation_unavailable'});}
