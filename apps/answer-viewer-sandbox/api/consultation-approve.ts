@@ -6,6 +6,7 @@ export const config = { maxDuration: 60 };
 import { authenticatedPrincipal } from '../src/server/passcodeAuth.js';
 import { validateConsultantAction } from '../src/server/consultantActions.js';
 import { db, readProof, readTickets, acknowledgeDelivery, writeTicketPublication } from '../src/server/pocketHrData.js';
+import { approvalIsCurrent } from '../src/server/atomicReview.js';
 
 type Req = {method?:string;headers:Record<string,string|string[]|undefined>;body?:unknown};
 type Res = {status(n:number):Res;setHeader(k:string,v:string):void;json(v:unknown):void};
@@ -46,7 +47,7 @@ export default async function handler(req:Req,res:Res) {
   const content=encodeResponse({text:input.content!,options,attachments});
   if(content.length>50000)return result(400).json({error:'response_too_long'});
   const pending = proof.approval && (conversation?.reply_revision??0)<proof.approval.revision ? proof.approval : null;
-  if(pending && (pending.approvedContent!==content || ![pending.revision,pending.revision-1].includes(input.expectedRevision))) return result(409).json({error:'response_already_approved'});
+  if(pending && (pending.approvedContent!==content || pending.revision!==input.expectedRevision+1 || pending.approvedByEmail!==principal.email)) return result(409).json({error:'response_already_approved'});
   let revision:number;
   try {
    revision=pending?.revision ?? await db<number>('rpc/pocket_hr_approve_snapshot','POST',{
@@ -58,13 +59,14 @@ export default async function handler(req:Req,res:Res) {
       return result(409).json({error:'revision_conflict'});
    throw e;
   }
-  // Sheet status is one user-facing release condition. Keep it non-approved
-  // until both the immutable snapshot and durable delivery acknowledgement exist.
+  if(!approvalIsCurrent(revision,input.expectedRevision,conversation?.reply_revision??0))
+    return result(409).json({error:'revision_conflict'});
+  // Publication is a multi-system operation; do not acknowledge before Sheet writes succeed.
   await writeTicketPublication(input.requestId,{C:'Delivery Pending',Y:'Delivery Pending'});
   await writeTicketPublication(input.requestId,{H:input.content!});
+  await writeTicketPublication(input.requestId,{C:'Approved',Y:'Approved'});
   if(!await acknowledgeDelivery(input.requestId,revision))
     return result(503).json({error:'delivery_ack_pending',revision});
-  await writeTicketPublication(input.requestId,{C:'Approved',Y:'Approved'});
   return result(200).json({ok:true,revision,state:'published'});
   });
   return res.status(outcome.status).json(outcome.body);
