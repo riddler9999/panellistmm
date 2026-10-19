@@ -38,7 +38,10 @@ export default async function handler(req:Req,res:Res) {
   );
   if(drafts.length>1)return result(409).json({error:'draft_changed'});
   const messageDraft=drafts[0]??null;
-  const ticket={Request_Text:conversation?.original_request??'',Consultant_Answer:'',Clarification_Question:'',AI_Answer:'',Sheet_AI_Answer:'',Review_Status:''};
+  const userMessages=await db<Array<{content:string}>>(
+   'pocket_hr_messages?select=content&request_id=eq.'+encodeURIComponent(input.requestId)+'&sender=eq.user&order=created_at.asc&limit=1'
+  );
+  const ticket={Request_Text:userMessages[0]?.content??'',Consultant_Answer:'',Clarification_Question:'',AI_Answer:'',Sheet_AI_Answer:'',Review_Status:''};
   if((req.body as {draftVersion?:unknown}).draftVersion!==draftVersion(ticket,messageDraft?.content)) return result(409).json({error:'draft_changed'});
   const proof=await readProof(input.requestId);
   const body=req.body as {options?:unknown;attachmentIds?:unknown};
