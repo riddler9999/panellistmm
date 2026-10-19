@@ -99,6 +99,23 @@ describe('consultation messages access and release', () => {
   expect(body.messages).toHaveLength(1);
   expect(JSON.stringify(body)).not.toContain('Reviewed answer');
  });
+ it('keeps multiple approval revisions scoped to their matching delivery proof', async () => {
+  const newer = {...messages[2],message_id:'c',publication_revision:2,approved_content:'Second reviewed answer'};
+  vi.mocked(db).mockImplementation(async (path: string) => {
+   if(path.startsWith('pocket_hr_messages?')) return [...messages,newer];
+   if(path.startsWith('pocket_hr_approvals?')) return [
+    {request_id:'R-1',revision:1,approved_content:'Reviewed answer',approved_by_email:'reviewer@example.com',approved_at:'2026-10-19T00:02:30Z'},
+    {request_id:'R-1',revision:2,approved_content:'Second reviewed answer',approved_by_email:'reviewer@example.com',approved_at:'2026-10-19T00:04:30Z'},
+   ];
+   if(path.startsWith('pocket_hr_deliveries?')) return [
+    {request_id:'R-1',revision:1,result:'success',delivered_at:'2026-10-19T00:03:00Z'},
+    {request_id:'R-1',revision:2,result:'failed',delivered_at:null},
+   ];
+   throw Error('unexpected_query');
+  });
+  const {body}=await call();
+  expect(body.messages.map((m: {content:string})=>m.content)).toEqual(['Question','Reviewed answer']);
+ });
  it('allows authenticated Admin to inspect pending drafts', async () => {
   vi.mocked(authenticatedPrincipal).mockResolvedValue({role:'Admin',email:'admin@example.com'});
   const {status,body}=await call();
