@@ -56,6 +56,42 @@ describe('consultation messages access and release', () => {
   expect(body.messages).toHaveLength(1);
   expect(JSON.stringify(body)).not.toContain('Reviewed answer');
  });
+ it('rejects malformed request identifiers before storage access', async () => {
+  expect((await call({requestId:['R-1']})).status).toBe(400);
+  expect((await call({requestId:'x'.repeat(257)})).status).toBe(400);
+  expect(db).not.toHaveBeenCalled();
+ });
+ it('withholds an approved answer when delivery is pending or failed', async () => {
+  for (const result of ['pending','failed']) {
+   vi.mocked(db).mockImplementation(async (path: string) => {
+    if(path.startsWith('pocket_hr_messages?')) return messages;
+    if(path.startsWith('pocket_hr_approvals?')) return [{request_id:'R-1',revision:1,approved_content:'Reviewed answer',approved_by_email:'reviewer@example.com',approved_at:'2026-10-19T00:02:30Z'}];
+    if(path.startsWith('pocket_hr_deliveries?')) return [{request_id:'R-1',revision:1,result,delivered_at:null}];
+    throw Error('unexpected_query');
+   });
+   const {status,body}=await call();
+   expect(status).toBe(200);
+   expect(body.messages).toHaveLength(1);
+   expect(JSON.stringify(body)).not.toContain('SECRET');
+   expect(JSON.stringify(body)).not.toContain('Reviewed answer');
+  }
+ });
+ it('withholds an answer if approved snapshot content differs', async () => {
+  vi.mocked(db).mockImplementation(async (path: string) => {
+   if(path.startsWith('pocket_hr_messages?')) return messages;
+   if(path.startsWith('pocket_hr_approvals?')) return [{request_id:'R-1',revision:1,approved_content:'Different answer',approved_by_email:'reviewer@example.com',approved_at:'2026-10-19T00:02:30Z'}];
+   if(path.startsWith('pocket_hr_deliveries?')) return [{request_id:'R-1',revision:1,result:'success',delivered_at:'2026-10-19T00:03:00Z'}];
+   throw Error('unexpected_query');
+  });
+  const {body}=await call();
+  expect(body.messages).toHaveLength(1);
+ });
+ it('fails closed when proof storage is unavailable', async () => {
+  vi.mocked(db).mockRejectedValue(new Error('storage_down'));
+  const {status,body}=await call();
+  expect(status).toBe(503);
+  expect(JSON.stringify(body)).not.toContain('SECRET');
+ });
  it('allows authenticated Admin to inspect pending drafts', async () => {
   vi.mocked(authenticatedPrincipal).mockResolvedValue({role:'Admin',email:'admin@example.com'});
   const {status,body}=await call();
