@@ -6,7 +6,7 @@ import { db, readTickets } from '../server/pocketHrData';
 vi.mock('../server/passcodeAuth', () => ({ authenticatedPrincipal: vi.fn() }));
 vi.mock('../server/pocketHrData', () => ({ db: vi.fn(), readTickets: vi.fn() }));
 const headers = { cookie: 'pocket_hr_session=synthetic' };
-const rows = [{ 'Row ID': 'R-1', Owner_Email: 'owner@example.com' }];
+const rows = [{ 'Row ID': 'R-1', Owner_Email: 'owner@example.com', Ticket_Status: 'Approved' }];
 const messages = [
  { message_id: 'u', request_id: 'R-1', sender: 'user', content: 'Question', review_state: null, approved_content: null, publication_revision: null, created_at: '2026-10-19T00:00:00Z' },
  { message_id: 'a', request_id: 'R-1', sender: 'agent', content: 'SECRET DRAFT', review_state: 'pending_review', approved_content: null, publication_revision: null, created_at: '2026-10-19T00:01:00Z' },
@@ -91,6 +91,13 @@ describe('consultation messages access and release', () => {
   const {status,body}=await call();
   expect(status).toBe(503);
   expect(JSON.stringify(body)).not.toContain('SECRET');
+ });
+ it('does not publish an acknowledged answer while Sheet status is still Delivery Pending', async () => {
+  vi.mocked(readTickets).mockResolvedValue([{...rows[0],Ticket_Status:'Delivery Pending'}]);
+  const {status,body}=await call();
+  expect(status).toBe(200);
+  expect(body.messages).toHaveLength(1);
+  expect(JSON.stringify(body)).not.toContain('Reviewed answer');
  });
  it('allows authenticated Admin to inspect pending drafts', async () => {
   vi.mocked(authenticatedPrincipal).mockResolvedValue({role:'Admin',email:'admin@example.com'});
