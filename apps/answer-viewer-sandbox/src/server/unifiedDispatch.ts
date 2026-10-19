@@ -8,6 +8,8 @@ export type UnifiedDispatchInput = {
 
 export async function dispatchUnifiedRequest(input: UnifiedDispatchInput): Promise<void> {
   const rawUrl = process.env.N8N_DISPATCH_WEBHOOK_URL;
+  const token = process.env.N8N_DISPATCH_AUTH_TOKEN;
+  if (!token?.trim()) throw new Error('dispatcher_not_configured');
   if (!rawUrl) throw new Error('dispatcher_not_configured');
   let url: URL;
   try { url = new URL(rawUrl); }
@@ -16,7 +18,7 @@ export async function dispatchUnifiedRequest(input: UnifiedDispatchInput): Promi
 
   const response = await fetch(url, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', 'X-Panellist-Dispatch-Token': token },
     body: JSON.stringify({
       request_id: input.requestId,
       company_id: null,
