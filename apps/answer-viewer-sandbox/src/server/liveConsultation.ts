@@ -39,7 +39,7 @@ export async function loadLiveConsultations(principal: Principal): Promise<Consu
   }
   const rows: TicketRow[] = accessible.map(request => ({
     'Row ID': request.request_id,
-    Owner_Email: ownerById.get(request.owner_account_id) ?? '',
+    Owner_Email: ownerById.get(request.owner_account_id) ?? (principal.role === 'User' && 'accountId' in principal && request.owner_account_id === principal.accountId ? principal.email.trim().toLowerCase() : ''),
     Ticket_Title: 'HR Consultation',
     Ticket_Status: 'Submitted',
     Ticket_Category: '',
