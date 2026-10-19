@@ -111,16 +111,11 @@ export async function readProof(requestId: string): Promise<{ approval: Approval
   return proofs.get(requestId) ?? { approval: null, delivery: null };
 }
 export async function acknowledgeDelivery(requestId: string, revision: number): Promise<boolean> {
-  // Durable publication acknowledgement, NOT proof that the user opened the page.
-  // A failed write leaves the approved snapshot inaccessible to users until retry succeeds.
-  const { url, key } = config();
-  const response = await fetch(url + '/rest/v1/pocket_hr_deliveries?on_conflict=request_id,revision', {
-    method: 'POST',
-    headers: { apikey: key, Authorization: 'Bearer ' + key, 'Content-Type': 'application/json', Prefer: 'resolution=merge-duplicates,return=representation' },
-    body: JSON.stringify({ request_id: requestId, revision, result: 'success', delivered_at: new Date().toISOString() }),
-    cache: 'no-store',
-  });
-  return response.ok;
+ // Only a pending, exact-revision ledger entry may transition to success.
+ // The RPC is safe to retry and refuses to resurrect a failed delivery.
+ return db<boolean>('rpc/pocket_hr_acknowledge_publication','POST',{
+  p_request_id:requestId,p_revision:revision
+ });
 }
 
 /** Read approval/delivery proofs in two bounded queries rather than two queries per ticket.
