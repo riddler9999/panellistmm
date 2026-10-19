@@ -3,6 +3,7 @@ import { draftVersion } from './draftVersion.js';
 import type { TicketRow } from './ticketRow';
 
 export type Principal = { email: string; name?: string; role: 'Admin' | 'User' };
+export type AuthenticatedPrincipal = Principal & { accountId: string };
 export type ConsultationTicket = { ticketId: string; requesterName?: string; requesterEmail?:string; options?: string[]; attachments?: ResponseAttachment[]; draftOptions?: string[]; draftAttachments?: ResponseAttachment[]; draftVersion?: string; conversation?: Array<{role:'user'|'consultant';content:string;revision:number;attachments?:ResponseAttachment[];options?:string[]}>; responseApproved?: boolean; closed?: boolean; autoCloseAt?: string; syncPending?: boolean; revision?: number; title: string; status: string; finalAnswer?: string; approvedQuestion?: string; category?: string; createdAt?: string; description?: string; reviewStatus?: string; processingStatus?: string; artifact?: { type?: string; title?: string; format?: string; status?: string; url?: string }; history: Array<{ type: 'QUESTION' | 'ANSWER' | 'ADVICE'; content: string; round: number }> };
 const validEmail = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 const string = (value: unknown) => typeof value === 'string' ? value.trim() : '';

@@ -1,7 +1,7 @@
 import type { ResponseAttachment } from '../domain/reviewedResponse';
 import { messageParts } from '../domain/messageParts';
 import { ticketStatus } from '../domain/ticketStatus';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ConsultationTicket } from '../server/consultationAccess';
 
 
@@ -11,6 +11,7 @@ const ticketIcon = (status: string) => ticketIcons[status] ?? '▣';
 
 export function ConsultationDashboard({side = 'user'}: {side?: 'user'|'admin'}) {
   const consultationUrl = '/api/consultation?side=' + side;
+  const createRequestKey=useRef<string|null>(null);
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<string>('All');
   const [selected, setSelected] = useState<string | null>(null);
@@ -129,10 +130,11 @@ export function ConsultationDashboard({side = 'user'}: {side?: 'user'|'admin'}) 
     event.preventDefault();if(requestBusy)return;
     setRequestBusy(true);setRequestError('');
     try{
+      createRequestKey.current??=crypto.randomUUID();
       const response=await fetch('/api/consultation-create',{method:'POST',credentials:'include',
-        headers:{'Content-Type':'application/json'},body:JSON.stringify({title:newTitle,category:newCategory,description:newDescription})});
+        headers:{'Content-Type':'application/json','Idempotency-Key':createRequestKey.current},body:JSON.stringify({title:newTitle,category:newCategory,description:newDescription})});
       if(!response.ok)throw new Error('create_failed');
-      await refreshTickets();setCreating(false);setNewTitle('');setNewCategory('');setNewDescription('');
+      await refreshTickets();createRequestKey.current=null;setCreating(false);setNewTitle('');setNewCategory('');setNewDescription('');
     }catch{setRequestError('Could not submit request. Please retry.');}
     finally{setRequestBusy(false);}
   }

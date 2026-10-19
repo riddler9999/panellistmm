@@ -19,7 +19,7 @@ const req={method:'POST',headers:{origin:'https://panellistmm.vercel.app',host:'
 describe('approval publication ordering',()=>{
  beforeEach(()=>{
   vi.resetAllMocks();
-  vi.mocked(authenticatedPrincipal).mockResolvedValue({email:'admin@example.com',role:'Admin'});
+  vi.mocked(authenticatedPrincipal).mockResolvedValue({accountId:'00000000-0000-4000-8000-000000000001',email:'admin@example.com',role:'Admin'});
   vi.mocked(readTickets).mockResolvedValue([{'Row ID':'T-1',Owner_Email:'user@example.com'}]);
   vi.mocked(db).mockResolvedValue(1);
   vi.mocked(acknowledgeDelivery).mockResolvedValue(true);
@@ -44,7 +44,7 @@ describe('approval publication ordering',()=>{
   expect(writeTicketPublication).toHaveBeenCalledTimes(2);
  });
  it('denies role spoofing without snapshot creation',async()=>{
-  vi.mocked(authenticatedPrincipal).mockResolvedValue({email:'user@example.com',role:'User'});
+  vi.mocked(authenticatedPrincipal).mockResolvedValue({accountId:'00000000-0000-4000-8000-000000000001',email:'user@example.com',role:'User'});
   const {res,result}=response();
   await handler(req,res);
   expect(result().status).toBe(403);

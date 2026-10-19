@@ -11,7 +11,7 @@ async function request(body:unknown){
  return status;
 }
 describe('account administration input contract',()=>{
- beforeEach(()=>{vi.resetAllMocks();vi.mocked(authenticatedPrincipal).mockResolvedValue({role:'Admin',email:'admin@example.com'});});
+ beforeEach(()=>{vi.resetAllMocks();vi.mocked(authenticatedPrincipal).mockResolvedValue({accountId:'00000000-0000-4000-8000-000000000001',role:'Admin',email:'admin@example.com'});});
  it('accepts a normal email and four digit PIN including leading zero',async()=>{
   expect(await request({action:'create',email:'user@example.com',role:'User',passcode:'0123'})).toBe(201);
   expect(writePasscodeAccount).toHaveBeenCalledWith('create','user@example.com','0123','User');
@@ -21,7 +21,7 @@ describe('account administration input contract',()=>{
   expect(writePasscodeAccount).not.toHaveBeenCalled();
  });
  it('rejects user role even with a valid payload',async()=>{
-  vi.mocked(authenticatedPrincipal).mockResolvedValue({role:'User',email:'user@example.com'});
+  vi.mocked(authenticatedPrincipal).mockResolvedValue({accountId:'00000000-0000-4000-8000-000000000001',role:'User',email:'user@example.com'});
   expect(await request({action:'create',email:'other@example.com',role:'Admin',passcode:'0123'})).toBe(403);
   expect(writePasscodeAccount).not.toHaveBeenCalled();
  });

@@ -210,11 +210,23 @@ export async function writePasscodeAccount(action:'create'|'reset'|'disable', em
 
 /** Append a new request to the existing Sheet1 bridge. Owner is derived from session. */
 export async function createSheetRequest(ownerEmail:string,title:string,category:string,description:string):Promise<string>{
+ return createSheetRequestWithId(randomUUID(),ownerEmail,title,category,description);
+}
+/** Retry-safe Sheet bridge append using the server-issued idempotency key as Row ID. */
+export async function createSheetRequestWithId(requestId:string,ownerEmail:string,title:string,category:string,description:string):Promise<string>{
  const id=process.env.POCKET_HR_SHEET_ID;
  if(!id) throw new Error('sheet_not_configured');
- const requestId=randomUUID();
  const rows=await readTickets();
- if(rows.some(row=>row['Row ID']===requestId)) throw new Error('request_id_collision');
+ const existing=rows.filter(row=>String(row['Row ID']??'').trim()===requestId);
+ if(existing.length>1) throw new Error('request_id_duplicate');
+ if(existing.length===1) {
+  const row=existing[0];
+  if(String(row.Owner_Email??'').trim().toLowerCase()!==ownerEmail.trim().toLowerCase()
+   || String(row.Ticket_Title??'').trim()!==title
+   || String(row.Ticket_Category??'').trim()!==category
+   || String(row.Request_Text??'').trim()!==description) throw new Error('request_id_conflict');
+  return requestId;
+ }
  const values=Array(34).fill('');
  values[0]=requestId;values[1]=title;values[2]='Submitted';values[3]=category;
  values[4]=description;values[8]=new Date().toISOString();values[31]=ownerEmail;

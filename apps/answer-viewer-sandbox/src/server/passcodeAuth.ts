@@ -1,7 +1,7 @@
 import { randomBytes, createHash } from 'node:crypto';
-import { readPasscodeAccounts } from './pocketHrData.js';
+import { db, readPasscodeAccounts } from './pocketHrData.js';
 import { redisCommand, allowAttempt } from './pocketHrRedis.js';
-import type { Principal } from './consultationAccess.js';
+import type { AuthenticatedPrincipal } from './consultationAccess.js';
 
 async function loginStage<T>(stage:string,operation:()=>Promise<T>):Promise<T>{
  try{return await operation();}catch(error){
@@ -46,7 +46,7 @@ export async function authenticate(pin: string, source = 'unknown'): Promise<str
  await loginStage('session_write',()=>redisCommand(['SET','phr:session:'+digest(token),JSON.stringify({email:identity.email,version:version??'0'}),'EX',2592000]));
  return token;
 }
-export async function authenticatedPrincipal(headers: Record<string,string|string[]|undefined>): Promise<Principal|null> {
+export async function authenticatedPrincipal(headers: Record<string,string|string[]|undefined>): Promise<AuthenticatedPrincipal|null> {
  const token = cookieToken(headers);
  if (!token) return null;
  const raw = await redisCommand<string|null>(['GET','phr:session:'+digest(token)]);
@@ -60,7 +60,13 @@ export async function authenticatedPrincipal(headers: Record<string,string|strin
  const entries = await readPasscodeAccounts();
  const matches = entries.filter(entry => entry.email === email);
  if (matches.length !== 1 || matches[0].status !== 'Active' || !['Admin','User'].includes(matches[0].role)) return null;
- return { email, role: matches[0].role as Principal['role'] };
+ const accounts = await db<Array<{id:string;email:string;role:string;disabled_at:string|null}>>(
+  'pocket_hr_accounts?select=id,email,role,disabled_at&email=eq.'+encodeURIComponent(email),
+ );
+ if(accounts.length!==1) return null;
+ const account=accounts[0];
+ if(account.email.trim().toLowerCase()!==email || account.disabled_at!==null || !['Admin','User'].includes(account.role)) return null;
+ return { accountId:account.id, email, role:account.role as AuthenticatedPrincipal['role'] };
 }
 export async function revokeSession(headers: Record<string,string|string[]|undefined>): Promise<void> {
  const token = cookieToken(headers);
