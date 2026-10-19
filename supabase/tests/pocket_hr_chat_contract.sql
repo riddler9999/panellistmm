@@ -50,7 +50,64 @@ begin
  exception when sqlstate 'P0001' then
    if sqlerrm='conflicting_retry_accepted' then raise; end if;
  end;
-end $$;
+end $;
+-- Failure and stale-write regression scenarios use isolated synthetic requests.
+do $
+declare
+  r text := 'chat-failure-' || gen_random_uuid()::text;
+  m uuid;
+  v integer;
+  before_approvals integer;
+begin
+  insert into public.pocket_hr_conversations(request_id,original_request)
+  values (r,'Failure-path synthetic request');
+  insert into public.pocket_hr_messages(request_id,sender,content,review_state)
+  values (r,'agent','Immutable AI draft','pending_review') returning message_id into m;
+
+  -- Reject stale expected revisions without allocating a publication.
+  begin
+    perform public.pocket_hr_approve_message(m,2,'Reviewed answer','reviewer@example.com');
+    raise exception 'stale_revision_accepted';
+  exception when others then
+    if sqlerrm = 'stale_revision_accepted' then raise; end if;
+  end;
+  if exists (select 1 from public.pocket_hr_approvals where request_id=r)
+    or exists (select 1 from public.pocket_hr_deliveries where request_id=r)
+  then raise exception 'stale_revision_created_side_effects'; end if;
+
+  -- An error after ledger insertion must roll back the ledger, delivery and message
+  -- together, not leave a partial approval behind.
+  begin
+    v := public.pocket_hr_approve_message(m,1,'Reviewed answer','reviewer@example.com');
+    raise exception 'synthetic_failure_after_approval';
+  exception when others then
+    if sqlerrm <> 'synthetic_failure_after_approval' then raise; end if;
+  end;
+  if exists (select 1 from public.pocket_hr_approvals where request_id=r)
+    or exists (select 1 from public.pocket_hr_deliveries where request_id=r)
+    or exists (select 1 from public.pocket_hr_messages
+               where message_id=m and review_state='approved')
+  then raise exception 'failed_transaction_left_partial_approval'; end if;
+
+  -- A real approval creates one pending outbox entry; retry does not duplicate it.
+  v := public.pocket_hr_approve_message(m,1,'Reviewed answer','reviewer@example.com');
+  if v <> 1 then raise exception 'recovery_approval_revision_failed'; end if;
+  if public.pocket_hr_approve_message(m,1,'Reviewed answer','reviewer@example.com') <> v
+  then raise exception 'recovery_idempotency_failed'; end if;
+  if (select count(*) from public.pocket_hr_approvals where request_id=r) <> 1
+     or (select count(*) from public.pocket_hr_deliveries
+         where request_id=r and revision=v and result='pending') <> 1
+  then raise exception 'recovery_created_duplicate_records'; end if;
+
+  -- A failed delivery must never be treated as a successful publication.
+  update public.pocket_hr_deliveries set result='failed'
+  where request_id=r and revision=v;
+  if public.pocket_hr_acknowledge_publication(r,v)
+  then raise exception 'failed_delivery_was_acknowledged'; end if;
+  if exists (select 1 from public.pocket_hr_deliveries
+             where request_id=r and revision=v and result='success')
+  then raise exception 'failed_delivery_became_success'; end if;
+end $;
 -- Direct anon/authenticated access must remain disabled.
 do $$
 begin
@@ -61,4 +118,5 @@ begin
  then raise exception 'message_access_exposed'; end if;
 end $$;
 rollback;
--- Concurrent connections and stale revision rejection require integration tests.
+-- Two-connection concurrency and authorization through the backend still require integration tests.
+-- Requires the PR #18 acknowledgement migration as well as the chat migration.
