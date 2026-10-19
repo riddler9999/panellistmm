@@ -64,9 +64,9 @@ export default async function handler(req:Req,res:Res) {
   // Publication is a multi-system operation; do not acknowledge before Sheet writes succeed.
   await writeTicketPublication(input.requestId,{C:'Delivery Pending',Y:'Delivery Pending'});
   await writeTicketPublication(input.requestId,{H:input.content!});
-  await writeTicketPublication(input.requestId,{C:'Approved',Y:'Approved'});
   if(!await acknowledgeDelivery(input.requestId,revision))
     return result(503).json({error:'delivery_ack_pending',revision});
+  await writeTicketPublication(input.requestId,{C:'Approved',Y:'Approved'});
   return result(200).json({ok:true,revision,state:'published'});
   });
   return res.status(outcome.status).json(outcome.body);
