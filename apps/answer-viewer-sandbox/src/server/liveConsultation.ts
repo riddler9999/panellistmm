@@ -1,7 +1,8 @@
 import { decodeResponse, parseDraftResponse } from '../domain/reviewedResponse.js';
 import { readConversations, shouldAutoClose, AUTO_CLOSE_MS } from './conversationLifecycle.js';
 import { canAccessTicket, projectConsultationTicket, type Principal, type ConsultationTicket } from './consultationAccess.js';
-import { db, readTickets, readProofs, readPasscodeAccounts } from './pocketHrData.js';
+import { db, readProofs, readPasscodeAccounts } from './pocketHrData.js';
+import type { TicketRow } from './ticketRow.js';
 import { draftVersion } from './draftVersion.js';
 import { releasedAnswer } from './deliveryPolicy.js';
 
@@ -10,7 +11,41 @@ export async function loadLiveConsultations(principal: Principal): Promise<Consu
   if (!principal || !['Admin', 'Consultant', 'User'].includes(principal.role) || !principal.email?.trim()) {
     throw new Error('verified_principal_required');
   }
-  const rows = (await readTickets()).filter(row => canAccessTicket(principal, row));
+  // Supabase is authoritative for new requests. The legacy Sheet bridge may
+  // contain blank/duplicate row IDs and must not take the live dashboard down.
+  // Ownership is resolved from verified session identity, never URL parameters.
+  const requestRows = await db<Array<{request_id:string;owner_account_id:string;created_at:string}>>(
+    'pocket_hr_requests?select=request_id,owner_account_id,created_at&order=created_at.desc&limit=1000',
+  );
+  const accountsForOwners = await db<Array<{id:string;email:string}>>(
+    'pocket_hr_accounts?select=id,email&limit=1000',
+  );
+  const ownerById = new Map(accountsForOwners.map(account => [account.id, account.email.trim().toLowerCase()]));
+  const accessible = requestRows.filter(request =>
+    principal.role !== 'User' ||
+    ('accountId' in principal && request.owner_account_id === principal.accountId) ||
+    ownerById.get(request.owner_account_id) === principal.email.trim().toLowerCase()
+  );
+  const idsForMessages = accessible.map(request => request.request_id);
+  const firstUserMessage = new Map<string,string>();
+  for (let i = 0; i < idsForMessages.length; i += 200) {
+    const batch = idsForMessages.slice(i,i+200);
+    const filter = batch.map(id => JSON.stringify(id)).join(',');
+    const messages = await db<Array<{request_id:string;content:string}>>(
+      'pocket_hr_messages?select=request_id,content&sender=eq.user&request_id=in.(' + encodeURIComponent(filter) + ')&order=created_at.asc&limit=1000',
+    );
+    for (const message of messages) if (batch.includes(message.request_id) && !firstUserMessage.has(message.request_id))
+      firstUserMessage.set(message.request_id, message.content);
+  }
+  const rows: TicketRow[] = accessible.map(request => ({
+    'Row ID': request.request_id,
+    Owner_Email: ownerById.get(request.owner_account_id) ?? '',
+    Ticket_Title: 'HR Consultation',
+    Ticket_Status: 'Submitted',
+    Ticket_Category: '',
+    Request_Text: firstUserMessage.get(request.request_id) ?? '',
+    Created_At: request.created_at,
+  })).filter(row => canAccessTicket(principal, row));
   const proofs: Awaited<ReturnType<typeof readProofs>> = new Map();
   const ids = rows
     .filter(row => principal.role !== 'User' || ['Approved','Resolved','Closed','Delivered'].includes(String(row.Ticket_Status).trim()))
