@@ -8,7 +8,9 @@ export type UnifiedDispatchInput = {
 
 export async function dispatchUnifiedRequest(input: UnifiedDispatchInput): Promise<void> {
   const rawUrl = process.env.N8N_DISPATCH_WEBHOOK_URL;
+  const sharedSecret = process.env.N8N_DISPATCH_SHARED_SECRET;
   if (!rawUrl) throw new Error('dispatcher_not_configured');
+  if (!sharedSecret || !/^[0-9a-f]{64}$/i.test(sharedSecret)) throw new Error('dispatcher_not_configured');
   let url: URL;
   try { url = new URL(rawUrl); }
   catch { throw new Error('dispatcher_not_configured'); }
@@ -16,7 +18,7 @@ export async function dispatchUnifiedRequest(input: UnifiedDispatchInput): Promi
 
   const response = await fetch(url, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', 'x-pocket-hr-service': sharedSecret },
     body: JSON.stringify({
       request_id: input.requestId,
       company_id: null,

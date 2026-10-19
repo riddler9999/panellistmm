@@ -10,6 +10,10 @@ export default async function handler(req:Req,res:Res) {
   catch{return res.status(503).json({error:'auth_unavailable'});}
  }
  if(req.method!=='GET') return res.status(405).json({error:'method_not_allowed'});
- try {const principal=await authenticatedPrincipal(req.headers);return principal?res.status(200).json(principal):res.status(401).json({error:'unauthenticated'});}
+ try {
+  const principal=await authenticatedPrincipal(req.headers);
+  if(!principal)return res.status(401).json({error:'unauthenticated'});
+  return res.status(200).json({email:principal.email,role:principal.role,...(principal.name?{name:principal.name}:{})});
+ }
  catch{return res.status(503).json({error:'auth_unavailable'});}
 }

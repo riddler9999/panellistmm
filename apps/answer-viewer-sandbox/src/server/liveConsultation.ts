@@ -12,7 +12,7 @@ export async function loadLiveConsultations(principal: Principal): Promise<Consu
   const rows = (await readTickets()).filter(row => canAccessTicket(principal, row));
   const proofs: Awaited<ReturnType<typeof readProofs>> = new Map();
   const ids = rows
-    .filter(row => principal.role === 'Admin' || ['Approved','Resolved','Closed','Delivered'].includes(String(row.Ticket_Status).trim()))
+    .filter(row => principal.role !== 'User' || ['Approved','Resolved','Closed','Delivered'].includes(String(row.Ticket_Status).trim()))
     .map(row => String(row['Row ID'] ?? '').trim());
   for (let i = 0; i < ids.length; i += 200) {
     const batch = await readProofs(ids.slice(i,i+200));
@@ -34,7 +34,7 @@ export async function loadLiveConsultations(principal: Principal): Promise<Consu
     }
     const state = conversations.get(ticket.ticketId);
     const proof = proofs.get(ticket.ticketId);
-    if (principal.role==='Admin' && proof?.approval && (state?.reply_revision??0)<proof.approval.revision && !ticket.finalAnswer) {const response=decodeResponse(proof.approval.approvedContent);ticket.history=[{type:'ADVICE',content:response.text,round:proof.approval.revision}];ticket.draftOptions=response.options;ticket.draftAttachments=response.attachments;}
+    if (principal.role!=='User' && proof?.approval && (state?.reply_revision??0)<proof.approval.revision && !ticket.finalAnswer) {const response=decodeResponse(proof.approval.approvedContent);ticket.history=[{type:'ADVICE',content:response.text,round:proof.approval.revision}];ticket.draftOptions=response.options;ticket.draftAttachments=response.attachments;}
     ticket.description = state?.original_request ?? ticket.description;
     ticket.conversation = state?.entries ?? [];
     ticket.syncPending = state?.pending_sync ?? false;
