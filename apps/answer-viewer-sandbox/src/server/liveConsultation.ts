@@ -47,9 +47,7 @@ export async function loadLiveConsultations(principal: Principal): Promise<Consu
     Created_At: request.created_at,
   })).filter(row => canAccessTicket(principal, row));
   const proofs: Awaited<ReturnType<typeof readProofs>> = new Map();
-  const ids = rows
-    .filter(row => principal.role !== 'User' || ['Approved','Resolved','Closed','Delivered'].includes(String(row.Ticket_Status).trim()))
-    .map(row => String(row['Row ID'] ?? '').trim());
+  const ids = rows.map(row => String(row['Row ID'] ?? '').trim());
   for (let i = 0; i < ids.length; i += 200) {
     const batch = await readProofs(ids.slice(i,i+200));
     for (const [id, proof] of batch) proofs.set(id, proof);
@@ -83,11 +81,15 @@ export async function loadLiveConsultations(principal: Principal): Promise<Consu
     const ownerAccounts=accounts.filter(account=>account.email===String(row.Owner_Email??'').trim().toLowerCase());
     ticket.requesterName=ownerAccounts.length===1 ? ownerAccounts[0].name || undefined : undefined;
     ticket.revision = proofs.get(ticket.ticketId)?.approval?.revision ?? 0;
-    // Sheet controls lifecycle; immutable approval + matching delivery control release.
-    if (['Approved','Resolved','Closed','Delivered'].includes(String(row.Ticket_Status ?? '').trim())) {
-      const proof = proofs.get(ticket.ticketId);
-      const answer = releasedAnswer(principal, row, proof?.approval ?? null, proof?.delivery ?? null);
-      if (answer) {const response=decodeResponse(answer);ticket.finalAnswer=response.text;ticket.options=response.options;ticket.attachments=response.attachments;}
+    // Supabase approval and successful matching delivery are the only release authority.
+    const releaseProof = proofs.get(ticket.ticketId);
+    const answer = releasedAnswer(principal, row, releaseProof?.approval ?? null, releaseProof?.delivery ?? null);
+    if (answer) {
+      const response=decodeResponse(answer);
+      ticket.finalAnswer=response.text;
+      ticket.options=response.options;
+      ticket.attachments=response.attachments;
+      ticket.status='Approved';
     }
     const state = conversations.get(ticket.ticketId);
     const proof = proofs.get(ticket.ticketId);
