@@ -13,7 +13,7 @@ const messages = [
  { message_id: 'b', request_id: 'R-1', sender: 'agent', content: 'SECRET ORIGINAL', review_state: 'approved', approved_content: 'Reviewed answer', publication_revision: 1, created_at: '2026-10-19T00:02:00Z' },
 ];
 async function call(query: Record<string, unknown> = { requestId: 'R-1' }) {
- let status = 200; let body: any;
+ let status = 200; let body: unknown;
  const res = { status(n: number) { status=n; return res; }, setHeader() {}, json(v: unknown) { body=v; } };
  await handler({method:'GET',headers,query},res);
  return {status,body};
@@ -21,7 +21,7 @@ async function call(query: Record<string, unknown> = { requestId: 'R-1' }) {
 describe('consultation messages access and release', () => {
  beforeEach(() => {
   vi.resetAllMocks();
-  vi.mocked(authenticatedPrincipal).mockResolvedValue({role:'User',email:'owner@example.com'});
+  vi.mocked(authenticatedPrincipal).mockResolvedValue({accountId:'00000000-0000-4000-8000-000000000001',role:'User',email:'owner@example.com'});
   vi.mocked(readTickets).mockResolvedValue(rows);
   vi.mocked(db).mockImplementation(async (path: string) => {
    if (path.startsWith('pocket_hr_messages?')) return messages;
@@ -33,7 +33,7 @@ describe('consultation messages access and release', () => {
  it('denies anonymous and other owners before message lookup', async () => {
   vi.mocked(authenticatedPrincipal).mockResolvedValueOnce(null);
   expect((await call()).status).toBe(403);
-  vi.mocked(authenticatedPrincipal).mockResolvedValueOnce({role:'User',email:'other@example.com'});
+  vi.mocked(authenticatedPrincipal).mockResolvedValueOnce({accountId:'00000000-0000-4000-8000-000000000002',role:'User',email:'other@example.com'});
   expect((await call()).status).toBe(404);
   expect(db).not.toHaveBeenCalled();
  });
@@ -93,7 +93,7 @@ describe('consultation messages access and release', () => {
   expect(JSON.stringify(body)).not.toContain('SECRET');
  });
  it('allows authenticated Admin to inspect pending drafts', async () => {
-  vi.mocked(authenticatedPrincipal).mockResolvedValue({role:'Admin',email:'admin@example.com'});
+  vi.mocked(authenticatedPrincipal).mockResolvedValue({accountId:'00000000-0000-4000-8000-000000000003',role:'Admin',email:'admin@example.com'});
   const {status,body}=await call();
   expect(status).toBe(200);
   expect(body.messages).toHaveLength(3);
