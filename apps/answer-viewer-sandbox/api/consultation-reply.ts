@@ -1,7 +1,6 @@
 import { decodeResponse } from '../src/domain/reviewedResponse.js';
 import { authenticatedPrincipal } from '../src/server/passcodeAuth.js';
-import { canAccessTicket } from '../src/server/consultationAccess.js';
-import { readTickets, readProof } from '../src/server/pocketHrData.js';
+import { db, readProof } from '../src/server/pocketHrData.js';
 import { releasedAnswer } from '../src/server/deliveryPolicy.js';
 import { readConversation, saveConversation, syncReply, withTicketLock, shouldAutoClose } from '../src/server/conversationLifecycle.js';
 export const config = { maxDuration: 60 };
@@ -22,10 +21,16 @@ export default async function handler(req:Req,res:Res) {
   if(input.action==='reply' && (typeof input.content!=='string'||!input.content.trim()||input.content.length>10000||!Number.isSafeInteger(input.expectedRevision))) return res.status(400).json({error:'invalid_reply'});
   const result=(status:number)=>({json:(body:unknown)=>({status,body})});
   const outcome = await withTicketLock(input.requestId,async()=>{
-   const ticket=(await readTickets()).find(row=>row['Row ID']===input.requestId);
-   if(!ticket || !canAccessTicket(principal,ticket)) return result(404).json({error:'ticket_not_found'});
-   let state=await readConversation(input.requestId as string) ?? {request_id:input.requestId as string,original_request:String(ticket.Request_Text??''),entries:[],closed_at:null,close_reason:null,reply_revision:0,pending_sync:false};
-   if(state.closed_at || ['Closed','Resolved'].includes(String(ticket.Ticket_Status))) return result(409).json({error:'ticket_closed'});
+   const requests=await db<Array<{request_id:string;owner_account_id:string}>>(
+    'pocket_hr_requests?select=request_id,owner_account_id&request_id=eq.'+encodeURIComponent(input.requestId)+'&limit=2'
+   );
+   if(requests.length!==1 || requests[0].owner_account_id!==identity.accountId)
+    return result(404).json({error:'ticket_not_found'});
+   const stateFromDb=await readConversation(input.requestId);
+   if(!stateFromDb) return result(503).json({error:'conversation_unavailable'});
+   let state=stateFromDb;
+   if(state.closed_at) return result(409).json({error:'ticket_closed'});
+   const ticket={'Row ID':input.requestId,Owner_Email:identity.email};
    if(input.action==='close') {
     await saveConversation({...state,closed_at:new Date().toISOString(),close_reason:'user',pending_sync:false});
     return result(200).json({ok:true});
@@ -39,7 +44,7 @@ export default async function handler(req:Req,res:Res) {
    }
    const proof=await readProof(input.requestId as string);
    const answer=releasedAnswer(principal,ticket,proof.approval,proof.delivery);
-   if(!answer || !proof.approval || proof.approval.revision!==input.expectedRevision || !['Approved','Delivered'].includes(String(ticket.Ticket_Status)) || shouldAutoClose(proof.delivery?.deliveredAt)) return result(409).json({error:'reply_not_available'});
+   if(!answer || !proof.approval || proof.approval.revision!==input.expectedRevision || shouldAutoClose(proof.delivery?.deliveredAt)) return result(409).json({error:'reply_not_available'});
    const response=decodeResponse(answer);
    state={...state,reply_revision:proof.approval.revision,pending_sync:true,entries:[...state.entries,
     {role:'consultant',content:response.text,revision:proof.approval.revision,...(response.attachments.length?{attachments:response.attachments}:{}),...(response.options.length?{options:response.options}:{})},
