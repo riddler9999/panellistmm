@@ -34,14 +34,15 @@ describe('approval publication ordering',()=>{
   expect(writeTicketPublication).toHaveBeenNthCalledWith(2,'T-1',{H:'Approved advice'});
   expect(writeTicketPublication).toHaveBeenNthCalledWith(3,'T-1',{C:'Approved',Y:'Approved'});
   expect(vi.mocked(acknowledgeDelivery).mock.invocationCallOrder[0])
-    .toBeGreaterThan(vi.mocked(writeTicketPublication).mock.invocationCallOrder[2]);
+    .toBeLessThan(vi.mocked(writeTicketPublication).mock.invocationCallOrder[2]);
  });
  it('does not mark Sheet approved if acknowledgement fails',async()=>{
   vi.mocked(acknowledgeDelivery).mockResolvedValue(false);
   const {res,result}=response();
   await handler(req,res);
   expect(result().status).toBe(503);
-  expect(writeTicketPublication).toHaveBeenCalledTimes(3);
+  expect(writeTicketPublication).toHaveBeenCalledTimes(2);
+  expect(writeTicketPublication).not.toHaveBeenCalledWith('T-1',{C:'Approved',Y:'Approved'});
  });
  it('denies role spoofing without snapshot creation',async()=>{
   vi.mocked(authenticatedPrincipal).mockResolvedValue({email:'user@example.com',role:'User'});
