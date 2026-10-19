@@ -35,6 +35,15 @@ begin
  then raise exception 'second_idempotent_retry_failed'; end if;
  if (select count(*) from public.pocket_hr_approvals where request_id=r)<>2
  then raise exception 'duplicate_or_missing_publication'; end if;
+ -- Legacy Sheet and chat approval paths must allocate from the same ledger.
+ if public.pocket_hr_approve_snapshot(r,2,'Legacy approved answer','reviewer@example.com')<>3
+ then raise exception 'legacy_revision_not_shared'; end if;
+ insert into public.pocket_hr_messages(request_id,sender,content,review_state)
+ values(r,'agent','Third AI draft','pending_review') returning message_id into m2;
+ if public.pocket_hr_approve_message(m2,1,'Third approved answer','reviewer@example.com')<>4
+ then raise exception 'chat_revision_not_shared'; end if;
+ if (select count(*) from public.pocket_hr_deliveries where request_id=r)<>4
+ then raise exception 'shared_outbox_revision_failed'; end if;
  begin
    perform public.pocket_hr_approve_message(m2,1,'Changed answer','reviewer@example.com');
    raise exception 'conflicting_retry_accepted';
