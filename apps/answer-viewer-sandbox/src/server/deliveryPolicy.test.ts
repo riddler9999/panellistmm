@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { deliveryKey, releasedAnswer, type ApprovalProof, type DeliveryProof } from './deliveryPolicy';
 const user = { email: 'owner@example.com', role: 'User' as const };
-const ticket = { 'Row ID': 'r-1', Owner_Email: 'owner@example.com', Final_Answer: 'mutable sheet value' };
+const ticket = { 'Row ID': 'r-1', Owner_Email: 'owner@example.com', Final_Answer: 'mutable sheet value', Ticket_Status: 'Approved' };
 const approval: ApprovalProof = { requestId: 'r-1', revision: 2, approvedContent: 'approved snapshot', approvedByAccountId: 'uuid-1', approvedAt: '2026-10-14T00:00:00Z' };
 const delivery: DeliveryProof = { requestId: 'r-1', revision: 2, result: 'success', deliveredAt: '2026-10-14T00:00:01Z' };
 describe('immutable approval and delivery release policy', () => {
@@ -28,6 +28,10 @@ describe('immutable approval and delivery release policy', () => {
     expect(releasedAnswer(user, ticket, {...approval,requestId:'r-2'}, delivery)).toBeNull();
     expect(releasedAnswer(user, ticket, {...approval,approvedByAccountId:''}, delivery)).toBeNull();
     expect(releasedAnswer(user, ticket, approval, {...delivery,deliveredAt:null})).toBeNull();
+  });
+  it('does not release while Sheet publication is incomplete', () => {
+    expect(releasedAnswer(user, {...ticket,Ticket_Status:'Delivery Pending'}, approval, delivery)).toBeNull();
+    expect(releasedAnswer(user, {...ticket,Ticket_Status:'Submitted'}, approval, delivery)).toBeNull();
   });
   it('never treats Sheet status or final answer as proof', () => {
     expect(releasedAnswer(user, {...ticket,Ticket_Status:'Delivered',Review_Status:'Approved'}, null, null)).toBeNull();
