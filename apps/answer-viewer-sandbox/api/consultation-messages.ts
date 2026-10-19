@@ -35,24 +35,31 @@ export default async function handler(req:Req,res:Res) {
    approvedContent:m.approved_content,publicationRevision:m.publication_revision,createdAt:m.created_at
   }))});
   const sheetPublished=['Approved','Delivered','Resolved','Closed'].includes(String(matches[0].Ticket_Status??'').trim());
-  const approved=messages.filter(m=>m.sender==='agent' && m.review_state==='approved' && Number.isSafeInteger(m.publication_revision) && (m.publication_revision??0)>0);
+  const approved=messages.filter(m=>m.sender==='agent' && m.review_state==='approved' &&
+    Number.isSafeInteger(m.publication_revision) && (m.publication_revision??0)>0);
   const revisions=[...new Set(approved.map(m=>m.publication_revision as number))];
-  let released=new Set<number>();
+  const released=new Set<number>();
   if(sheetPublished && revisions.length) {
    const [approvals,deliveries]=await Promise.all([
     db<Approval[]>('pocket_hr_approvals?select=request_id,revision,approved_content,approved_by_email,approved_at&request_id=eq.'+query(requestId)+'&revision=in.('+revisions.join(',')+')'),
     db<Delivery[]>('pocket_hr_deliveries?select=request_id,revision,result,delivered_at&request_id=eq.'+query(requestId)+'&revision=in.('+revisions.join(',')+')')
    ]);
-   released=new Set(approved.filter(m=>approvals.some(a=>a.request_id===requestId && a.revision===m.publication_revision && a.approved_content===m.approved_content && !!a.approved_at && !!a.approved_by_email) &&
-    deliveries.some(d=>d.request_id===requestId && d.revision===m.publication_revision && d.result==='success' && !!d.delivered_at)).map(m=>m.publication_revision as number));
+   const approvedByRevision=new Map(approvals.map(a=>[a.revision,a]));
+   const delivered=new Set(deliveries.filter(d=>d.request_id===requestId && d.result==='success' && !!d.delivered_at).map(d=>d.revision));
+   for(const m of approved) {
+    const a=approvedByRevision.get(m.publication_revision!);
+    if(a?.request_id===requestId && a.approved_content===m.approved_content &&
+       !!a.approved_at && !!a.approved_by_email && delivered.has(m.publication_revision!))
+      released.add(m.publication_revision!);
+   }
   }
-  return res.status(200).json({requestId,messages:messages.flatMap(m=>{
-   if(m.sender==='user') return [{messageId:m.message_id,sender:'user',content:m.content,createdAt:m.created_at}];
-   if(m.sender==='agent' && m.review_state==='approved' && m.publication_revision!==null && released.has(m.publication_revision))
-    return [{messageId:m.message_id,sender:'agent',content:m.approved_content,createdAt:m.created_at}];
-   if(m.sender==='consultant') return [];
-   return [];
-  })});
+  const visible=messages.filter(m=>m.sender==='user' ||
+    (m.sender==='agent' && m.review_state==='approved' &&
+     m.publication_revision!==null && released.has(m.publication_revision)));
+  return res.status(200).json({requestId,messages:visible.map(m=>({
+   messageId:m.message_id,sender:m.sender,
+   content:m.sender==='user'?m.content:m.approved_content,createdAt:m.created_at
+  }))});
  } catch {
   return res.status(503).json({error:'messages_unavailable'});
  }
