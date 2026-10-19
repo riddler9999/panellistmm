@@ -29,6 +29,7 @@ export function releasedAnswer(
   const requestId = value(ticket['Row ID']);
   const owner = value(ticket.Owner_Email).toLowerCase();
   if (!requestId || !owner || (principal.role !== 'Admin' && principal.email.toLowerCase() !== owner)) return null;
+  if (!['Approved','Delivered','Resolved','Closed'].includes(value(ticket.Ticket_Status))) return null;
   if (!approval || !delivery || approval.requestId !== requestId || delivery.requestId !== requestId) return null;
   if (!Number.isSafeInteger(approval.revision) || approval.revision < 1 || delivery.revision !== approval.revision) return null;
   const hasApprover = !!approval.approvedByAccountId || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value(approval.approvedByEmail));
