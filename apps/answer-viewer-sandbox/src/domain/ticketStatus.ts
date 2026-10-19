@@ -1,5 +1,5 @@
 /** Display aliases only; preserve upstream workflow values in storage. */
-export function ticketStatus(status: string, role: 'Admin' | 'User' = 'Admin'): string {
+export function ticketStatus(status: string, role: 'Admin' | 'Consultant' | 'User' = 'Admin'): string {
   const value = status.trim();
   if (role === 'User') {
     if (['Awaiting Review', 'Pending_Review'].includes(value)) return 'Under review';

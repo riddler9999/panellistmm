@@ -16,7 +16,7 @@ export default async function handler(req:Req,res:Res){
   if(req.method==='POST'){
    const origin=req.headers.origin;
    try{if(typeof origin!=='string'||new URL(origin).origin!=='https://'+req.headers.host)return res.status(403).json({error:'access_denied'});}catch{return res.status(403).json({error:'access_denied'});}
-   if(principal.role!=='Admin')return res.status(403).json({error:'access_denied'});
+   if(principal.role==='User')return res.status(403).json({error:'access_denied'});
    const input=req.body as {requestId?:unknown;name?:unknown;base64?:unknown}|undefined;
    if(!input||typeof input.requestId!=='string'||!input.requestId||input.requestId.length>256)return res.status(400).json({error:'invalid_file'});
    const result=(status:number)=>({json:(body:unknown)=>({status,body})});

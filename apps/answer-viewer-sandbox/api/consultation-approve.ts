@@ -22,7 +22,7 @@ export default async function handler(req:Req,res:Res) {
    return res.status(403).json({error:'access_denied'});
  try {
   const principal=await authenticatedPrincipal(req.headers);
-  if(principal?.role!=='Admin') return res.status(403).json({error:'access_denied'});
+  if(!principal || principal.role==='User') return res.status(403).json({error:'access_denied'});
   const input=validateConsultantAction(req.body);
   if(!input || input.action!=='approve') return res.status(400).json({error:'invalid_action'});
   const result=(status:number)=>({json:(body:unknown)=>({status,body})});
@@ -32,7 +32,12 @@ export default async function handler(req:Req,res:Res) {
   const rows=await readTickets();
   const ticket=rows.find(row=>String(row['Row ID']).trim()===input.requestId);
   if(!ticket) return result(404).json({error:'ticket_not_found'});
-  if((req.body as {draftVersion?:unknown}).draftVersion!==draftVersion(ticket)) return result(409).json({error:'draft_changed'});
+  const drafts=await db<Array<{message_id:string;content:string;revision:number}>>(
+   'pocket_hr_messages?select=message_id,content,revision&request_id=eq.'+encodeURIComponent(input.requestId)+'&sender=eq.agent&review_state=eq.pending_review&revision=eq.'+(input.expectedRevision+1)+'&limit=2'
+  );
+  if(drafts.length>1)return result(409).json({error:'draft_changed'});
+  const messageDraft=drafts[0]??null;
+  if((req.body as {draftVersion?:unknown}).draftVersion!==draftVersion(ticket,messageDraft?.content)) return result(409).json({error:'draft_changed'});
   if(['resolved','closed'].includes(String(ticket.Ticket_Status).trim().toLowerCase()))
     return result(409).json({error:'request_already_final'});
   const proof=await readProof(input.requestId);
@@ -49,10 +54,15 @@ export default async function handler(req:Req,res:Res) {
   if(pending && (pending.approvedContent!==content || ![pending.revision,pending.revision-1].includes(input.expectedRevision))) return result(409).json({error:'response_already_approved'});
   let revision:number;
   try {
-   revision=pending?.revision ?? await db<number>('rpc/pocket_hr_approve_snapshot','POST',{
-    p_request_id:input.requestId,p_expected_revision:input.expectedRevision,
-    p_content:content,p_approved_by_email:principal.email
-   });
+   revision=pending?.revision ?? (messageDraft
+    ? await db<number>('rpc/pocket_hr_approve_message','POST',{
+      p_message_id:messageDraft.message_id,p_expected_revision:input.expectedRevision,
+      p_approved_content:content,p_approved_by_email:principal.email,
+     })
+    : await db<number>('rpc/pocket_hr_approve_snapshot','POST',{
+      p_request_id:input.requestId,p_expected_revision:input.expectedRevision,
+      p_content:content,p_approved_by_email:principal.email,
+     }));
   } catch(e) {
    if(e instanceof Error && e.message==='storage_request_failed' && (e as Error & {status?:number}).status===400)
       return result(409).json({error:'revision_conflict'});

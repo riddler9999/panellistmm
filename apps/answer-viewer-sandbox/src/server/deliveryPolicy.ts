@@ -28,7 +28,7 @@ export function releasedAnswer(
 ): string | null {
   const requestId = value(ticket['Row ID']);
   const owner = value(ticket.Owner_Email).toLowerCase();
-  if (!requestId || !owner || (principal.role !== 'Admin' && principal.email.toLowerCase() !== owner)) return null;
+  if (!requestId || !owner || (principal.role === 'User' && principal.email.toLowerCase() !== owner)) return null;
   if (!approval || !delivery || approval.requestId !== requestId || delivery.requestId !== requestId) return null;
   if (!Number.isSafeInteger(approval.revision) || approval.revision < 1 || delivery.revision !== approval.revision) return null;
   const hasApprover = !!approval.approvedByAccountId || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value(approval.approvedByEmail));

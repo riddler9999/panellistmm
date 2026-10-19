@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { loadLiveConsultations } from './liveConsultation';
-import { readTickets, readProofs, readPasscodeAccounts } from './pocketHrData';
+import { db, readTickets, readProofs, readPasscodeAccounts } from './pocketHrData';
 vi.mock('./conversationLifecycle',async(importOriginal)=>({...await importOriginal<typeof import('./conversationLifecycle')>(),readConversations:vi.fn(async()=>new Map())}));
-vi.mock('./pocketHrData', () => ({ readPasscodeAccounts:vi.fn(async()=>[]), readTickets:vi.fn(), readProofs:vi.fn() }));
+vi.mock('./pocketHrData', () => ({ db:vi.fn(async()=>[]), readPasscodeAccounts:vi.fn(async()=>[]), readTickets:vi.fn(), readProofs:vi.fn() }));
 const sheetRows = [
  { 'Row ID':'A-001',Owner_Email:'a@example.com',Ticket_Title:'Leave request',Ticket_Status:'Awaiting Review',AI_Answer:'SECRET AI DRAFT',Final_Answer:'NOT APPROVED' },
  { 'Row ID':'B-001',Owner_Email:'b@example.com',Ticket_Title:'Policy request',Ticket_Status:'Approved',Final_Answer:'SHEET APPROVED ANSWER' },
@@ -12,6 +12,7 @@ describe('live Sheet consultation projection',()=>{
   vi.resetAllMocks();
   vi.mocked(readTickets).mockResolvedValue(sheetRows);
   vi.mocked(readProofs).mockResolvedValue(new Map());
+  vi.mocked(db).mockResolvedValue([]);
  });
  it('rejects unauthenticated principals before reading Sheet',async()=>{
   await expect(loadLiveConsultations(null as never)).rejects.toThrow('verified_principal_required');
@@ -47,8 +48,15 @@ describe('live Sheet consultation projection',()=>{
   expect(rows.find(r=>r.ticketId==='B-001')?.revision).toBe(3);
   expect(readProofs).toHaveBeenCalledWith(['A-001','B-001']);
  });
+ it('lets Consultants review every request and pending Supabase messages',async()=>{
+  vi.mocked(db).mockResolvedValue([{request_id:'A-001',content:'Consultant-only AI draft',revision:1}]);
+  const rows=await loadLiveConsultations({email:'consultant@example.com',role:'Consultant'});
+  expect(rows.map(row=>row.ticketId)).toEqual(['A-001','B-001']);
+  expect(rows.find(row=>row.ticketId==='A-001')?.history[0]?.content).toBe('Consultant-only AI draft');
+  expect(db).toHaveBeenCalledWith(expect.stringContaining('pocket_hr_messages?'));
+ });
  it('shows only the ticket owner name, never the PIN register',async()=>{
-  vi.mocked(readPasscodeAccounts).mockResolvedValue([{email:'a@example.com',role:'User',passcode:'1234',status:'Active',sheetRow:2,name:'မောင်မောင်'},{email:'b@example.com',role:'User',passcode:'5678',status:'Active',sheetRow:3,name:'Other user'}]);
+  vi.mocked(readPasscodeAccounts).mockResolvedValue([{email:'a@example.com',role:'User',status:'Active',name:'မောင်မောင်'},{email:'b@example.com',role:'User',status:'Active',name:'Other user'}]);
   const tickets=await loadLiveConsultations({email:'a@example.com',role:'User'});
   expect(tickets[0].requesterName).toBe('မောင်မောင်');
   expect(JSON.stringify(tickets)).not.toMatch(/1234|5678|Other user/);
