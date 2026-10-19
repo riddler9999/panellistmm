@@ -39,7 +39,7 @@ begin
      or p_approved_content is null or length(trim(p_approved_content))=0
      or length(p_approved_content)>50000
      or p_approved_by_email is null
-     or p_approved_by_email !~ '^[^[:space:]@]+@[^[:space:]@]+\\.[^[:space:]@]+$'
+     or p_approved_by_email !~ '^[^[:space:]@]+@[^[:space:]@]+[.][^[:space:]@]+$'
   then raise exception 'invalid_approval_input'; end if;
 
   select * into m from public.pocket_hr_messages
