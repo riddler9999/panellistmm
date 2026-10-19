@@ -3,6 +3,8 @@ import { randomUUID } from 'node:crypto';
 import { db, readTickets, updateSheetRequest } from './pocketHrData.js';
 import { redisCommand } from './pocketHrRedis.js';
 import { dispatchUnifiedRequest } from './unifiedDispatch.js';
+import { readProof } from './pocketHrData.js';
+import { retryCanResetApprovedFields } from './atomicReview.js';
 export const AUTO_CLOSE_MS = 48 * 60 * 60 * 1000;
 export type ConversationEntry = { role: 'user' | 'consultant'; content: string; revision: number; attachments?: ResponseAttachment[]; options?:string[] };
 export type ConversationState = {
@@ -47,6 +49,9 @@ export async function syncReply(state: ConversationState): Promise<void> {
  if(!current) throw new Error('ticket_not_found');
  // A retry may arrive after the Sheet write but before async dispatch was acknowledged.
  if(current.Request_Text!==context) {
+  const proof=await readProof(state.request_id);
+  if(!retryCanResetApprovedFields(state.reply_revision,proof.approval?.revision))
+   throw new Error('stale_reply_sync');
   await updateSheetRequest(state.request_id, {
    Request_Text: context, AI_Answer: '', Sheet_AI_Answer: '', AI_Draft: '',
    Consultant_Answer: '', Clarification_Question: '', Needs_Clarification: '',
