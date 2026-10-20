@@ -121,4 +121,65 @@ describe('delivery publication proof boundary', () => {
    path === 'rpc/pocket_hr_approve_message' || path === 'rpc/pocket_hr_record_delivery_result'
   )).toBe(false);
  });
+
+ it('returns pending on a failed delivery acknowledgement without releasing the answer', async () => {
+  vi.mocked(readProof).mockResolvedValueOnce(emptyProof)
+   .mockResolvedValue({ approval: approved, delivery: pending });
+  vi.mocked(db).mockImplementation(async (path) => {
+   if (path.startsWith('pocket_hr_requests?')) return [{ request_id: requestId }] as never;
+   if (path.startsWith('pocket_hr_messages?') && path.includes('sender=eq.agent'))
+    return [{ message_id: '00000000-0000-4000-8000-000000000003', revision: 1, content: draft }] as never;
+   if (path.startsWith('pocket_hr_messages?') && path.includes('sender=eq.user'))
+    return [{ content: original }] as never;
+   if (path === 'rpc/pocket_hr_approve_message') return 1 as never;
+   if (path === 'rpc/pocket_hr_record_delivery_result') throw new Error('delivery_rpc_failed');
+   throw new Error('unexpected_database_query');
+  });
+  expect(await callApprove()).toEqual({ status: 503, body: { error: 'delivery_ack_pending', revision: 1 } });
+  expect(vi.mocked(db).mock.calls.filter(([path]) => path === 'rpc/pocket_hr_record_delivery_result')).toHaveLength(1);
+ });
+
+ it('serializes concurrent identical approvals and acknowledges a committed revision only once', async () => {
+  const { withTicketLock } = await import('../server/conversationLifecycle');
+  let tail: Promise<void> = Promise.resolve();
+  vi.mocked(withTicketLock).mockImplementation(async (_id, work) => {
+   const previous = tail;
+   let release!: () => void;
+   tail = new Promise<void>(resolve => { release = resolve; });
+   await previous;
+   try { return await work(); } finally { release(); }
+  });
+  let approvalCommitted = false;
+  let deliverySucceeded = false;
+  let approvalWrites = 0;
+  let deliveryWrites = 0;
+  vi.mocked(readProof).mockImplementation(async () => ({
+   approval: approvalCommitted ? approved : null,
+   delivery: !approvalCommitted ? null : deliverySucceeded ? success : pending,
+  }));
+  vi.mocked(db).mockImplementation(async (path) => {
+   if (path.startsWith('pocket_hr_requests?')) return [{ request_id: requestId }] as never;
+   if (path.startsWith('pocket_hr_messages?') && path.includes('sender=eq.agent'))
+    return [{ message_id: '00000000-0000-4000-8000-000000000003', revision: 1, content: draft }] as never;
+   if (path.startsWith('pocket_hr_messages?') && path.includes('sender=eq.user'))
+    return [{ content: original }] as never;
+   if (path === 'rpc/pocket_hr_approve_message') {
+    approvalWrites++;
+    approvalCommitted = true;
+    return 1 as never;
+   }
+   if (path === 'rpc/pocket_hr_record_delivery_result') {
+    deliveryWrites++;
+    deliverySucceeded = true;
+    return 'success' as never;
+   }
+   throw new Error('unexpected_database_query');
+  });
+  const [first, second] = await Promise.all([callApprove(), callApprove()]);
+  expect(first).toEqual({ status: 200, body: { ok: true, revision: 1, state: 'published' } });
+  expect(second).toEqual(first);
+  expect(approvalWrites).toBe(1);
+  expect(deliveryWrites).toBe(1);
+ });
+
 });
