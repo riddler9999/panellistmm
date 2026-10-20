@@ -30,11 +30,11 @@ describe('unified request dispatcher',()=>{
   expect(fetchMock).not.toHaveBeenCalled();
  });
  it('fails closed when the dispatcher is missing, insecure, or unavailable',async()=>{
-  await expect(dispatchUnifiedRequest({requestId:'T',revision:1,description:'x'})).rejects.toThrow('dispatcher_not_configured');
+  await expect(dispatchUnifiedRequest({requestId:'T',revision:1,ownerEmail:'user@example.com',description:'x'})).rejects.toThrow('dispatcher_not_configured');
   vi.stubEnv('N8N_DISPATCH_WEBHOOK_URL','http://dispatcher.example.test');
-  await expect(dispatchUnifiedRequest({requestId:'T',revision:1,description:'x'})).rejects.toThrow('dispatcher_not_configured');
+  await expect(dispatchUnifiedRequest({requestId:'T',revision:1,ownerEmail:'user@example.com',description:'x'})).rejects.toThrow('dispatcher_not_configured');
   vi.stubEnv('N8N_DISPATCH_WEBHOOK_URL','https://dispatcher.example.test');
   vi.stubGlobal('fetch',vi.fn<typeof fetch>(async()=>new Response(null,{status:503})));
-  await expect(dispatchUnifiedRequest({requestId:'T',revision:1,description:'x'})).rejects.toThrow('dispatcher_unavailable');
+  await expect(dispatchUnifiedRequest({requestId:'T',revision:1,ownerEmail:'user@example.com',description:'x'})).rejects.toThrow('dispatcher_unavailable');
  });
 });
