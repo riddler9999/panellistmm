@@ -19,7 +19,7 @@ The existing n8n integration is **not** a secure User/Consultant read API. Do no
 `/api/consultation` must return 403 until a trusted Glide identity bridge and trusted Sheet Users/role lookup are implemented and deployed. Neither URL email nor role fields prove identity.
 `Owner_Email` in the Sheet alone is not evidence of row-level authorization.
 No production n8n/Glide/Sheet writes or publication authorized.
-Live approval/edit/reject, persisted clarification rounds, duplicate-safe delivery and isolated multi-account Glide UAT remain open.
+Live approval/edit/clarification, persisted clarification rounds, duplicate-safe delivery and isolated multi-account Glide UAT remain open.
 
 
 ## October 14 verified reconciliation and execution priority
