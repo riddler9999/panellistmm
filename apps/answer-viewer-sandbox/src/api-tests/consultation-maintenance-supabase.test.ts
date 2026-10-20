@@ -53,6 +53,7 @@ describe('Supabase-only maintenance for pending n8n dispatch and auto-close', ()
   vi.setSystemTime(new Date('2026-10-20T00:00:00Z'));
   vi.mocked(db).mockImplementation(async (path) => {
    if (path.startsWith('pocket_hr_conversations?')) return [replyState] as never;
+   if (path.startsWith('pocket_hr_deliveries?')) return [] as never;
    if (path.startsWith('pocket_hr_requests?')) return [{ owner_account_id: ownerAccountId, request_id: requestId }] as never;
    if (path.startsWith('pocket_hr_accounts?')) return [{ email: 'owner@example.com', disabled_at: null }] as never;
    throw new Error('unexpected_database_operation');
@@ -82,6 +83,7 @@ describe('Supabase-only maintenance for pending n8n dispatch and auto-close', ()
  it('retries an initial unsent request separately from a follow-up turn', async () => {
   vi.mocked(db).mockImplementation(async (path) => {
    if (path.startsWith('pocket_hr_conversations?')) return [initialState] as never;
+   if (path.startsWith('pocket_hr_deliveries?')) return [] as never;
    if (path.startsWith('pocket_hr_requests?')) return [{ owner_account_id: ownerAccountId }] as never;
    if (path.startsWith('pocket_hr_accounts?')) return [{ email: 'owner@example.com', disabled_at: null }] as never;
    throw new Error('unexpected_database_operation');
@@ -98,6 +100,7 @@ describe('Supabase-only maintenance for pending n8n dispatch and auto-close', ()
  it('refuses to dispatch if stored owner lookup is missing', async () => {
   vi.mocked(db).mockImplementation(async (path) => {
    if (path.startsWith('pocket_hr_conversations?')) return [replyState] as never;
+   if (path.startsWith('pocket_hr_deliveries?')) return [] as never;
    if (path.startsWith('pocket_hr_requests?')) return [] as never;
    throw new Error('unexpected_database_operation');
   });
@@ -116,7 +119,8 @@ describe('Supabase-only maintenance for pending n8n dispatch and auto-close', ()
  it('closes an expired published revision only after re-reading the proof under lock', async () => {
   const active = { ...replyState, entries: [], reply_revision: 0, pending_sync: false };
   vi.mocked(db).mockImplementation(async path => path.startsWith('pocket_hr_conversations?')
-   ? [active] as never : [] as never);
+   ? [active] as never : path.startsWith('pocket_hr_deliveries?')
+   ? [{ request_id: requestId }] as never : [] as never);
   vi.mocked(readConversation).mockResolvedValue(active);
   vi.mocked(readProofs).mockResolvedValue(new Map([[requestId, { approval: approved, delivery: delivered }]]));
   vi.mocked(readProof).mockResolvedValue({ approval: approved, delivery: delivered });
@@ -129,7 +133,8 @@ describe('Supabase-only maintenance for pending n8n dispatch and auto-close', ()
  it('does not close when a newer delivery moves the deadline', async () => {
   const active = { ...replyState, entries: [], reply_revision: 0, pending_sync: false };
   vi.mocked(db).mockImplementation(async path => path.startsWith('pocket_hr_conversations?')
-   ? [active] as never : [] as never);
+   ? [active] as never : path.startsWith('pocket_hr_deliveries?')
+   ? [{ request_id: requestId }] as never : [] as never);
   vi.mocked(readConversation).mockResolvedValue(active);
   vi.mocked(readProofs).mockResolvedValue(new Map([[requestId, { approval: approved, delivery: delivered }]]));
   vi.mocked(readProof).mockResolvedValue({
