@@ -147,6 +147,29 @@ describe('Supabase-only maintenance for pending n8n dispatch and auto-close', ()
   }));
  });
 
+ it('paginates past 1,000 old delivery records and closes a later eligible request', async () => {
+  const active={...replyState,entries:[],reply_revision:0,pending_sync:false};
+  const old=Array.from({length:500},(_,i)=>({request_id:'closed-'+i}));
+  let deliveryPages=0;
+  vi.mocked(db).mockImplementation(async path => {
+   if(path.startsWith('pocket_hr_conversations?')) return [] as never;
+   if(path.startsWith('pocket_hr_deliveries?')) {
+    const offset=Number(new URLSearchParams(path.split('?')[1]).get('offset'));
+    deliveryPages++;
+    return (offset===0 || offset===500) ? old as never
+      : [{request_id:requestId}] as never;
+   }
+   throw new Error('unexpected_database_operation');
+  });
+  vi.mocked(readConversation).mockImplementation(async id => id===requestId ? active : null);
+  vi.mocked(readProof).mockResolvedValue({approval:approved,delivery:delivered});
+  expect((await runCron()).status).toBe(200);
+  expect(deliveryPages).toBe(3);
+  expect(saveConversation).toHaveBeenCalledWith(expect.objectContaining({
+   request_id:requestId,close_reason:'timeout',
+  }));
+ });
+
  it('does not close when a newer delivery moves the deadline', async () => {
   const active = { ...replyState, entries: [], reply_revision: 0, pending_sync: false };
   vi.mocked(db).mockImplementation(async path => path.startsWith('pocket_hr_conversations?')
