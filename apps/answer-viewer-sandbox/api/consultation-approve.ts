@@ -73,13 +73,41 @@ export default async function handler(req:Req,res:Res) {
       return result(409).json({error:'revision_conflict'});
    throw e;
   }
-  // The approval RPC creates a pending delivery. Only the delivery RPC releases it.
+  // Delivery means durable publication to the authenticated portal, not a user-read receipt.
+  // Never acknowledge a revision just because the approval RPC returned a number.
+  if(!Number.isSafeInteger(revision) || revision!==input.expectedRevision+1)
+   return result(503).json({error:'delivery_ack_pending',revision});
+  const publicationPending=()=>result(503).json({error:'delivery_ack_pending',revision});
+  const matchesCommittedSnapshot=(stored:Awaited<ReturnType<typeof readProof>>)=>
+   stored.approval?.requestId===input.requestId &&
+   stored.approval.revision===revision &&
+   stored.approval.approvedContent===content &&
+   !!stored.approval.approvedAt &&
+   !!(stored.approval.approvedByAccountId || stored.approval.approvedByEmail) &&
+   stored.delivery?.requestId===input.requestId &&
+   stored.delivery.revision===revision;
   try {
-   const delivery=await db<string>('rpc/pocket_hr_record_delivery_result','POST',{
+   // Re-read after the approval transaction has committed. The pending delivery
+   // record and the immutable approved snapshot must both be present and match.
+   const persisted=await readProof(input.requestId);
+   if(!matchesCommittedSnapshot(persisted)) return publicationPending();
+   if(persisted.delivery?.result==='success') {
+    return persisted.delivery.deliveredAt
+     ? result(200).json({ok:true,revision,state:'published'})
+     : publicationPending();
+   }
+   if(persisted.delivery?.result!=='pending' && persisted.delivery?.result!=='failed')
+    return publicationPending();
+   const acknowledgement=await db<string>('rpc/pocket_hr_record_delivery_result','POST',{
     p_request_id:input.requestId,p_revision:revision,p_success:true,p_error:null,
    });
-   if(delivery!=='success') return result(503).json({error:'delivery_ack_pending',revision});
-  } catch { return result(503).json({error:'delivery_ack_pending',revision}); }
+   if(acknowledgement!=='success') return publicationPending();
+   // An RPC success response alone is not the release condition. Confirm the
+   // stored delivery row can be read alongside the same immutable snapshot.
+   const published=await readProof(input.requestId);
+   if(!matchesCommittedSnapshot(published) || published.delivery?.result!=='success' || !published.delivery.deliveredAt)
+    return publicationPending();
+  } catch { return publicationPending(); }
   return result(200).json({ok:true,revision,state:'published'});
   });
   return res.status(outcome.status).json(outcome.body);
