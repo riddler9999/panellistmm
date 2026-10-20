@@ -14,9 +14,7 @@ export default async function handler(req:Req,res:Res){
   if(!principal || principal.role==='User')return res.status(403).json({error:'access_denied'});
   const input=validateConsultantAction(req.body);
   if(!input||input.action==='approve')return res.status(400).json({error:'invalid_action'});
-  // Approval must use the revision-safe Supabase approval endpoint. The former
-  // Sheet-only edit/clarification/reject writes are not a supported state store.
-  if(input.action==='reject') return res.status(409).json({error:'review_action_not_supported'});
+  // Edit and clarification require an authoritative Supabase transaction.
   return res.status(409).json({error:'review_action_requires_approval'});
  }catch{return res.status(503).json({error:'consultant_action_unavailable'});}
 }
