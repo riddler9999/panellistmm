@@ -2,7 +2,7 @@
 import {describe,it,expect,vi} from 'vitest';
 import sharp from 'sharp';
 import {zipSync,strToU8} from 'fflate';
-import {validateAttachment,selectAttachments} from './responseAttachments';
+import {validateAttachment,selectAttachments,storeAttachment} from './responseAttachments';
 import {db} from './pocketHrData';
 vi.mock('./pocketHrData',()=>({db:vi.fn()}));
 describe('private response attachment validation',()=>{
@@ -29,4 +29,23 @@ describe('private response attachment validation',()=>{
   vi.mocked(db).mockResolvedValue([{id:'00000000-0000-4000-8000-000000000001',request_id:'B'}]);
   await expect(selectAttachments('A',['00000000-0000-4000-8000-000000000001'])).rejects.toThrow('invalid_attachments');
  });
+ it('removes a private Storage object if the Supabase file metadata write fails',async()=>{
+  vi.stubEnv('SUPABASE_URL','https://storage.example.test');
+  vi.stubEnv('SUPABASE_SERVICE_ROLE_KEY','synthetic-secret');
+  const fetchMock=vi.fn<typeof fetch>(async()=>new Response('{}',{status:200}));
+  vi.stubGlobal('fetch',fetchMock);
+  vi.mocked(db).mockRejectedValueOnce(new Error('metadata_unavailable'));
+  try {
+   await expect(storeAttachment('request-1','consultant@example.com',{
+    name:'test.pdf',mime:'application/pdf',bytes:Buffer.from('%PDF-1.7\\n%%EOF'),
+   })).rejects.toThrow('metadata_unavailable');
+   expect(fetchMock).toHaveBeenCalledTimes(2);
+   expect(fetchMock.mock.calls[0][1]?.method).toBe('POST');
+   expect(fetchMock.mock.calls[1][1]?.method).toBe('DELETE');
+  } finally {
+   vi.unstubAllEnvs();
+   vi.unstubAllGlobals();
+  }
+ });
+
 });
