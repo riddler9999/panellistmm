@@ -83,6 +83,15 @@ describe('Supabase live consultation projection and privacy', () => {
   expect(JSON.stringify(rows)).not.toContain('Policy request');
   expect(vi.mocked(db).mock.calls.some(([path]) => String(path).includes('sender=eq.agent'))).toBe(false);
   expect(readProofs).toHaveBeenCalledWith(['A-001']);
+  expect(vi.mocked(db).mock.calls.some(([path]) => String(path).includes('owner_account_id=eq.acct-a'))).toBe(true);
+ });
+
+ it('does not treat a matching email as ownership of another account', async () => {
+  accounts = [{ id: 'acct-b', email: 'a@example.com' }];
+  requests = [requestB];
+  const rows = await loadLiveConsultations(userA);
+  expect(rows).toEqual([]);
+  expect(readProofs).not.toHaveBeenCalled();
  });
 
  it('does not release any answer without matching success delivery proof', async () => {

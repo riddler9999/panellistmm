@@ -14,17 +14,23 @@ export async function loadLiveConsultations(principal: Principal): Promise<Consu
   // Supabase is authoritative for new requests. The legacy Sheet bridge may
   // contain blank/duplicate row IDs and must not take the live dashboard down.
   // Ownership is resolved from verified session identity, never URL parameters.
+  const userAccountId = principal.role === 'User' && 'accountId' in principal &&
+    typeof principal.accountId === 'string' ? principal.accountId : null;
+  if (principal.role === 'User' && !userAccountId)
+    throw new Error('verified_principal_required');
+  const ownerFilter = principal.role === 'User'
+    ? '&owner_account_id=eq.' + encodeURIComponent(userAccountId!) : '';
   const requestRows = await db<Array<{request_id:string;owner_account_id:string;created_at:string}>>(
-    'pocket_hr_requests?select=request_id,owner_account_id,created_at&order=created_at.desc&limit=1000',
+    'pocket_hr_requests?select=request_id,owner_account_id,created_at' + ownerFilter + '&order=created_at.desc&limit=1000',
   );
   const accountsForOwners = await db<Array<{id:string;email:string}>>(
     'pocket_hr_accounts?select=id,email&limit=1000',
   );
   const ownerById = new Map(accountsForOwners.map(account => [account.id, account.email.trim().toLowerCase()]));
+  // Check the immutable account ID again even though the query is scoped: a
+  // service-role response must never turn a matching email into ownership.
   const accessible = requestRows.filter(request =>
-    principal.role !== 'User' ||
-    ('accountId' in principal && request.owner_account_id === principal.accountId) ||
-    ownerById.get(request.owner_account_id) === principal.email.trim().toLowerCase()
+    principal.role !== 'User' || request.owner_account_id === userAccountId
   );
   const idsForMessages = accessible.map(request => request.request_id);
   const firstUserMessage = new Map<string,string>();
@@ -39,7 +45,7 @@ export async function loadLiveConsultations(principal: Principal): Promise<Consu
   }
   const rows: TicketRow[] = accessible.map(request => ({
     'Row ID': request.request_id,
-    Owner_Email: ownerById.get(request.owner_account_id) ?? (principal.role === 'User' && 'accountId' in principal && request.owner_account_id === principal.accountId ? principal.email.trim().toLowerCase() : ''),
+    Owner_Email: principal.role === 'User' ? principal.email.trim().toLowerCase() : ownerById.get(request.owner_account_id) ?? '',
     Ticket_Title: 'HR Consultation',
     Ticket_Status: 'Submitted',
     Ticket_Category: '',
