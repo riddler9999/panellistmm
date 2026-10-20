@@ -124,19 +124,6 @@ export async function readProof(requestId: string): Promise<{ approval: Approval
   const proofs = await readProofs([requestId]);
   return proofs.get(requestId) ?? { approval: null, delivery: null };
 }
-export async function acknowledgeDelivery(requestId: string, revision: number): Promise<boolean> {
-  // Durable publication acknowledgement, NOT proof that the user opened the page.
-  // A failed write leaves the approved snapshot inaccessible to users until retry succeeds.
-  const { url, key } = config();
-  const response = await fetch(url + '/rest/v1/pocket_hr_deliveries?on_conflict=request_id,revision', {
-    method: 'POST',
-    headers: { apikey: key, Authorization: 'Bearer ' + key, 'Content-Type': 'application/json', Prefer: 'resolution=merge-duplicates,return=representation' },
-    body: JSON.stringify({ request_id: requestId, revision, result: 'success', delivered_at: new Date().toISOString() }),
-    cache: 'no-store',
-  });
-  return response.ok;
-}
-
 /** Read approval/delivery proofs in two bounded queries rather than two queries per ticket.
  * Caller must authorize and bound ticket IDs before invoking this function.
  */
