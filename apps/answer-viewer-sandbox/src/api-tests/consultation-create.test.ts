@@ -74,7 +74,7 @@ describe('Supabase request identity and retry handoff', () => {
   expect(outcome).toEqual({ code: 201, body: { ok: true, requestId: key, dispatchPending: false } });
   expect(db).toHaveBeenCalledWith('rpc/pocket_hr_create_request', 'POST', {
    p_request_id: key, p_owner_account_id: principal.accountId,
-   p_content: body.description,
+   p_content: body.description, p_title: body.title, p_category: body.category,
   });
   expect(dispatchUnifiedRequest).toHaveBeenCalledWith({
    requestId: key, revision: 1, ownerEmail: principal.email,
