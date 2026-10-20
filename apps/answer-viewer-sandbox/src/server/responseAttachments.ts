@@ -46,7 +46,17 @@ export async function storeAttachment(requestId:string,email:string,file:Awaited
  });
  if(!response.ok)throw new Error('attachment_storage_failed');
  const attachment={id,name:file.name,mime:file.mime,size:file.bytes.length};
- await db('pocket_hr_response_files','POST',{...attachment,request_id:requestId,object_path,uploaded_by:email});
+ try {
+  await db('pocket_hr_response_files','POST',{...attachment,request_id:requestId,object_path,uploaded_by:email});
+ } catch (error) {
+  // Avoid leaving an unreferenced private Storage object when metadata fails.
+  try {
+   await fetch(config.url+'/storage/v1/object/'+bucket+'/'+encodeURIComponent(object_path),{
+    method:'DELETE',headers:config.headers,
+   });
+  } catch { /* The original metadata failure remains authoritative. */ }
+  throw error;
+ }
  return attachment;
 }
 export async function readAttachment(id:string):Promise<StoredAttachment|null> {
