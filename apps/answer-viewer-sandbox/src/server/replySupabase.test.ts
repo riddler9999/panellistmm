@@ -23,7 +23,9 @@ describe('Supabase owner reply outbox and n8n handoff', () => {
  beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(db).mockImplementation(async (path) => {
+   if (path.startsWith('pocket_hr_requests?')) return [{title:'Leave request',category:'Leave'}] as never;
    if (path.startsWith(lookup)) return [] as never;
+   if (path.startsWith('pocket_hr_requests?')) return [{title:'Leave request',category:'Leave'}] as never;
    if (path.startsWith('pocket_hr_messages?select=message_id,content')) return [{message_id:'draft-1',content:'Draft'}] as never;
    if (path === 'pocket_hr_messages') return [] as never;
    if (path === 'rpc/pocket_hr_save_conversation') return undefined as never;
@@ -41,7 +43,7 @@ describe('Supabase owner reply outbox and n8n handoff', () => {
    message_id: expect.stringMatching(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-8[0-9a-f]{3}-[0-9a-f]{12}$/),
   }));
   expect(dispatchUnifiedRequest).toHaveBeenCalledWith(expect.objectContaining({
-   requestId: state.request_id, revision: 2, ownerEmail,
+   requestId: state.request_id, revision: 2, ownerEmail, title:'Leave request',category:'Leave',
    description: 'Original HR request\n\nConsultant: Approved answer\nOptions: Option A\n\nUser: Follow-up question',
   }));
   expect(db).toHaveBeenLastCalledWith('rpc/pocket_hr_save_conversation', 'POST', {
@@ -57,9 +59,11 @@ describe('Supabase owner reply outbox and n8n handoff', () => {
 
  it('retries a previously persisted user turn without inserting a duplicate', async () => {
   vi.mocked(db).mockImplementation(async (path) => {
+   if (path.startsWith('pocket_hr_requests?')) return [{title:'Leave request',category:'Leave'}] as never;
    if (path.startsWith(lookup)) return [{
     request_id: state.request_id, content: 'Follow-up question',
    }] as never;
+   if (path.startsWith('pocket_hr_requests?')) return [{title:'Leave request',category:'Leave'}] as never;
    if (path.startsWith('pocket_hr_messages?select=message_id,content')) return [{message_id:'draft-1',content:'Draft'}] as never;
    if (path === 'rpc/pocket_hr_save_conversation') return undefined as never;
    throw new Error('duplicate_message_insert');
@@ -81,8 +85,10 @@ describe('Supabase owner reply outbox and n8n handoff', () => {
 
  it('does not clear pending_sync when n8n accepted work but no draft exists yet', async () => {
   vi.mocked(db).mockImplementation(async (path) => {
+   if (path.startsWith('pocket_hr_requests?')) return [{title:'Leave request',category:'Leave'}] as never;
    if (path.startsWith(lookup)) return [] as never;
    if (path === 'pocket_hr_messages') return [] as never;
+   if (path.startsWith('pocket_hr_requests?')) return [{title:'Leave request',category:'Leave'}] as never;
    if (path.startsWith('pocket_hr_messages?select=message_id,content')) return [] as never;
    if (path === 'rpc/pocket_hr_save_conversation') return undefined as never;
    throw new Error('unexpected_database_operation');
