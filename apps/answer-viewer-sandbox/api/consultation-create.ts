@@ -27,7 +27,7 @@ export default async function handler(req:Req,res:Res){
   const requestId=idempotencyKey.toLowerCase();
   const state:ConversationState={request_id:requestId,original_request:description,entries:[],closed_at:null,close_reason:null,reply_revision:0,pending_sync:true};
   const created=await db<boolean>('rpc/pocket_hr_create_request', 'POST', {
-   p_request_id:requestId,p_owner_account_id:principal.accountId,p_content:description,
+   p_request_id:requestId,p_owner_account_id:principal.accountId,p_content:description,p_title:title,p_category:category,
   });
   // The transactional RPC has already committed the request, user message,
   // and retryable conversation state. Legacy Google Sheets is not required.
