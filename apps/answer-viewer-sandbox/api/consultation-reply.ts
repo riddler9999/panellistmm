@@ -35,11 +35,11 @@ export default async function handler(req:Req,res:Res) {
     await saveConversation({...state,closed_at:new Date().toISOString(),close_reason:'user',pending_sync:false});
     return result(200).json({ok:true});
    }
-   // Identical retries repair the pending bridge write without adding another turn.
+   // Identical retries resume the persisted Supabase turn and n8n dispatch without duplicating history.
    if(state.reply_revision===input.expectedRevision) {
     const last=state.entries.at(-1);
     if(last?.role!=='user'||last.content!==(input.content as string).trim()) return result(409).json({error:'revision_conflict'});
-    if(state.pending_sync) await syncReply(state);
+    if(state.pending_sync) await syncReply(state, identity.email);
     return result(200).json({ok:true});
    }
    const proof=await readProof(input.requestId as string);
@@ -50,7 +50,7 @@ export default async function handler(req:Req,res:Res) {
     {role:'consultant',content:response.text,revision:proof.approval.revision,...(response.attachments.length?{attachments:response.attachments}:{}),...(response.options.length?{options:response.options}:{})},
     {role:'user',content:(input.content as string).trim(),revision:proof.approval.revision}]};
    await saveConversation(state);
-   await syncReply(state);
+   await syncReply(state, identity.email);
    return result(200).json({ok:true});
   });
   return res.status(outcome.status).json(outcome.body);
