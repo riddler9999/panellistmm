@@ -41,12 +41,16 @@ export function shouldAutoClose(deliveredAt: string | null | undefined, now = Da
  return Number.isFinite(timestamp) && now - timestamp >= AUTO_CLOSE_MS;
 }
 /** Retryable Supabase outbox: persist the user turn before dispatching n8n. */
-export async function syncReply(state: ConversationState): Promise<void> {
+export async function syncReply(state: ConversationState, verifiedOwnerEmail: string): Promise<void> {
+ // The caller must authorize this request via its verified account ID before passing the email.
+ const ownerEmail=verifiedOwnerEmail?.trim().toLowerCase();
+ if(!ownerEmail || ownerEmail.length>254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(ownerEmail))
+  throw new Error('verified_reply_owner_required');
  const last=state.entries.at(-1);
  if(!last || last.role!=='user' || last.revision!==state.reply_revision) throw new Error('invalid_reply_state');
  const context=[state.original_request,...state.entries.map(entry =>
-  `${entry.role==='user'?'User':'Consultant'}: ${entry.content}${entry.options?.length?'\\nOptions: '+entry.options.join(' / '):''}`
- )].join('\\n\\n');
+  `${entry.role==='user'?'User':'Consultant'}: ${entry.content}${entry.options?.length?'\nOptions: '+entry.options.join(' / '):''}`
+ )].join('\n\n');
  // Stable message ID makes retries safe after partial failures.
  const hex=createHash('sha256').update(state.request_id+':user:'+state.reply_revision).digest('hex');
  const messageId=[hex.slice(0,8),hex.slice(8,12),'4'+hex.slice(13,16),'8'+hex.slice(17,20),hex.slice(20,32)].join('-');
@@ -57,11 +61,11 @@ export async function syncReply(state: ConversationState): Promise<void> {
   throw new Error('reply_message_conflict');
  if(!saved.length) await db('pocket_hr_messages','POST',{
   message_id:messageId,request_id:state.request_id,sender:'user',
-  content:last.content,revision:state.reply_revision+1,review_state:'approved',
+  content:last.content,revision:state.reply_revision+1,review_state:null,
  });
  await dispatchUnifiedRequest({
   requestId:state.request_id,revision:state.reply_revision+1,
-  description:context,
+  ownerEmail,description:context,
  });
  await saveConversation({...state,pending_sync:false});
 }
