@@ -24,7 +24,7 @@
 ## Pocket HR consultation requirements — owner update 2026-10-13
 ဒီ section သည် consultation-specific functional requirements အတွက် အပေါ်က generic wording ထက် ဦးစားပေးရမည်။ Canonical detail: `project/POCKET_HR_CONTEXT_2026-10-13.md`.
 - AI assessment result: `ASK_CLARIFICATION` သို့မဟုတ် `PROVIDE_ADVICE`.
-- AI question/advice draft နှစ်မျိုးလုံး consultant approve/edit/reject မဖြတ်မီ user မမြင်ရ။
+- AI question/advice draft နှစ်မျိုးလုံး consultant approve/edit or ask clarification မဖြတ်မီ user မမြင်ရ။
 - Approved clarification question ကို user ဖြေနိုင်ရမည်။ Context/history ထိန်းပြီး AI reassessment လုပ်ရမည်။ Multiple rounds support လုပ်ရမည်။
 - Final advice သည် consultant approval ရပြီးမှ user ထံ deliver လုပ်ရမည်။ Approval နှင့် delivery status ကို ခွဲမှတ်ရမည်။
 - Resolved ticket သည် read-only; နောက်ထပ် request အသစ်တင်ရမည်။
