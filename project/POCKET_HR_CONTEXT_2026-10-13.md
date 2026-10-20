@@ -17,7 +17,7 @@
 1. User submits an HR request.
 2. AI assesses available information and chooses **ASK_CLARIFICATION** (information insufficient) or **PROVIDE_ADVICE** (information sufficient).
 3. Both AI-generated questions and advice are **consultant-only drafts** until reviewed.
-4. Consultant can approve, edit or reject. Only approved content can reach the user. Rejected content must not be delivered; exact rework mechanism remains to be specified.
+4. Consultant can approve, edit or ask clarification. Only approved content can reach the user. Unapproved content must not be delivered.
 5. If clarification is approved, user receives questions and submits answers.
 6. AI reassesses with the accumulated conversation context, and can ask another round or propose advice. Clarification may repeat without a fixed number of rounds.
 7. Final advice requires consultant approval before user delivery.
@@ -73,7 +73,7 @@ Key: `Tickets.🔒 Row ID ↔ Sheet1.Row ID`. Status differences are **not autom
 - User clarification answer must attach to the correct ticket and round; reprocessing must be idempotent.
 - Persist multi-round question, answer, AI assessment and consultant decision history without overwriting previous rounds.
 - Delivery must be idempotent and guarded against duplicate writes/retries.
-- Reject/edit semantics, actual field names, state machine, authenticated n8n callback, role mapping, error recovery and delivery acknowledgement are **open**, not already implemented by this document.
+- Edit/clarification semantics, actual field names, state machine, authenticated n8n callback, role mapping, error recovery and delivery acknowledgement are **open**, not already implemented by this document.
 - Preserve the existing 100% human-in-the-loop requirement and resolved read-only behavior.
 
 ## 7. Work split and implementation order
@@ -86,7 +86,7 @@ Key: `Tickets.🔒 Row ID ↔ Sheet1.Row ID`. Status differences are **not autom
 1. Focused read-only inspection of existing consultant review UI/actions and exact Sheet/Glide field mapping.
 2. Reconcile a single integration contract with n8n Codex A, including decision types, round IDs, approval revisions, statuses and delivery.
 3. Implement only missing Glide-side pieces and corresponding n8n handoff points in their respective ownership areas.
-4. Test normal-user vs consultant data access (including underlying data, not just hidden UI), approved-only content, edit/reject, repeated clarification, failures, retries and duplicate delivery.
+4. Test normal-user vs consultant data access (including underlying data, not just hidden UI), approved-only content, edit/clarification, repeated clarification, failures, retries and duplicate delivery.
 5. End-to-end UAT using isolated test tickets and accounts; only then consider publish, merge or deployment.
 
 ## 8. Release gate / do not assume
