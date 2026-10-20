@@ -41,7 +41,7 @@ const deliveredApproval = {
 };
 const successfulDelivery = {
  requestId: 'B-001', revision: 3, result: 'success' as const,
- deliveredAt: '2026-10-15T00:00:01Z',
+ deliveredAt: new Date().toISOString(),
 };
 
 let requests = [requestA, requestB];
