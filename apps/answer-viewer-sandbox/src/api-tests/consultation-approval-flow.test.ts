@@ -84,7 +84,6 @@ describe('Supabase approval publication and retry boundary', () => {
  it('leaves approval pending when delivery acknowledgement fails', async () => {
   vi.mocked(readProof).mockResolvedValueOnce(empty)
    .mockResolvedValue({ approval, delivery: pendingDelivery });
-  vi.mocked(db).mockImplementationOnce(async () => [] as never);
   // Force failure at the acknowledgement RPC while leaving read-only lookups intact.
   vi.mocked(db).mockImplementation(async (path) => {
    if (path.startsWith('pocket_hr_requests?')) return [{ request_id: requestId }] as never;
