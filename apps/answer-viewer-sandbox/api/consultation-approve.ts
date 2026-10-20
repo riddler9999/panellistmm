@@ -5,7 +5,7 @@ import { readConversation, withTicketLock } from '../src/server/conversationLife
 export const config = { maxDuration: 60 };
 import { authenticatedPrincipal } from '../src/server/passcodeAuth.js';
 import { validateConsultantAction } from '../src/server/consultantActions.js';
-import { db, readProof, readTickets, acknowledgeDelivery, writeTicketPublication } from '../src/server/pocketHrData.js';
+import { db, readProof } from '../src/server/pocketHrData.js';
 
 type Req = {method?:string;headers:Record<string,string|string[]|undefined>;body?:unknown};
 type Res = {status(n:number):Res;setHeader(k:string,v:string):void;json(v:unknown):void};
@@ -22,22 +22,27 @@ export default async function handler(req:Req,res:Res) {
    return res.status(403).json({error:'access_denied'});
  try {
   const principal=await authenticatedPrincipal(req.headers);
-  if(principal?.role!=='Admin') return res.status(403).json({error:'access_denied'});
+  if(!principal || principal.role==='User') return res.status(403).json({error:'access_denied'});
   const input=validateConsultantAction(req.body);
   if(!input || input.action!=='approve') return res.status(400).json({error:'invalid_action'});
   const result=(status:number)=>({json:(body:unknown)=>({status,body})});
   const outcome = await withTicketLock(input.requestId,async()=>{
   const conversation=await readConversation(input.requestId);
   if(conversation?.closed_at || conversation?.pending_sync) return result(409).json({error:'ticket_closed_or_syncing'});
-  const rows=await readTickets();
-  const ticket=rows.find(row=>String(row['Row ID']).trim()===input.requestId);
-  if(!ticket) return result(404).json({error:'ticket_not_found'});
-  if((req.body as {draftVersion?:unknown}).draftVersion!==draftVersion(ticket)) return result(409).json({error:'draft_changed'});
-  if(['resolved','closed'].includes(String(ticket.Ticket_Status).trim().toLowerCase()))
-    return result(409).json({error:'request_already_final'});
+  const requests=await db<Array<{request_id:string;owner_account_id:string}>>(
+   'pocket_hr_requests?select=request_id,owner_account_id&request_id=eq.'+encodeURIComponent(input.requestId)+'&limit=2'
+  );
+  if(requests.length!==1) return result(404).json({error:'ticket_not_found'});
+  const drafts=await db<Array<{message_id:string;content:string;revision:number}>>(
+   'pocket_hr_messages?select=message_id,content,revision&request_id=eq.'+encodeURIComponent(input.requestId)+'&sender=eq.agent&review_state=eq.pending_review&revision=eq.'+(input.expectedRevision+1)+'&limit=2'
+  );
+  if(drafts.length>1)return result(409).json({error:'draft_changed'});
+  const messageDraft=drafts[0]??null;
+  const userMessages=await db<Array<{content:string}>>(
+   'pocket_hr_messages?select=content&request_id=eq.'+encodeURIComponent(input.requestId)+'&sender=eq.user&order=created_at.asc&limit=1'
+  );
+  const ticket={Request_Text:userMessages[0]?.content??'',Consultant_Answer:'',Clarification_Question:'',AI_Answer:'',Sheet_AI_Answer:'',Review_Status:''};
   const proof=await readProof(input.requestId);
-  if(['Approved','Delivered'].includes(String(ticket.Ticket_Status)))
-    return result(409).json({error:'response_already_approved'});
   const body=req.body as {options?:unknown;attachmentIds?:unknown};
   const options=validateOptions(body.options);
   if(!options)return result(400).json({error:'invalid_options'});
@@ -46,25 +51,63 @@ export default async function handler(req:Req,res:Res) {
   const content=encodeResponse({text:input.content!,options,attachments});
   if(content.length>50000)return result(400).json({error:'response_too_long'});
   const pending = proof.approval && (conversation?.reply_revision??0)<proof.approval.revision ? proof.approval : null;
-  if(pending && (pending.approvedContent!==content || ![pending.revision,pending.revision-1].includes(input.expectedRevision))) return result(409).json({error:'response_already_approved'});
+  if(pending) {
+   if(pending.approvedContent!==content || input.expectedRevision!==pending.revision-1)
+    return result(409).json({error:'response_already_approved'});
+  } else if((req.body as {draftVersion?:unknown}).draftVersion!==draftVersion(ticket,messageDraft?.content)) {
+   return result(409).json({error:'draft_changed'});
+  }
   let revision:number;
   try {
-   revision=pending?.revision ?? await db<number>('rpc/pocket_hr_approve_snapshot','POST',{
-    p_request_id:input.requestId,p_expected_revision:input.expectedRevision,
-    p_content:content,p_approved_by_email:principal.email
-   });
+   revision=pending?.revision ?? (messageDraft
+    ? await db<number>('rpc/pocket_hr_approve_message','POST',{
+      p_message_id:messageDraft.message_id,p_expected_revision:input.expectedRevision,
+      p_approved_content:content,p_approved_by_email:principal.email,
+     })
+    : await db<number>('rpc/pocket_hr_approve_snapshot','POST',{
+      p_request_id:input.requestId,p_expected_revision:input.expectedRevision,
+      p_content:content,p_approved_by_email:principal.email,
+     }));
   } catch(e) {
    if(e instanceof Error && e.message==='storage_request_failed' && (e as Error & {status?:number}).status===400)
       return result(409).json({error:'revision_conflict'});
    throw e;
   }
-  // Sheet status is one user-facing release condition. Keep it non-approved
-  // until both the immutable snapshot and durable delivery acknowledgement exist.
-  await writeTicketPublication(input.requestId,{C:'Delivery Pending',Y:'Delivery Pending'});
-  await writeTicketPublication(input.requestId,{H:input.content!});
-  if(!await acknowledgeDelivery(input.requestId,revision))
-    return result(503).json({error:'delivery_ack_pending',revision});
-  await writeTicketPublication(input.requestId,{C:'Approved',Y:'Approved'});
+  // Delivery means durable publication to the authenticated portal, not a user-read receipt.
+  // Never acknowledge a revision just because the approval RPC returned a number.
+  if(!Number.isSafeInteger(revision) || revision!==input.expectedRevision+1)
+   return result(503).json({error:'delivery_ack_pending',revision});
+  const publicationPending=()=>result(503).json({error:'delivery_ack_pending',revision});
+  const matchesCommittedSnapshot=(stored:Awaited<ReturnType<typeof readProof>>)=>
+   stored.approval?.requestId===input.requestId &&
+   stored.approval.revision===revision &&
+   stored.approval.approvedContent===content &&
+   !!stored.approval.approvedAt &&
+   !!(stored.approval.approvedByAccountId || stored.approval.approvedByEmail) &&
+   stored.delivery?.requestId===input.requestId &&
+   stored.delivery.revision===revision;
+  try {
+   // Re-read after the approval transaction has committed. The pending delivery
+   // record and the immutable approved snapshot must both be present and match.
+   const persisted=await readProof(input.requestId);
+   if(!matchesCommittedSnapshot(persisted)) return publicationPending();
+   if(persisted.delivery?.result==='success') {
+    return persisted.delivery.deliveredAt
+     ? result(200).json({ok:true,revision,state:'published'})
+     : publicationPending();
+   }
+   if(persisted.delivery?.result!=='pending' && persisted.delivery?.result!=='failed')
+    return publicationPending();
+   const acknowledgement=await db<string>('rpc/pocket_hr_record_delivery_result','POST',{
+    p_request_id:input.requestId,p_revision:revision,p_success:true,p_error:null,
+   });
+   if(acknowledgement!=='success') return publicationPending();
+   // An RPC success response alone is not the release condition. Confirm the
+   // stored delivery row can be read alongside the same immutable snapshot.
+   const published=await readProof(input.requestId);
+   if(!matchesCommittedSnapshot(published) || published.delivery?.result!=='success' || !published.delivery.deliveredAt)
+    return publicationPending();
+  } catch { return publicationPending(); }
   return result(200).json({ok:true,revision,state:'published'});
   });
   return res.status(outcome.status).json(outcome.body);

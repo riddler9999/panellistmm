@@ -1,6 +1,6 @@
 import type { ResponseAttachment } from '../domain/reviewedResponse.js';
-import { randomUUID } from 'node:crypto';
-import { db, readTickets, updateSheetRequest } from './pocketHrData.js';
+import { createHash, randomUUID } from 'node:crypto';
+import { db } from './pocketHrData.js';
 import { redisCommand } from './pocketHrRedis.js';
 import { dispatchUnifiedRequest } from './unifiedDispatch.js';
 export const AUTO_CLOSE_MS = 48 * 60 * 60 * 1000;
@@ -27,6 +27,15 @@ export async function readConversations(ids: string[]): Promise<Map<string, Conv
 export async function saveConversation(state: ConversationState): Promise<void> {
  await db('rpc/pocket_hr_save_conversation', 'POST', { p_state: state });
 }
+/** A dispatch acknowledgement is complete only after its revision is visible in Supabase. */
+export async function hasPendingAgentDraft(requestId:string, revision:number):Promise<boolean> {
+ const messages=await db<Array<{message_id:string;content:string}>>(
+  'pocket_hr_messages?select=message_id,content&request_id=eq.'+encodeURIComponent(requestId)+
+  '&sender=eq.agent&review_state=eq.pending_review&revision=eq.'+revision+'&limit=2'
+ );
+ if(messages.length>1) throw new Error('duplicate_agent_draft_revision');
+ return messages.length===1 && typeof messages[0].content==='string' && !!messages[0].content.trim();
+}
 /** Serialize application writes for a ticket; release only our own lock. */
 export async function withTicketLock<T>(id: string, work: () => Promise<T>): Promise<T> {
  const key = 'pocket-hr:ticket-write:' + id;
@@ -40,26 +49,36 @@ export function shouldAutoClose(deliveredAt: string | null | undefined, now = Da
  const timestamp = Date.parse(deliveredAt);
  return Number.isFinite(timestamp) && now - timestamp >= AUTO_CLOSE_MS;
 }
-/** Retryable outbox: the stored user turn is committed before the Sheet bridge. */
-export async function syncReply(state: ConversationState): Promise<void> {
- const context = [state.original_request, ...state.entries.map(entry => `${entry.role === 'user' ? 'User' : 'Consultant'}: ${entry.content}${entry.options?.length?'\nOptions: '+entry.options.join(' / '):''}`)].join('\n\n');
- const current=(await readTickets()).find(row=>row['Row ID']===state.request_id);
- if(!current) throw new Error('ticket_not_found');
- // A retry may arrive after the Sheet write but before async dispatch was acknowledged.
- if(current.Request_Text!==context) {
-  await updateSheetRequest(state.request_id, {
-   Request_Text: context, AI_Answer: '', Sheet_AI_Answer: '', AI_Draft: '',
-   Consultant_Answer: '', Clarification_Question: '', Needs_Clarification: '',
-   Final_Answer: '', Review_Status: '', Processing_Status: '', Processing_Error: '',
-   Ticket_Status: 'Submitted', Unified_Status: '',
-  });
- }
- await dispatchUnifiedRequest({
-  requestId: state.request_id,
-  ownerEmail: String(current.Owner_Email??''),
-  title: String(current.Ticket_Title??''),
-  category: String(current.Ticket_Category??''),
-  description: context,
+/** Retryable Supabase outbox: persist the user turn before dispatching n8n. */
+export async function syncReply(state: ConversationState, verifiedOwnerEmail: string): Promise<void> {
+ // The caller must authorize this request via its verified account ID before passing the email.
+ const ownerEmail=verifiedOwnerEmail?.trim().toLowerCase();
+ if(!ownerEmail || ownerEmail.length>254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(ownerEmail))
+  throw new Error('verified_reply_owner_required');
+ const last=state.entries.at(-1);
+ if(!last || last.role!=='user' || last.revision!==state.reply_revision) throw new Error('invalid_reply_state');
+ const context=[state.original_request,...state.entries.map(entry =>
+  `${entry.role==='user'?'User':'Consultant'}: ${entry.content}${entry.options?.length?'\nOptions: '+entry.options.join(' / '):''}`
+ )].join('\n\n');
+ // Stable message ID makes retries safe after partial failures.
+ const hex=createHash('sha256').update(state.request_id+':user:'+state.reply_revision).digest('hex');
+ const messageId=[hex.slice(0,8),hex.slice(8,12),'4'+hex.slice(13,16),'8'+hex.slice(17,20),hex.slice(20,32)].join('-');
+ const saved=await db<Array<{content:string;request_id:string}>>(
+  'pocket_hr_messages?select=content,request_id&message_id=eq.'+messageId
+ );
+ if(saved.length>1 || (saved.length===1 && (saved[0].content!==last.content || saved[0].request_id!==state.request_id)))
+  throw new Error('reply_message_conflict');
+ if(!saved.length) await db('pocket_hr_messages','POST',{
+  message_id:messageId,request_id:state.request_id,sender:'user',
+  content:last.content,revision:state.reply_revision+1,review_state:null,
  });
- await saveConversation({ ...state, pending_sync: false });
+ const metadata=await db<Array<{title:string;category:string}>>('pocket_hr_requests?select=title,category&request_id=eq.'+encodeURIComponent(state.request_id)+'&limit=2');
+ if(metadata.length!==1) throw new Error('reply_request_missing');
+ await dispatchUnifiedRequest({
+  requestId:state.request_id,revision:state.reply_revision+1,
+  ownerEmail,title:metadata[0].title,category:metadata[0].category,description:context,
+ });
+ if(!await hasPendingAgentDraft(state.request_id,state.reply_revision+1))
+  throw new Error('agent_draft_not_persisted');
+ await saveConversation({...state,pending_sync:false});
 }

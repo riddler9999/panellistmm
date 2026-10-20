@@ -1,6 +1,5 @@
 import { authenticatedPrincipal } from '../src/server/passcodeAuth.js';
-import { canAccessTicket } from '../src/server/consultationAccess.js';
-import { db,readTickets } from '../src/server/pocketHrData.js';
+import { db } from '../src/server/pocketHrData.js';
 import { readConversation,withTicketLock } from '../src/server/conversationLifecycle.js';
 import { decodeResponse } from '../src/domain/reviewedResponse.js';
 import { validateAttachment,storeAttachment,readAttachment,downloadAttachment } from '../src/server/responseAttachments.js';
@@ -16,17 +15,21 @@ export default async function handler(req:Req,res:Res){
   if(req.method==='POST'){
    const origin=req.headers.origin;
    try{if(typeof origin!=='string'||new URL(origin).origin!=='https://'+req.headers.host)return res.status(403).json({error:'access_denied'});}catch{return res.status(403).json({error:'access_denied'});}
-   if(principal.role!=='Admin')return res.status(403).json({error:'access_denied'});
+   if(principal.role==='User')return res.status(403).json({error:'access_denied'});
    const input=req.body as {requestId?:unknown;name?:unknown;base64?:unknown}|undefined;
    if(!input||typeof input.requestId!=='string'||!input.requestId||input.requestId.length>256)return res.status(400).json({error:'invalid_file'});
+   const requestId=input.requestId;
    const result=(status:number)=>({json:(body:unknown)=>({status,body})});
-  const outcome = await withTicketLock(input.requestId,async()=>{
-    const ticket=(await readTickets()).find(row=>row['Row ID']===input.requestId);
-    if(!ticket)return result(404).json({error:'ticket_not_found'});
-    const state=await readConversation(input.requestId as string);
-    if(state?.closed_at||state?.pending_sync||['Approved','Delivered','Closed','Resolved','Delivery Pending'].includes(String(ticket.Ticket_Status)))return result(409).json({error:'response_not_editable'});
+  const outcome = await withTicketLock(requestId,async()=>{
+    const requests=await db<Array<{request_id:string;owner_account_id:string}>>(
+     'pocket_hr_requests?select=request_id,owner_account_id&request_id=eq.'+encodeURIComponent(requestId)+'&limit=2'
+    );
+    if(requests.length!==1 || (principal.role==='User' && requests[0].owner_account_id!==principal.accountId))
+     return result(404).json({error:'ticket_not_found'});
+    const state=await readConversation(requestId);
+    if(state?.closed_at||state?.pending_sync)return result(409).json({error:'response_not_editable'});
     let file;try{file=await validateAttachment(input.name,input.base64);}catch{return result(400).json({error:'invalid_file'});}
-    return result(201).json(await storeAttachment(input.requestId as string,principal.email,file));
+    return result(201).json(await storeAttachment(requestId,principal.email,file));
    });
   return res.status(outcome.status).json(outcome.body);
   }
@@ -34,14 +37,15 @@ export default async function handler(req:Req,res:Res){
   if(typeof id!=='string'||!Number.isSafeInteger(revision)||revision<1)return res.status(404).json({error:'file_not_found'});
   const file=await readAttachment(id);
   if(!file)return res.status(404).json({error:'file_not_found'});
-  const ticket=(await readTickets()).find(row=>row['Row ID']===file.request_id);
-  if(!ticket||!canAccessTicket(principal,ticket))return res.status(404).json({error:'file_not_found'});
+  const requests=await db<Array<{request_id:string;owner_account_id:string}>>(
+   'pocket_hr_requests?select=request_id,owner_account_id&request_id=eq.'+encodeURIComponent(file.request_id)+'&limit=2'
+  );
+  if(requests.length!==1 || (principal.role==='User' && requests[0].owner_account_id!==principal.accountId))
+   return res.status(404).json({error:'file_not_found'});
   const filter='request_id=eq.'+encodeURIComponent(file.request_id)+'&revision=eq.'+revision;
   const approvals=await db<Array<{approved_content:string}>>('pocket_hr_approvals?select=approved_content&'+filter);
   const deliveries=await db<Array<{result:string}>>('pocket_hr_deliveries?select=result&'+filter);
-  const state=await readConversation(file.request_id);
-  const published=['Approved','Delivered','Closed','Resolved'].includes(String(ticket.Ticket_Status))||(state?.reply_revision??0)>=revision;
-  if(!published||deliveries[0]?.result!=='success'||!approvals[0]||!decodeResponse(approvals[0].approved_content).attachments.some(a=>a.id===id))return res.status(404).json({error:'file_not_found'});
+  if(deliveries[0]?.result!=='success'||!approvals[0]||!decodeResponse(approvals[0].approved_content).attachments.some(a=>a.id===id))return res.status(404).json({error:'file_not_found'});
   const bytes=await downloadAttachment(file);
   res.setHeader('Content-Type',file.mime);
   res.setHeader('Content-Disposition',"attachment; filename*=UTF-8''"+encodeURIComponent(file.name));

@@ -8,18 +8,18 @@ const res=()=>{let status=200;let body:unknown;const r={status(n:number){status=
 describe('separate embed API projections',()=>{
  beforeEach(()=>{vi.resetAllMocks();vi.mocked(loadLiveConsultations).mockResolvedValue([]);});
  it('downgrades admin to owner-only User projection on My Requests',async()=>{
-  vi.mocked(authenticatedPrincipal).mockResolvedValue({email:'admin@example.com',role:'Admin'});
+  vi.mocked(authenticatedPrincipal).mockResolvedValue({accountId:'00000000-0000-4000-8000-000000000001',email:'admin@example.com',role:'Admin'});
   const {r,result}=res();await handler({method:'GET',headers:{},query:{side:'user'}},r);
-  expect(loadLiveConsultations).toHaveBeenCalledWith({email:'admin@example.com',role:'User'});
+  expect(loadLiveConsultations).toHaveBeenCalledWith({accountId:'00000000-0000-4000-8000-000000000001',email:'admin@example.com',role:'User'});
   expect(result().body).toEqual({role:'User',tickets:[]});
  });
  it('denies User visiting admin URL before loading tickets',async()=>{
-  vi.mocked(authenticatedPrincipal).mockResolvedValue({email:'user@example.com',role:'User'});
+  vi.mocked(authenticatedPrincipal).mockResolvedValue({accountId:'00000000-0000-4000-8000-000000000001',email:'user@example.com',role:'User'});
   const {r,result}=res();await handler({method:'GET',headers:{},query:{side:'admin'}},r);
   expect(result().status).toBe(403);expect(loadLiveConsultations).not.toHaveBeenCalled();
  });
  it('allows verified Admin on All Requests',async()=>{
-  vi.mocked(authenticatedPrincipal).mockResolvedValue({email:'admin@example.com',role:'Admin'});
+  vi.mocked(authenticatedPrincipal).mockResolvedValue({accountId:'00000000-0000-4000-8000-000000000001',email:'admin@example.com',role:'Admin'});
   const {r,result}=res();await handler({method:'GET',headers:{},query:{side:'admin'}},r);
   expect(result().body).toEqual({role:'Admin',tickets:[]});
  });

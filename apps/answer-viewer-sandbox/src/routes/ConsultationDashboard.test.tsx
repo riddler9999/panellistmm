@@ -63,6 +63,55 @@ describe('named requester and free-form clarification',()=>{
  });
 });
 
+describe('user-facing request presentation',()=>{
+ it('uses user labels consistently and filters by them',async()=>{
+  const {default:userEvent}=await import('@testing-library/user-event');const user=userEvent.setup();
+  vi.stubGlobal('fetch',vi.fn(async()=>({ok:true,json:async()=>({role:'User',tickets:[
+   {ticketId:'1',title:'Review request',status:'Awaiting Review',history:[]},
+   {ticketId:'2',title:'Answered request',status:'Approved',history:[]},
+   {ticketId:'3',title:'Clarification request',status:'Needs Clarification',history:[]}
+  ]})})));
+  render(<ConsultationDashboard/>);
+  await user.click(await screen.findByRole('button',{name:'Under review (1)'}));
+  expect(screen.getByText('Review request')).toBeInTheDocument();
+  expect(screen.queryByText('Answered request')).not.toBeInTheDocument();
+  expect(screen.getByRole('button',{name:'Response available (1)'})).toBeInTheDocument();
+  expect(screen.getByRole('button',{name:'Your reply needed (1)'})).toBeInTheDocument();
+  expect(screen.queryByText(/Waiting for user|Needs approval/)).not.toBeInTheDocument();
+  await user.click(screen.getByText('Review request'));
+  expect(screen.getByText('Under review')).toBeInTheDocument();
+ });
+ it('aligns the original request and follow-ups as outgoing messages',async()=>{
+  const {default:userEvent}=await import('@testing-library/user-event');const user=userEvent.setup();
+  vi.stubGlobal('fetch',vi.fn(async()=>({ok:true,json:async()=>({role:'User',tickets:[{
+   ticketId:'1',title:'Conversation test',status:'Approved',history:[],description:'Original request',
+   conversation:[{role:'consultant',content:'Earlier response',revision:1},{role:'user',content:'My follow-up',revision:2}],
+   responseApproved:true,finalAnswer:'Latest response'
+  }]})})));
+  render(<ConsultationDashboard/>);await user.click(await screen.findByText('Conversation test'));
+  for(const text of ['Original request','My follow-up']) expect(screen.getByText(text).closest('article')).toHaveClass('consult-message-own');
+  for(const text of ['Earlier response','Latest response']) expect(screen.getByText(text).closest('article')).toHaveClass('consult-message-incoming');
+ });
+});
+
+describe('new request form',()=>{
+ it('offers the configured categories and submits the existing intake contract',async()=>{
+  const {default:userEvent}=await import('@testing-library/user-event');const user=userEvent.setup();
+  const fetchMock=vi.fn(async()=>({ok:true,json:async()=>({role:'User',tickets:[]})}));vi.stubGlobal('fetch',fetchMock);
+  render(<ConsultationDashboard/>);await user.click(await screen.findByRole('button',{name:'＋ New Request'}));
+  expect(screen.queryByLabelText('Search requests')).not.toBeInTheDocument();
+  expect(screen.getAllByRole('option')).toHaveLength(10);
+  await user.type(screen.getByLabelText('Title'),'Team structure');
+  await user.selectOptions(screen.getByRole('combobox'),'Organization Chart / Structure');
+  await user.type(screen.getByLabelText('Description'),'Please help structure our sales team.');
+  await user.click(screen.getByRole('button',{name:'Submit Request'}));
+  const calls=fetchMock.mock.calls as unknown as Array<[string,RequestInit]>;
+  const sent=calls.find(call=>call[0]==='/api/consultation-create');
+  expect(JSON.parse(sent![1].body as string)).toEqual({title:'Team structure',category:'Organization Chart / Structure',description:'Please help structure our sales team.'});
+  expect(await screen.findByLabelText('Search requests')).toBeInTheDocument();
+ });
+});
+
 describe('separate portal controls',()=>{
  it('keeps admin controls off the user URL even with an admin response',async()=>{
   const {default:userEvent}=await import('@testing-library/user-event');const user=userEvent.setup();
