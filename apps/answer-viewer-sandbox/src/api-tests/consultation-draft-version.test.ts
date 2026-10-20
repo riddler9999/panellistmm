@@ -44,7 +44,19 @@ describe('Supabase approval draftVersion boundary', () => {
    accountId: '00000000-0000-4000-8000-000000000001',
    role: 'Consultant', email: 'consultant@example.com',
   });
-  vi.mocked(readProof).mockResolvedValue({ approval: null, delivery: null });
+  vi.mocked(readProof).mockReset();
+  const persistedApproval = {
+   requestId, revision: 1, approvedContent: 'Consultant-approved answer',
+   approvedByEmail: 'consultant@example.com', approvedAt: '2026-10-20T00:00:00Z',
+  };
+  vi.mocked(readProof).mockResolvedValueOnce({ approval: null, delivery: null })
+   .mockResolvedValueOnce({
+    approval: persistedApproval,
+    delivery: { requestId, revision: 1, result: 'pending', deliveredAt: null },
+   }).mockResolvedValue({
+    approval: persistedApproval,
+    delivery: { requestId, revision: 1, result: 'success', deliveredAt: '2026-10-20T00:01:00Z' },
+   });
   vi.mocked(db).mockImplementation(async (path) => {
    if (path.startsWith('pocket_hr_requests?')) return [
     { request_id: requestId, owner_account_id: '00000000-0000-4000-8000-000000000002' },
