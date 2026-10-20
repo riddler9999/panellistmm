@@ -9,7 +9,7 @@ Method: Superpowers-style Plan → Implement → Test → Review; Ponytail minim
 - Google Sheets: consultation business records and history; reuse existing n8n for AI assessment, clarification, reassessment, approval/delivery integration.
 - Do not connect Glide Data Relations/Lookups to the new web app backend.
 - Avoid additional PIN and login prompts, **without weakening security**. Do not claim login-free identity transfer works before verification.
-- `Users.Role = Admin`: all seven admins are authorized consultants; can view all tickets and review/approve/edit/reject.
+- `Users.Role = Admin`: all seven admins are authorized consultants; can view all tickets and review/approve/edit or ask clarification.
 - `Users.Role = User`: each user sees **only their own tickets and history**. User A must never access User B data in UI **or API**.
 - `Assistant`, unknown identity/role, missing valid email: deny access.
 - AI chooses `ASK_CLARIFICATION` or `PROVIDE_ADVICE`. Both remain consultant-only drafts until approved. Approved clarification responses can trigger repeated reassessment without a fixed round limit. Final advice is delivered only after approval.
@@ -49,7 +49,7 @@ At the API boundary resolve verified principal to server-side role and owner ide
 ### 5. Consultant dashboard
 Reuse React/Vite UI for all-ticket listing and approved consultant actions. Protect approval by revision/round checks. Preserve immutable history and separate approval from delivery outcomes.
 
-**Gate:** valid approve/edit/reject; stale and duplicate actions safely rejected or idempotent.
+**Gate:** valid approve/edit or ask clarification; stale and duplicate actions safely rejected or idempotent.
 
 ### 6. User dashboard
 Show only own ticket, approved questions/advice and history; support submitting answers for the matching ticket and round. Resolved remains read-only.

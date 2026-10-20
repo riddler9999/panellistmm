@@ -14,7 +14,7 @@ Glide visibility, Row Owners, Web Embed URL fields, email, and Row ID do not aut
 2. Keep canonical Sheet1 headers and exact Ticket_Status strings. Do not derive published state from Ticket_Status, Review_Status, or Final_Answer alone.
 3. After an independently verified identity integration is established, resolve role from a trusted registry, authorize the ticket set, and only then fetch and project data. User role may access only matching Owner_Email; Consultant/Admin may access all authorized tickets.
 4. Batch approval and delivery proof reads for the already-authorized ticket IDs; avoid N+1 queries. Ensure latest revision is chosen deterministically and a missing/mismatched proof fails closed.
-5. Implement approve, edit, request clarification, and reject through a single revision-checked server-side contract. Persist immutable approved snapshots, retry failed delivery idempotently, and publish only after durable delivery acknowledgement.
+5. Implement approve, edit, and request clarification through a single revision-checked server-side contract. Persist immutable approved snapshots, retry failed delivery idempotently, and publish only after durable delivery acknowledgement.
 6. Test both roles with actual Sheet schema fixtures, cross-user direct-ID denial, spoofed URL/email, absent proof, duplicate approvals, failed delivery, and n8n retry. Perform read-only verification before any production write.
 
 ## Current limits

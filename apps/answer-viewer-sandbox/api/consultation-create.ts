@@ -1,7 +1,8 @@
 import { authenticatedPrincipal } from '../src/server/passcodeAuth.js';
 import { db } from '../src/server/pocketHrData.js';
-import { readConversation, saveConversation, type ConversationState } from '../src/server/conversationLifecycle.js';
+import { hasPendingAgentDraft, readConversation, saveConversation, type ConversationState } from '../src/server/conversationLifecycle.js';
 import { dispatchUnifiedRequest } from '../src/server/unifiedDispatch.js';
+export const config={maxDuration:60};
 type Req={method?:string;headers:Record<string,string|string[]|undefined>;body?:unknown};
 type Res={status(n:number):Res;setHeader(k:string,v:string):void;json(v:unknown):void};
 export default async function handler(req:Req,res:Res){
@@ -26,7 +27,7 @@ export default async function handler(req:Req,res:Res){
   const requestId=idempotencyKey.toLowerCase();
   const state:ConversationState={request_id:requestId,original_request:description,entries:[],closed_at:null,close_reason:null,reply_revision:0,pending_sync:true};
   const created=await db<boolean>('rpc/pocket_hr_create_request', 'POST', {
-   p_request_id:requestId,p_owner_account_id:principal.accountId,p_content:description,
+   p_request_id:requestId,p_owner_account_id:principal.accountId,p_content:description,p_title:title,p_category:category,
   });
   // The transactional RPC has already committed the request, user message,
   // and retryable conversation state. Legacy Google Sheets is not required.
@@ -34,12 +35,17 @@ export default async function handler(req:Req,res:Res){
   const savedConversation=created?state:await readConversation(requestId);
   if(savedConversation?.pending_sync) {
    try {
-    await dispatchUnifiedRequest({
-     requestId, revision:savedConversation.reply_revision+1,
-     ownerEmail:principal.email, title, category,
-     description:savedConversation.original_request,
-    });
-    await saveConversation({...savedConversation,pending_sync:false});
+    const revision=savedConversation.reply_revision+1;
+    if(!await hasPendingAgentDraft(requestId,revision)) {
+     await dispatchUnifiedRequest({
+      requestId, revision,
+      ownerEmail:principal.email, title, category,
+      description:savedConversation.original_request,
+     });
+    }
+    if(await hasPendingAgentDraft(requestId,revision))
+     await saveConversation({...savedConversation,pending_sync:false});
+    else dispatchPending=true;
    } catch(error) {
     // Preserve the committed request and pending_sync for a safe retry.
     console.error('pocket_hr_dispatch_pending', {code:error instanceof Error?error.message:'unknown'});

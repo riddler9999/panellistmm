@@ -1,5 +1,5 @@
 import { authenticatedPrincipal } from '../src/server/passcodeAuth.js';
-import { db, readTickets } from '../src/server/pocketHrData.js';
+import { db } from '../src/server/pocketHrData.js';
 
 type Req = { method?: string; headers: Record<string,string|string[]|undefined>; query?: Record<string,unknown> };
 type Res = { status(n:number):Res; setHeader(k:string,v:string):void; json(v:unknown):void };
@@ -22,12 +22,13 @@ export default async function handler(req:Req,res:Res) {
  try {
   const principal=await authenticatedPrincipal(req.headers);
   if(!principal) return res.status(403).json({error:'access_denied'});
-  // Legacy Sheet ownership is the current verified account-to-request binding.
-  // Do not trust request owner or reviewer roles supplied by the browser.
-  const tickets=await readTickets();
-  const matches=tickets.filter(row=>String(row['Row ID']).trim()===requestId);
-  if(matches.length!==1) return res.status(404).json({error:'request_not_found'});
-  if(principal.role==='User' && String(matches[0].Owner_Email).trim().toLowerCase()!==principal.email.toLowerCase())
+  // Request ownership is the immutable account FK in Supabase. Email and role
+  // supplied by the browser are never used to authorize this request.
+  const requests=await db<Array<{request_id:string;owner_account_id:string}>>(
+   'pocket_hr_requests?select=request_id,owner_account_id&request_id=eq.'+query(requestId)+'&limit=2'
+  );
+  if(requests.length!==1) return res.status(404).json({error:'request_not_found'});
+  if(principal.role==='User' && requests[0].owner_account_id!==principal.accountId)
    return res.status(404).json({error:'request_not_found'});
   const messages=await db<Message[]>('pocket_hr_messages?select=message_id,request_id,sender,content,review_state,approved_content,publication_revision,created_at&request_id=eq.'+query(requestId)+'&order=created_at.asc,message_id.asc&limit=500');
   if(principal.role!=='User') return res.status(200).json({requestId,messages:messages.map(m=>({

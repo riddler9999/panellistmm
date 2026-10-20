@@ -5,7 +5,7 @@ describe('consultant action contract', () => {
     for (const action of ['approve','edit','request_clarification'] as const) {
       expect(validateConsultantAction({action,requestId:'r-1',content:'Reviewed answer',expectedRevision:1})?.action).toBe(action);
     }
-    expect(validateConsultantAction({action:'reject',requestId:'r-1',expectedRevision:1})?.action).toBe('reject');
+    expect(validateConsultantAction({action:'reject',requestId:'r-1',expectedRevision:1})).toBeNull();
   });
   it('rejects malformed and ambiguous mutations', () => {
     expect(validateConsultantAction({action:'approve',requestId:'r-1',expectedRevision:1})).toBeNull();

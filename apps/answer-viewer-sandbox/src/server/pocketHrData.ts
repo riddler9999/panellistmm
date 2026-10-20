@@ -27,7 +27,12 @@ export async function db<T>(path: string, method = 'GET', body?: unknown): Promi
     console.error('pocket_hr_storage_failure', { table: allowedTable, status: response.status, method });
     throw error;
   }
-  return response.json();
+  // PostgREST void-returning RPCs (including pocket_hr_save_conversation)
+  // respond with 204 No Content; parsing JSON here would turn a successful
+  // durable write into a false failure and cause duplicate dispatch retries.
+  if (response.status === 204 || response.status === 205 || response.body === null)
+    return undefined as T;
+  return response.json() as Promise<T>;
 }
 const query = (s: string) => encodeURIComponent(s);
 const base64url = (input: string | Buffer) => Buffer.from(input).toString('base64url');
@@ -119,19 +124,6 @@ export async function readProof(requestId: string): Promise<{ approval: Approval
   const proofs = await readProofs([requestId]);
   return proofs.get(requestId) ?? { approval: null, delivery: null };
 }
-export async function acknowledgeDelivery(requestId: string, revision: number): Promise<boolean> {
-  // Durable publication acknowledgement, NOT proof that the user opened the page.
-  // A failed write leaves the approved snapshot inaccessible to users until retry succeeds.
-  const { url, key } = config();
-  const response = await fetch(url + '/rest/v1/pocket_hr_deliveries?on_conflict=request_id,revision', {
-    method: 'POST',
-    headers: { apikey: key, Authorization: 'Bearer ' + key, 'Content-Type': 'application/json', Prefer: 'resolution=merge-duplicates,return=representation' },
-    body: JSON.stringify({ request_id: requestId, revision, result: 'success', delivered_at: new Date().toISOString() }),
-    cache: 'no-store',
-  });
-  return response.ok;
-}
-
 /** Read approval/delivery proofs in two bounded queries rather than two queries per ticket.
  * Caller must authorize and bound ticket IDs before invoking this function.
  */
