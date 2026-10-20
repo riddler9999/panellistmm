@@ -24,6 +24,7 @@ describe('Supabase owner reply outbox and n8n handoff', () => {
   vi.clearAllMocks();
   vi.mocked(db).mockImplementation(async (path) => {
    if (path.startsWith(lookup)) return [] as never;
+   if (path.startsWith('pocket_hr_messages?select=message_id,content')) return [{message_id:'draft-1',content:'Draft'}] as never;
    if (path === 'pocket_hr_messages') return [] as never;
    if (path === 'rpc/pocket_hr_save_conversation') return undefined as never;
    throw new Error('unexpected_database_operation');
@@ -59,6 +60,7 @@ describe('Supabase owner reply outbox and n8n handoff', () => {
    if (path.startsWith(lookup)) return [{
     request_id: state.request_id, content: 'Follow-up question',
    }] as never;
+   if (path.startsWith('pocket_hr_messages?select=message_id,content')) return [{message_id:'draft-1',content:'Draft'}] as never;
    if (path === 'rpc/pocket_hr_save_conversation') return undefined as never;
    throw new Error('duplicate_message_insert');
   });
@@ -74,6 +76,19 @@ describe('Supabase owner reply outbox and n8n handoff', () => {
   vi.mocked(dispatchUnifiedRequest).mockRejectedValueOnce(new Error('dispatcher_unavailable'));
   await expect(syncReply(state, ownerEmail)).rejects.toThrow('dispatcher_unavailable');
   expect(db).toHaveBeenCalledWith('pocket_hr_messages', 'POST', expect.any(Object));
+  expect(vi.mocked(db).mock.calls.some(([path]) => path === 'rpc/pocket_hr_save_conversation')).toBe(false);
+ });
+
+ it('does not clear pending_sync when n8n accepted work but no draft exists yet', async () => {
+  vi.mocked(db).mockImplementation(async (path) => {
+   if (path.startsWith(lookup)) return [] as never;
+   if (path === 'pocket_hr_messages') return [] as never;
+   if (path.startsWith('pocket_hr_messages?select=message_id,content')) return [] as never;
+   if (path === 'rpc/pocket_hr_save_conversation') return undefined as never;
+   throw new Error('unexpected_database_operation');
+  });
+  await expect(syncReply(state, ownerEmail)).rejects.toThrow('agent_draft_not_persisted');
+  expect(dispatchUnifiedRequest).toHaveBeenCalledOnce();
   expect(vi.mocked(db).mock.calls.some(([path]) => path === 'rpc/pocket_hr_save_conversation')).toBe(false);
  });
 

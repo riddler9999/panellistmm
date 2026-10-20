@@ -27,6 +27,15 @@ export async function readConversations(ids: string[]): Promise<Map<string, Conv
 export async function saveConversation(state: ConversationState): Promise<void> {
  await db('rpc/pocket_hr_save_conversation', 'POST', { p_state: state });
 }
+/** A dispatch acknowledgement is complete only after its revision is visible in Supabase. */
+export async function hasPendingAgentDraft(requestId:string, revision:number):Promise<boolean> {
+ const messages=await db<Array<{message_id:string;content:string}>>(
+  'pocket_hr_messages?select=message_id,content&request_id=eq.'+encodeURIComponent(requestId)+
+  '&sender=eq.agent&review_state=eq.pending_review&revision=eq.'+revision+'&limit=2'
+ );
+ if(messages.length>1) throw new Error('duplicate_agent_draft_revision');
+ return messages.length===1 && typeof messages[0].content==='string' && !!messages[0].content.trim();
+}
 /** Serialize application writes for a ticket; release only our own lock. */
 export async function withTicketLock<T>(id: string, work: () => Promise<T>): Promise<T> {
  const key = 'pocket-hr:ticket-write:' + id;
@@ -67,5 +76,7 @@ export async function syncReply(state: ConversationState, verifiedOwnerEmail: st
   requestId:state.request_id,revision:state.reply_revision+1,
   ownerEmail,description:context,
  });
+ if(!await hasPendingAgentDraft(state.request_id,state.reply_revision+1))
+  throw new Error('agent_draft_not_persisted');
  await saveConversation({...state,pending_sync:false});
 }

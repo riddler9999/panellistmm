@@ -1,7 +1,7 @@
 import { timingSafeEqual } from 'node:crypto';
 import { db, readProof } from '../src/server/pocketHrData.js';
 import {
- readConversation, saveConversation, syncReply, withTicketLock, shouldAutoClose, AUTO_CLOSE_MS,
+ hasPendingAgentDraft, readConversation, saveConversation, syncReply, withTicketLock, shouldAutoClose, AUTO_CLOSE_MS,
  type ConversationState,
 } from '../src/server/conversationLifecycle.js';
 import { dispatchUnifiedRequest } from '../src/server/unifiedDispatch.js';
@@ -60,10 +60,12 @@ export default async function handler(req:Req,res:Res) {
       } else if(state.entries.length===0 && state.reply_revision===0) {
        // Initial-request retries are not reply turns: the original user message
        // was already inserted transactionally by pocket_hr_create_request.
-       await dispatchUnifiedRequest({
-        requestId:id,revision:1,ownerEmail,description:state.original_request,
-       });
-       await saveConversation({...state,pending_sync:false});
+       if(!await hasPendingAgentDraft(id,1)) {
+        await dispatchUnifiedRequest({
+         requestId:id,revision:1,ownerEmail,description:state.original_request,
+        });
+       }
+       if(await hasPendingAgentDraft(id,1)) await saveConversation({...state,pending_sync:false});
       } else {
        throw new Error('invalid_pending_sync_state');
       }

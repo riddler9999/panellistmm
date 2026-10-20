@@ -2,7 +2,7 @@ import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
 import handler from '../../api/consultation-maintenance';
 import { db, readProofs, readProof } from '../server/pocketHrData';
 import {
- readConversation, saveConversation, syncReply, withTicketLock,
+ hasPendingAgentDraft, readConversation, saveConversation, syncReply, withTicketLock,
  type ConversationState,
 } from '../server/conversationLifecycle';
 import { dispatchUnifiedRequest } from '../server/unifiedDispatch';
@@ -12,7 +12,7 @@ vi.mock('../server/pocketHrData', () => ({
 }));
 vi.mock('../server/conversationLifecycle', async (importOriginal) => ({
  ...await importOriginal<typeof import('../server/conversationLifecycle')>(),
- readConversation: vi.fn(), saveConversation: vi.fn(), syncReply: vi.fn(),
+ hasPendingAgentDraft: vi.fn(), readConversation: vi.fn(), saveConversation: vi.fn(), syncReply: vi.fn(),
  withTicketLock: vi.fn(),
 }));
 vi.mock('../server/unifiedDispatch', () => ({ dispatchUnifiedRequest: vi.fn() }));
@@ -60,6 +60,7 @@ describe('Supabase-only maintenance for pending n8n dispatch and auto-close', ()
   });
   vi.mocked(withTicketLock).mockImplementation(async (_id, work) => work());
   vi.mocked(readConversation).mockResolvedValue(replyState);
+  vi.mocked(hasPendingAgentDraft).mockResolvedValue(false);
   vi.mocked(saveConversation).mockResolvedValue(undefined);
   vi.mocked(syncReply).mockResolvedValue(undefined);
   vi.mocked(dispatchUnifiedRequest).mockResolvedValue(undefined);
@@ -86,15 +87,31 @@ describe('Supabase-only maintenance for pending n8n dispatch and auto-close', ()
    if (path.startsWith('pocket_hr_deliveries?')) return [] as never;
    if (path.startsWith('pocket_hr_requests?')) return [{ owner_account_id: ownerAccountId }] as never;
    if (path.startsWith('pocket_hr_accounts?')) return [{ email: 'owner@example.com', disabled_at: null }] as never;
+   if (path.startsWith('pocket_hr_messages?select=message_id,content')) return [] as never;
    throw new Error('unexpected_database_operation');
   });
   vi.mocked(readConversation).mockResolvedValue(initialState);
+  vi.mocked(hasPendingAgentDraft).mockReset().mockResolvedValueOnce(false).mockResolvedValueOnce(false);
   expect((await runCron()).status).toBe(200);
   expect(syncReply).not.toHaveBeenCalled();
   expect(dispatchUnifiedRequest).toHaveBeenCalledWith(expect.objectContaining({
    requestId, revision: 1, ownerEmail: 'owner@example.com', description: 'Original HR issue',
   }));
-  expect(saveConversation).toHaveBeenCalledWith({ ...initialState, pending_sync: false });
+  expect(saveConversation).not.toHaveBeenCalled();
+ });
+
+ it('clears a pending initial outbox only after Supabase contains the expected draft', async () => {
+  const initialPending={...initialState,pending_sync:true};
+  vi.mocked(db).mockImplementation(async path => path.startsWith('pocket_hr_conversations?')
+   ? [initialPending] as never : path.startsWith('pocket_hr_deliveries?')
+   ? [] as never : path.startsWith('pocket_hr_requests?')
+   ? [{owner_account_id:ownerAccountId}] as never : path.startsWith('pocket_hr_accounts?')
+   ? [{email:'owner@example.com',disabled_at:null}] as never : [] as never);
+  vi.mocked(readConversation).mockResolvedValue(initialPending);
+  vi.mocked(hasPendingAgentDraft).mockReset().mockResolvedValue(true);
+  expect((await runCron()).status).toBe(200);
+  expect(dispatchUnifiedRequest).not.toHaveBeenCalled();
+  expect(saveConversation).toHaveBeenCalledWith({...initialPending,pending_sync:false});
  });
 
  it('refuses to dispatch if stored owner lookup is missing', async () => {

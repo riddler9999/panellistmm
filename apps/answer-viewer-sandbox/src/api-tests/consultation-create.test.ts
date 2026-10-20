@@ -2,13 +2,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import handler from '../../api/consultation-create';
 import { authenticatedPrincipal } from '../server/passcodeAuth';
 import { db } from '../server/pocketHrData';
-import { readConversation, saveConversation } from '../server/conversationLifecycle';
+import { hasPendingAgentDraft, readConversation, saveConversation } from '../server/conversationLifecycle';
 import { dispatchUnifiedRequest } from '../server/unifiedDispatch';
 
 vi.mock('../server/passcodeAuth', () => ({ authenticatedPrincipal: vi.fn() }));
 vi.mock('../server/pocketHrData', () => ({ db: vi.fn() }));
 vi.mock('../server/conversationLifecycle', () => ({
- readConversation: vi.fn(), saveConversation: vi.fn(),
+ hasPendingAgentDraft: vi.fn(), readConversation: vi.fn(), saveConversation: vi.fn(),
 }));
 vi.mock('../server/unifiedDispatch', () => ({ dispatchUnifiedRequest: vi.fn() }));
 
@@ -50,6 +50,7 @@ beforeEach(() => {
  vi.mocked(authenticatedPrincipal).mockResolvedValue(principal);
  vi.mocked(db).mockResolvedValue(true as never);
  vi.mocked(readConversation).mockResolvedValue(null);
+ vi.mocked(hasPendingAgentDraft).mockResolvedValueOnce(false).mockResolvedValueOnce(true);
  vi.mocked(saveConversation).mockResolvedValue(undefined);
  vi.mocked(dispatchUnifiedRequest).mockResolvedValue(undefined);
 });
@@ -95,6 +96,7 @@ describe('Supabase request identity and retry handoff', () => {
  it('retries the previously committed request without inserting another request', async () => {
   vi.mocked(db).mockResolvedValue(false as never);
   vi.mocked(readConversation).mockResolvedValue(pendingState);
+  vi.mocked(hasPendingAgentDraft).mockReset().mockResolvedValueOnce(false).mockResolvedValueOnce(true);
   expect((await call()).code).toBe(200);
   expect(db).toHaveBeenCalledTimes(1);
   expect(dispatchUnifiedRequest).toHaveBeenCalledTimes(1);
@@ -105,6 +107,13 @@ describe('Supabase request identity and retry handoff', () => {
   vi.mocked(dispatchUnifiedRequest).mockRejectedValueOnce(new Error('dispatcher_unavailable'));
   expect(await call()).toEqual({ code: 201, body: { ok: true, requestId: key, dispatchPending: true } });
   expect(db).toHaveBeenCalledTimes(1);
+  expect(saveConversation).not.toHaveBeenCalled();
+ });
+
+ it('keeps dispatch pending when 202 is returned before the draft is in Supabase', async () => {
+  vi.mocked(hasPendingAgentDraft).mockReset().mockResolvedValue(false);
+  expect(await call()).toEqual({ code: 201, body: { ok: true, requestId: key, dispatchPending: true } });
+  expect(dispatchUnifiedRequest).toHaveBeenCalledOnce();
   expect(saveConversation).not.toHaveBeenCalled();
  });
 });

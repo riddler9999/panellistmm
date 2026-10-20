@@ -20,7 +20,8 @@ describe('retryable Supabase reply outbox', () => {
  beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(db).mockImplementation(async (path) =>
-   path.startsWith('pocket_hr_messages?select=') ? [] as never : undefined as never
+   path.startsWith('pocket_hr_messages?select=content,request_id') ? [] as never :
+   path.startsWith('pocket_hr_messages?select=message_id,content') ? [{message_id:'draft-1',content:'Draft'}] as never : undefined as never
   );
   vi.mocked(dispatchUnifiedRequest).mockResolvedValue(undefined);
  });
@@ -41,7 +42,9 @@ describe('retryable Supabase reply outbox', () => {
 
  it('resumes n8n dispatch without inserting a duplicate user turn', async () => {
   vi.mocked(db).mockImplementation(async path => path.startsWith('pocket_hr_messages?select=')
-   ? [{ request_id: 'T', content: 'More' }] as never : undefined as never);
+   ? path.startsWith('pocket_hr_messages?select=message_id,content')
+    ? [{message_id:'draft-1',content:'Draft'}] as never
+    : [{ request_id: 'T', content: 'More' }] as never : undefined as never);
   await syncReply(state, 'owner@example.com');
   expect(vi.mocked(db).mock.calls.some(([path]) => path === 'pocket_hr_messages')).toBe(false);
   expect(dispatchUnifiedRequest).toHaveBeenCalledTimes(1);
