@@ -39,7 +39,7 @@ async function approve(version: string) {
 
 describe('Supabase approval draftVersion boundary', () => {
  beforeEach(() => {
-  vi.resetAllMocks();
+  vi.clearAllMocks();
   vi.mocked(authenticatedPrincipal).mockResolvedValue({
    accountId: '00000000-0000-4000-8000-000000000001',
    role: 'Consultant', email: 'consultant@example.com',
