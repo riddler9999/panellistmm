@@ -18,6 +18,17 @@ describe('unified request dispatcher',()=>{
    description:'How many days?',attachments:[],source:'pocket-hr-web',
   }));
  });
+ it('fails closed when the verified request owner is missing or malformed', async () => {
+  vi.stubEnv('N8N_DISPATCH_WEBHOOK_URL', 'https://dispatcher.example.test/intake');
+  const fetchMock = vi.fn<typeof fetch>(async () => new Response(null, { status: 202 }));
+  vi.stubGlobal('fetch', fetchMock);
+  for (const ownerEmail of ['', 'not-an-email', 'owner@example.com\nother@example.com']) {
+   await expect(dispatchUnifiedRequest({
+    requestId: 'T-1', revision: 2, ownerEmail, description: 'Follow-up',
+   })).rejects.toThrow('dispatcher_identity_missing');
+  }
+  expect(fetchMock).not.toHaveBeenCalled();
+ });
  it('fails closed when the dispatcher is missing, insecure, or unavailable',async()=>{
   await expect(dispatchUnifiedRequest({requestId:'T',revision:1,description:'x'})).rejects.toThrow('dispatcher_not_configured');
   vi.stubEnv('N8N_DISPATCH_WEBHOOK_URL','http://dispatcher.example.test');
