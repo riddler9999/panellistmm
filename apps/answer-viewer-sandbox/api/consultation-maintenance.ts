@@ -21,18 +21,26 @@ export default async function handler(req:Req,res:Res) {
  try {
   // New Pocket HR requests and replies are Supabase-owned. Legacy Sheets must not
   // determine whether an outbox turn is retried or an approved answer auto-closes.
-  const pending=await db<ConversationState[]>(
-   'pocket_hr_conversations?select=*&pending_sync=eq.true&closed_at=is.null&order=request_id.asc&limit=1000'
-  );
+  // Paginate both candidate sets: a fixed 1,000-row limit silently strands
+  // newer deliveries once enough old, already-closed records accumulate.
+  const pageSize=500;
+  const ids=new Set<string>();
+  for(let offset=0;;offset+=pageSize) {
+   const pending=await db<ConversationState[]>(
+    'pocket_hr_conversations?select=*&pending_sync=eq.true&closed_at=is.null&order=request_id.asc&limit='+pageSize+'&offset='+offset
+   );
+   for(const item of pending) if(item.request_id) ids.add(item.request_id);
+   if(pending.length<pageSize) break;
+  }
   const cutoff=new Date(Date.now()-AUTO_CLOSE_MS).toISOString();
-  const expired=await db<Array<{request_id:string}>>(
-   'pocket_hr_deliveries?select=request_id&result=eq.success&delivered_at=lt.'+
-    encodeURIComponent(cutoff)+'&order=delivered_at.asc&limit=1000'
-  );
-  const ids=[...new Set([
-   ...pending.map(item=>item.request_id),
-   ...expired.map(item=>item.request_id),
-  ].filter(Boolean))];
+  for(let offset=0;;offset+=pageSize) {
+   const expired=await db<Array<{request_id:string}>>(
+    'pocket_hr_deliveries?select=request_id&result=eq.success&delivered_at=lt.'+
+     encodeURIComponent(cutoff)+'&order=delivered_at.asc,id.asc&limit='+pageSize+'&offset='+offset
+   );
+   for(const item of expired) if(item.request_id) ids.add(item.request_id);
+   if(expired.length<pageSize) break;
+  }
 
   for(const id of ids) {
    try {
