@@ -54,7 +54,7 @@ describe('Supabase-only maintenance for pending n8n dispatch and auto-close', ()
   vi.mocked(db).mockImplementation(async (path) => {
    if (path.startsWith('pocket_hr_conversations?')) return [replyState] as never;
    if (path.startsWith('pocket_hr_deliveries?')) return [] as never;
-   if (path.startsWith('pocket_hr_requests?')) return [{ owner_account_id: ownerAccountId, request_id: requestId }] as never;
+   if (path.startsWith('pocket_hr_requests?')) return [{ owner_account_id: ownerAccountId, request_id: requestId, title:'Leave request', category:'Leave' }] as never;
    if (path.startsWith('pocket_hr_accounts?')) return [{ email: 'owner@example.com', disabled_at: null }] as never;
    throw new Error('unexpected_database_operation');
   });
@@ -85,7 +85,7 @@ describe('Supabase-only maintenance for pending n8n dispatch and auto-close', ()
   vi.mocked(db).mockImplementation(async (path) => {
    if (path.startsWith('pocket_hr_conversations?')) return [initialState] as never;
    if (path.startsWith('pocket_hr_deliveries?')) return [] as never;
-   if (path.startsWith('pocket_hr_requests?')) return [{ owner_account_id: ownerAccountId }] as never;
+   if (path.startsWith('pocket_hr_requests?')) return [{ owner_account_id: ownerAccountId, title:'Leave request', category:'Leave' }] as never;
    if (path.startsWith('pocket_hr_accounts?')) return [{ email: 'owner@example.com', disabled_at: null }] as never;
    if (path.startsWith('pocket_hr_messages?select=message_id,content')) return [] as never;
    throw new Error('unexpected_database_operation');
@@ -95,7 +95,7 @@ describe('Supabase-only maintenance for pending n8n dispatch and auto-close', ()
   expect((await runCron()).status).toBe(200);
   expect(syncReply).not.toHaveBeenCalled();
   expect(dispatchUnifiedRequest).toHaveBeenCalledWith(expect.objectContaining({
-   requestId, revision: 1, ownerEmail: 'owner@example.com', description: 'Original HR issue',
+   requestId, revision: 1, ownerEmail: 'owner@example.com', title:'Leave request', category:'Leave', description: 'Original HR issue',
   }));
   expect(saveConversation).not.toHaveBeenCalled();
  });
@@ -105,7 +105,7 @@ describe('Supabase-only maintenance for pending n8n dispatch and auto-close', ()
   vi.mocked(db).mockImplementation(async path => path.startsWith('pocket_hr_conversations?')
    ? [initialPending] as never : path.startsWith('pocket_hr_deliveries?')
    ? [] as never : path.startsWith('pocket_hr_requests?')
-   ? [{owner_account_id:ownerAccountId}] as never : path.startsWith('pocket_hr_accounts?')
+   ? [{owner_account_id:ownerAccountId,title:'Leave request',category:'Leave'}] as never : path.startsWith('pocket_hr_accounts?')
    ? [{email:'owner@example.com',disabled_at:null}] as never : [] as never);
   vi.mocked(readConversation).mockResolvedValue(initialPending);
   vi.mocked(hasPendingAgentDraft).mockReset().mockResolvedValue(true);
