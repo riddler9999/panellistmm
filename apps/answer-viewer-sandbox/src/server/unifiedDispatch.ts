@@ -1,7 +1,7 @@
 export type UnifiedDispatchInput = {
   requestId: string;
   revision: number;
-  ownerEmail?: string;
+  ownerEmail: string;
   title?: string;
   category?: string;
   description: string;
@@ -14,6 +14,9 @@ export async function dispatchUnifiedRequest(input: UnifiedDispatchInput): Promi
   try { url = new URL(rawUrl); }
   catch { throw new Error('dispatcher_not_configured'); }
   if (url.protocol !== 'https:') throw new Error('dispatcher_not_configured');
+  const ownerEmail = input.ownerEmail?.trim().toLowerCase();
+  if (!ownerEmail || ownerEmail.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(ownerEmail))
+    throw new Error('dispatcher_identity_missing');
 
   const response = await fetch(url, {
     method: 'POST',
@@ -22,7 +25,7 @@ export async function dispatchUnifiedRequest(input: UnifiedDispatchInput): Promi
       request_id: input.requestId,
       revision: input.revision,
       company_id: null,
-      user_id: input.ownerEmail?.trim() || null,
+      user_id: ownerEmail,
       subject: input.title?.trim() || '',
       hr_issue: input.category?.trim() || '',
       description: input.description,
