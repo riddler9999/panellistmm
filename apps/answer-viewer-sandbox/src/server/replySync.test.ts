@@ -20,6 +20,7 @@ describe('retryable Supabase reply outbox', () => {
  beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(db).mockImplementation(async (path) =>
+   path.startsWith('pocket_hr_requests?') ? [{title:'Leave request',category:'Leave'}] as never :
    path.startsWith('pocket_hr_messages?select=content,request_id') ? [] as never :
    path.startsWith('pocket_hr_messages?select=message_id,content') ? [{message_id:'draft-1',content:'Draft'}] as never : undefined as never
   );
@@ -31,7 +32,7 @@ describe('retryable Supabase reply outbox', () => {
   expect(db).toHaveBeenCalledWith('pocket_hr_messages', 'POST',
    expect.objectContaining({ sender: 'user', review_state: null, content: 'More' }));
   expect(dispatchUnifiedRequest).toHaveBeenCalledWith({
-   requestId: 'T', revision: 2, ownerEmail: 'owner@example.com',
+   requestId: 'T', revision: 2, ownerEmail: 'owner@example.com', title:'Leave request',category:'Leave',
    description: 'Original\n\nConsultant: Answer\n\nUser: More',
   });
   expect(db).toHaveBeenCalledWith('rpc/pocket_hr_save_conversation', 'POST', {
@@ -41,7 +42,7 @@ describe('retryable Supabase reply outbox', () => {
  });
 
  it('resumes n8n dispatch without inserting a duplicate user turn', async () => {
-  vi.mocked(db).mockImplementation(async path => path.startsWith('pocket_hr_messages?select=')
+  vi.mocked(db).mockImplementation(async path => path.startsWith('pocket_hr_requests?') ? [{title:'Leave request',category:'Leave'}] as never : path.startsWith('pocket_hr_messages?select=')
    ? path.startsWith('pocket_hr_messages?select=message_id,content')
     ? [{message_id:'draft-1',content:'Draft'}] as never
     : [{ request_id: 'T', content: 'More' }] as never : undefined as never);
