@@ -50,8 +50,8 @@ export default async function handler(req:Req,res:Res) {
      if(state.pending_sync) {
       // Trust only the account joined to the stored request, never a cron payload
       // or a Google Sheets Owner_Email cell.
-      const owners=await db<Array<{owner_account_id:string}>>(
-       'pocket_hr_requests?select=owner_account_id&request_id=eq.'+encodeURIComponent(id)+'&limit=2'
+      const owners=await db<Array<{owner_account_id:string;title:string;category:string}>>(
+       'pocket_hr_requests?select=owner_account_id,title,category&request_id=eq.'+encodeURIComponent(id)+'&limit=2'
       );
       if(owners.length!==1 || !owners[0].owner_account_id)
        throw new Error('request_owner_missing');
@@ -70,7 +70,7 @@ export default async function handler(req:Req,res:Res) {
        // was already inserted transactionally by pocket_hr_create_request.
        if(!await hasPendingAgentDraft(id,1)) {
         await dispatchUnifiedRequest({
-         requestId:id,revision:1,ownerEmail,description:state.original_request,
+         requestId:id,revision:1,ownerEmail,title:owners[0].title,category:owners[0].category,description:state.original_request,
         });
        }
        if(await hasPendingAgentDraft(id,1)) await saveConversation({...state,pending_sync:false});
