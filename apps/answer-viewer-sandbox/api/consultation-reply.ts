@@ -19,18 +19,20 @@ export default async function handler(req:Req,res:Res) {
   const input=req.body as {requestId?:unknown;action?:unknown;content?:unknown;expectedRevision?:unknown}|undefined;
   if(!input || typeof input.requestId!=='string' || !input.requestId.trim() || input.requestId.length>256 || !['reply','close'].includes(String(input.action))) return res.status(400).json({error:'invalid_action'});
   if(input.action==='reply' && (typeof input.content!=='string'||!input.content.trim()||input.content.length>10000||!Number.isSafeInteger(input.expectedRevision))) return res.status(400).json({error:'invalid_reply'});
+  // Preserve the validated identifier across the asynchronous lock callback.
+  const requestId = input.requestId;
   const result=(status:number)=>({json:(body:unknown)=>({status,body})});
-  const outcome = await withTicketLock(input.requestId,async()=>{
+  const outcome = await withTicketLock(requestId,async()=>{
    const requests=await db<Array<{request_id:string;owner_account_id:string}>>(
-    'pocket_hr_requests?select=request_id,owner_account_id&request_id=eq.'+encodeURIComponent(input.requestId)+'&limit=2'
+    'pocket_hr_requests?select=request_id,owner_account_id&request_id=eq.'+encodeURIComponent(requestId)+'&limit=2'
    );
    if(requests.length!==1 || requests[0].owner_account_id!==identity.accountId)
     return result(404).json({error:'ticket_not_found'});
-   const stateFromDb=await readConversation(input.requestId);
+   const stateFromDb=await readConversation(requestId);
    if(!stateFromDb) return result(503).json({error:'conversation_unavailable'});
    let state=stateFromDb;
    if(state.closed_at) return result(409).json({error:'ticket_closed'});
-   const ticket={'Row ID':input.requestId,Owner_Email:identity.email};
+   const ticket={'Row ID':requestId,Owner_Email:identity.email};
    if(input.action==='close') {
     await saveConversation({...state,closed_at:new Date().toISOString(),close_reason:'user',pending_sync:false});
     return result(200).json({ok:true});
@@ -42,7 +44,7 @@ export default async function handler(req:Req,res:Res) {
     if(state.pending_sync) await syncReply(state, identity.email);
     return result(200).json({ok:true});
    }
-   const proof=await readProof(input.requestId as string);
+   const proof=await readProof(requestId);
    const answer=releasedAnswer(principal,ticket,proof.approval,proof.delivery);
    if(!answer || !proof.approval || proof.approval.revision!==input.expectedRevision || shouldAutoClose(proof.delivery?.deliveredAt)) return result(409).json({error:'reply_not_available'});
    const response=decodeResponse(answer);
