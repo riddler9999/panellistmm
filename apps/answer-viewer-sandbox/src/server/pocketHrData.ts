@@ -27,7 +27,12 @@ export async function db<T>(path: string, method = 'GET', body?: unknown): Promi
     console.error('pocket_hr_storage_failure', { table: allowedTable, status: response.status, method });
     throw error;
   }
-  return response.json();
+  // PostgREST void-returning RPCs (including pocket_hr_save_conversation)
+  // respond with 204 No Content; parsing JSON here would turn a successful
+  // durable write into a false failure and cause duplicate dispatch retries.
+  if (response.status === 204 || response.status === 205 || response.body === null)
+    return undefined as T;
+  return response.json() as Promise<T>;
 }
 const query = (s: string) => encodeURIComponent(s);
 const base64url = (input: string | Buffer) => Buffer.from(input).toString('base64url');
