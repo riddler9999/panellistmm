@@ -72,9 +72,11 @@ export async function syncReply(state: ConversationState, verifiedOwnerEmail: st
   message_id:messageId,request_id:state.request_id,sender:'user',
   content:last.content,revision:state.reply_revision+1,review_state:null,
  });
+ const metadata=await db<Array<{title:string;category:string}>>('pocket_hr_requests?select=title,category&request_id=eq.'+encodeURIComponent(state.request_id)+'&limit=2');
+ if(metadata.length!==1) throw new Error('reply_request_missing');
  await dispatchUnifiedRequest({
   requestId:state.request_id,revision:state.reply_revision+1,
-  ownerEmail,description:context,
+  ownerEmail,title:metadata[0].title,category:metadata[0].category,description:context,
  });
  if(!await hasPendingAgentDraft(state.request_id,state.reply_revision+1))
   throw new Error('agent_draft_not_persisted');
