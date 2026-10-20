@@ -52,7 +52,7 @@ beforeEach(() => {
  vi.mocked(readConversation).mockResolvedValue(null);
  vi.mocked(hasPendingAgentDraft).mockResolvedValueOnce(false).mockResolvedValueOnce(true);
  vi.mocked(saveConversation).mockResolvedValue(undefined);
- vi.mocked(dispatchUnifiedRequest).mockResolvedValue(undefined);
+ vi.mocked(dispatchUnifiedRequest).mockResolvedValue('accepted');
 });
 afterEach(() => vi.unstubAllGlobals());
 

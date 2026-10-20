@@ -29,7 +29,7 @@ describe('Supabase owner reply outbox and n8n handoff', () => {
    if (path === 'rpc/pocket_hr_save_conversation') return undefined as never;
    throw new Error('unexpected_database_operation');
   });
-  vi.mocked(dispatchUnifiedRequest).mockResolvedValue(undefined);
+  vi.mocked(dispatchUnifiedRequest).mockResolvedValue('accepted');
  });
 
  it('saves a user message with a null review state and dispatches the verified owner', async () => {

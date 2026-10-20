@@ -63,7 +63,7 @@ describe('Supabase-only maintenance for pending n8n dispatch and auto-close', ()
   vi.mocked(hasPendingAgentDraft).mockResolvedValue(false);
   vi.mocked(saveConversation).mockResolvedValue(undefined);
   vi.mocked(syncReply).mockResolvedValue(undefined);
-  vi.mocked(dispatchUnifiedRequest).mockResolvedValue(undefined);
+  vi.mocked(dispatchUnifiedRequest).mockResolvedValue('accepted');
   vi.mocked(readProofs).mockResolvedValue(new Map());
   vi.mocked(readProof).mockResolvedValue({ approval: null, delivery: null });
  });

@@ -23,7 +23,7 @@ describe('retryable Supabase reply outbox', () => {
    path.startsWith('pocket_hr_messages?select=content,request_id') ? [] as never :
    path.startsWith('pocket_hr_messages?select=message_id,content') ? [{message_id:'draft-1',content:'Draft'}] as never : undefined as never
   );
-  vi.mocked(dispatchUnifiedRequest).mockResolvedValue(undefined);
+  vi.mocked(dispatchUnifiedRequest).mockResolvedValue('accepted');
  });
 
  it('writes only to Supabase and dispatches full approved context with owner', async () => {

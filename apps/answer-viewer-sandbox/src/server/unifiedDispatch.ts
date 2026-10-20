@@ -7,10 +7,20 @@ export type UnifiedDispatchInput = {
   description: string;
 };
 
-export async function dispatchUnifiedRequest(input: UnifiedDispatchInput): Promise<void> {
+export type UnifiedDispatchResult = 'accepted' | 'draft_stored';
+
+export type UnifiedDispatchAcknowledgement = {
+  ok: true;
+  request_id: string;
+  revision: number;
+  ai_draft_stored: true;
+};
+
+export async function dispatchUnifiedRequest(input: UnifiedDispatchInput): Promise<UnifiedDispatchResult> {
   const rawUrl = process.env.N8N_DISPATCH_WEBHOOK_URL;
   const serviceToken = process.env.N8N_DISPATCH_WEBHOOK_SECRET;
   if (!rawUrl) throw new Error('dispatcher_not_configured');
+  if (!serviceToken || serviceToken.trim().length < 32) throw new Error('dispatcher_auth_not_configured');
   let url: URL;
   try { url = new URL(rawUrl); }
   catch { throw new Error('dispatcher_not_configured'); }
@@ -18,7 +28,6 @@ export async function dispatchUnifiedRequest(input: UnifiedDispatchInput): Promi
   const ownerEmail = input.ownerEmail?.trim().toLowerCase();
   if (!ownerEmail || ownerEmail.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(ownerEmail))
     throw new Error('dispatcher_identity_missing');
-  if (!serviceToken || serviceToken.length < 32) throw new Error('dispatcher_auth_not_configured');
 
   const response = await fetch(url, {
     method: 'POST',
@@ -27,7 +36,7 @@ export async function dispatchUnifiedRequest(input: UnifiedDispatchInput): Promi
       request_id: input.requestId,
       revision: input.revision,
       company_id: null,
-      owner_email: ownerEmail,
+      user_id: ownerEmail,
       subject: input.title?.trim() || '',
       hr_issue: input.category?.trim() || '',
       description: input.description,
@@ -36,9 +45,18 @@ export async function dispatchUnifiedRequest(input: UnifiedDispatchInput): Promi
       source: 'pocket-hr-web',
     }),
     cache: 'no-store',
-    signal: AbortSignal.timeout(10_000),
+    signal: AbortSignal.timeout(50_000),
   });
-  // A 202 means n8n accepted the work, not that it created the consultant draft.
-  // Callers must independently confirm the pending_review message in Supabase.
-  if (response.status !== 200 && response.status !== 202) throw new Error('dispatcher_unavailable');
+  // 202 only acknowledges dispatch; every caller checks Supabase before it
+  // clears the retryable conversation state.
+  if (response.status === 202) return 'accepted';
+  if (response.status !== 200) throw new Error('dispatcher_unavailable');
+  let acknowledgement: unknown;
+  try { acknowledgement = await response.json(); }
+  catch { throw new Error('dispatcher_ack_invalid'); }
+  const ack = acknowledgement as Partial<UnifiedDispatchAcknowledgement> | null;
+  if (!ack || ack.ok !== true || ack.ai_draft_stored !== true ||
+      ack.request_id !== input.requestId || ack.revision !== input.revision)
+    throw new Error('dispatcher_ack_invalid');
+  return 'draft_stored';
 }
