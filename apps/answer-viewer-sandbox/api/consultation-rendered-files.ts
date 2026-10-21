@@ -18,9 +18,9 @@ export default async function handler(req:Req,res:Res){
  if(req.method!=='POST')return res.status(405).json({error:'method_not_allowed'});
  if(Number(req.headers['content-length']??0)>6*1024*1024)return res.status(413).json({error:'payload_too_large'});
  if(!authorized(req.headers['x-renderer-secret']))return res.status(403).json({error:'access_denied'});
- const input=req.body as {request_id?:unknown;job_key?:unknown;files?:unknown}|undefined;
- const requestId=input?.request_id,jobKey=input?.job_key;
- if(typeof requestId!=='string'||!/^[A-Za-z0-9_-]{1,96}$/.test(requestId)||typeof jobKey!=='string'||!/^[A-Za-z0-9_-]{1,96}$/.test(jobKey)||!Array.isArray(input?.files)||
+ const input=req.body as {request_id?:unknown;files?:unknown}|undefined;
+ const requestId=input?.request_id;
+ if(typeof requestId!=='string'||!/^[A-Za-z0-9_-]{1,96}$/.test(requestId)||!Array.isArray(input?.files)||
     input.files.length!==2||input.files.some(f=>!f||typeof f.name!=='string'||typeof f.base64!=='string'))
    return res.status(400).json({error:'invalid_payload'});
  try{
@@ -29,7 +29,7 @@ export default async function handler(req:Req,res:Res){
      if(requests.length!==1)return {status:404,body:{error:'ticket_not_found'}};
      const state=await readConversation(requestId);
      if(state?.closed_at||state?.pending_sync)return {status:409,body:{error:'ticket_closed_or_syncing'}};
-     const files=await storeRenderedPair(requestId,input.files as Array<{name:string;base64:string}>,jobKey);
+     const files=await storeRenderedPair(requestId,input.files as Array<{name:string;base64:string}>);
      return {status:201,body:{ok:true,request_id:requestId,files}};
    });
    return res.status(outcome.status).json(outcome.body);
