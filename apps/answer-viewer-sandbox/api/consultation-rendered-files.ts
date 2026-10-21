@@ -27,7 +27,7 @@ export default async function handler(req:Req,res:Res){
      const requests=await db<Array<{request_id:string}>>('pocket_hr_requests?select=request_id&request_id=eq.'+encodeURIComponent(requestId)+'&limit=2');
      if(requests.length!==1)return {status:404,body:{error:'ticket_not_found'}};
      const state=await readConversation(requestId);
-     if(state?.closed_at)return {status:409,body:{error:'ticket_closed'}};
+     if(state?.closed_at||state?.pending_sync)return {status:409,body:{error:'ticket_closed_or_syncing'}};
      const files=await storeRenderedPair(requestId,input.files as Array<{name:string;base64:string}>);
      return {status:201,body:{ok:true,request_id:requestId,files}};
    });
