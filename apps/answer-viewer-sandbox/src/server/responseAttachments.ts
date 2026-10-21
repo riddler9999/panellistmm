@@ -88,6 +88,7 @@ export async function storeRenderedPair(requestId:string, files:Array<{name:stri
     files.filter(f=>/\.xlsx$/i.test(f.name)).length!==1||
     files.filter(f=>/\.png$/i.test(f.name)).length!==1) throw new Error('invalid_render_pair');
  const validated=await Promise.all(files.map(f=>validateAttachment(f.name,f.base64)));
+ if(validated.reduce((sum,f)=>sum+f.bytes.length,0)>3*1024*1024)throw new Error('render_pair_too_large');
  const saved:ResponseAttachment[]=[];
  try {
   for(const file of validated) saved.push(await storeAttachment(requestId,'panellist-renderer',file));
