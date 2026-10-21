@@ -47,8 +47,10 @@ export default async function handler(req:Req,res:Res){
   const deliveries=await db<Array<{result:string}>>('pocket_hr_deliveries?select=result&'+filter);
   if(deliveries[0]?.result!=='success'||!approvals[0]||!decodeResponse(approvals[0].approved_content).attachments.some(a=>a.id===id))return res.status(404).json({error:'file_not_found'});
   const bytes=await downloadAttachment(file);
+  const inline=req.query?.inline==='1' && file.mime==='image/png';
+  res.setHeader('Content-Security-Policy',"default-src 'none'; sandbox");
   res.setHeader('Content-Type',file.mime);
-  res.setHeader('Content-Disposition',"attachment; filename*=UTF-8''"+encodeURIComponent(file.name));
+  res.setHeader('Content-Disposition',(inline?'inline':'attachment')+"; filename*=UTF-8''"+encodeURIComponent(file.name));
   return res.status(200).send(bytes);
  }catch{return res.status(503).json({error:'file_unavailable'});}
 }
