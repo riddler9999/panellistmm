@@ -85,9 +85,16 @@ export async function downloadAttachment(file:StoredAttachment):Promise<Buffer> 
 // The renderer caller never receives service-role credentials.
 export async function storeRenderedPair(requestId:string, files:Array<{name:string;base64:string}>):Promise<ResponseAttachment[]> {
  if(!/^[A-Za-z0-9_-]{1,96}$/.test(requestId)||files.length!==2 ||
-    !files.some(f=>/\.xlsx$/i.test(f.name))||!files.some(f=>/\.png$/i.test(f.name)))
+    files.filter(f=>/\.xlsx$/i.test(f.name)).length!==1 ||
+    files.filter(f=>/\.png$/i.test(f.name)).length!==1)
    throw new Error('invalid_render_pair');
  const validated=await Promise.all(files.map(f=>validateAttachment(f.name,f.base64)));
+ const existing=await db<StoredAttachment[]>('pocket_hr_response_files?select=*&request_id=eq.'+encodeURIComponent(requestId)+'&uploaded_by=eq.panellist-renderer&limit=10');
+ if(existing.length>=2) {
+   const xlsx=existing.find(f=>f.mime.includes('spreadsheetml')),png=existing.find(f=>f.mime==='image/png');
+   if(xlsx&&png)return [xlsx,png].map(f=>({id:f.id,name:f.name,mime:f.mime,size:f.size}));
+ }
+ if(existing.length)throw new Error('partial_render_pair');
  const saved:ResponseAttachment[]=[];
  try {
    for(const file of validated)saved.push(await storeAttachment(requestId,'panellist-renderer',file));
@@ -95,9 +102,9 @@ export async function storeRenderedPair(requestId:string, files:Array<{name:stri
    const config=storageConfig();
    for(const file of saved){
      try {
-       await fetch(config.url+'/storage/v1/object/'+bucket+'/'+encodeURIComponent(file.id),{method:'DELETE',headers:config.headers});
-       await db('pocket_hr_response_files?id=eq.'+file.id,'DELETE');
-     }catch { /* original error is authoritative; monitor orphan cleanup */ }
+       const deleted=await fetch(config.url+'/storage/v1/object/'+bucket+'/'+encodeURIComponent(file.id),{method:'DELETE',headers:config.headers});
+       if(deleted.ok)await db('pocket_hr_response_files?id=eq.'+file.id,'DELETE');
+     }catch { /* original error is authoritative; recovery may be required */ }
    }
    throw error;
  }
