@@ -88,5 +88,18 @@ export async function storeRenderedPair(requestId:string, files:Array<{name:stri
     !files.some(f=>/\.xlsx$/i.test(f.name))||!files.some(f=>/\.png$/i.test(f.name)))
    throw new Error('invalid_render_pair');
  const validated=await Promise.all(files.map(f=>validateAttachment(f.name,f.base64)));
- return Promise.all(validated.map(f=>storeAttachment(requestId,'panellist-renderer',f)));
+ const saved:ResponseAttachment[]=[];
+ try {
+   for(const file of validated)saved.push(await storeAttachment(requestId,'panellist-renderer',file));
+ }catch(error){
+   const config=storageConfig();
+   for(const file of saved){
+     try {
+       await fetch(config.url+'/storage/v1/object/'+bucket+'/'+encodeURIComponent(file.id),{method:'DELETE',headers:config.headers});
+       await db('pocket_hr_response_files?id=eq.'+file.id,'DELETE');
+     }catch { /* original error is authoritative; monitor orphan cleanup */ }
+   }
+   throw error;
+ }
+ return saved;
 }
