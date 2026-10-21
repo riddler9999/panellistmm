@@ -83,31 +83,23 @@ export async function downloadAttachment(file:StoredAttachment):Promise<Buffer> 
 
 // Renderer integration uses the same validation and private Storage path as manual attachments.
 // The renderer caller never receives service-role credentials.
-export async function storeRenderedPair(requestId:string, files:Array<{name:string;base64:string}>, jobKey:string):Promise<ResponseAttachment[]> {
- if(!/^[A-Za-z0-9_-]{1,96}$/.test(requestId)||!/^[A-Za-z0-9_-]{1,96}$/.test(jobKey)||
-    files.length!==2||files.filter(f=>/\.xlsx$/i.test(f.name)).length!==1||
-    files.filter(f=>/\.png$/i.test(f.name)).length!==1)
-   throw new Error('invalid_render_pair');
+export async function storeRenderedPair(requestId:string, files:Array<{name:string;base64:string}>):Promise<ResponseAttachment[]> {
+ if(!/^[A-Za-z0-9_-]{1,96}$/.test(requestId)||files.length!==2||
+    files.filter(f=>/\.xlsx$/i.test(f.name)).length!==1||
+    files.filter(f=>/\.png$/i.test(f.name)).length!==1) throw new Error('invalid_render_pair');
  const validated=await Promise.all(files.map(f=>validateAttachment(f.name,f.base64)));
- const uploader='panellist-renderer:'+jobKey;
- const existing=await db<StoredAttachment[]>('pocket_hr_response_files?select=*&request_id=eq.'+encodeURIComponent(requestId)+'&uploaded_by=eq.'+encodeURIComponent(uploader)+'&limit=10');
- if(existing.length>=2) {
-   const xlsx=existing.find(f=>f.mime.includes('spreadsheetml')),png=existing.find(f=>f.mime==='image/png');
-   if(xlsx&&png)return [xlsx,png].map(f=>({id:f.id,name:f.name,mime:f.mime,size:f.size}));
- }
- if(existing.length)throw new Error('partial_render_pair');
  const saved:ResponseAttachment[]=[];
  try {
-   for(const file of validated)saved.push(await storeAttachment(requestId,uploader,file));
+  for(const file of validated) saved.push(await storeAttachment(requestId,'panellist-renderer',file));
+  return saved;
  }catch(error){
-   const config=storageConfig();
-   for(const file of saved){
-     try {
-       const deleted=await fetch(config.url+'/storage/v1/object/'+bucket+'/'+encodeURIComponent(file.id),{method:'DELETE',headers:config.headers});
-       if(deleted.ok)await db('pocket_hr_response_files?id=eq.'+file.id,'DELETE');
-     }catch { /* rollback may need operator repair */ }
-   }
-   throw error;
+  const config=storageConfig();
+  for(const file of saved){
+   try {
+    const deletion=await fetch(config.url+'/storage/v1/object/'+bucket+'/'+encodeURIComponent(file.id),{method:'DELETE',headers:config.headers});
+    if(deletion.ok)await db('pocket_hr_response_files?id=eq.'+file.id,'DELETE');
+   }catch { /* original storage failure remains authoritative */ }
+  }
+  throw error;
  }
- return saved;
 }
