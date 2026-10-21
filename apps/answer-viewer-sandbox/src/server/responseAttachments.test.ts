@@ -49,8 +49,8 @@ describe('private response attachment validation',()=>{
  });
 
  it('refuses mismatched rendered pairs before reaching Storage',async()=>{
-  await expect(storeRenderedPair('request-1',[{name:'one.png',base64:''},{name:'two.png',base64:''}])).rejects.toThrow('invalid_render_pair');
-  await expect(storeRenderedPair('../invalid',[{name:'one.xlsx',base64:''},{name:'two.png',base64:''}])).rejects.toThrow('invalid_render_pair');
+  await expect(storeRenderedPair('request-1',[{name:'one.png',base64:''},{name:'two.png',base64:''}],'testjob')).rejects.toThrow('invalid_render_pair');
+  await expect(storeRenderedPair('../invalid',[{name:'one.xlsx',base64:''},{name:'two.png',base64:''}],'testjob')).rejects.toThrow('invalid_render_pair');
  });
 
 });
