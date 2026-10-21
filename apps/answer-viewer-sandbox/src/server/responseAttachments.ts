@@ -80,3 +80,13 @@ export async function downloadAttachment(file:StoredAttachment):Promise<Buffer> 
  if(!response.ok)throw new Error('attachment_unavailable');
  return Buffer.from(await response.arrayBuffer());
 }
+
+// Renderer integration uses the same validation and private Storage path as manual attachments.
+// The renderer caller never receives service-role credentials.
+export async function storeRenderedPair(requestId:string, files:Array<{name:string;base64:string}>):Promise<ResponseAttachment[]> {
+ if(!/^[A-Za-z0-9_-]{1,96}$/.test(requestId)||files.length!==2 ||
+    !files.some(f=>/\.xlsx$/i.test(f.name))||!files.some(f=>/\.png$/i.test(f.name)))
+   throw new Error('invalid_render_pair');
+ const validated=await Promise.all(files.map(f=>validateAttachment(f.name,f.base64)));
+ return Promise.all(validated.map(f=>storeAttachment(requestId,'panellist-renderer',f)));
+}
