@@ -80,3 +80,35 @@ export async function downloadAttachment(file:StoredAttachment):Promise<Buffer> 
  if(!response.ok)throw new Error('attachment_unavailable');
  return Buffer.from(await response.arrayBuffer());
 }
+
+// Renderer integration uses the same validation and private Storage path as manual attachments.
+// The renderer caller never receives service-role credentials.
+export async function storeRenderedPair(requestId:string, files:Array<{name:string;base64:string}>,jobKey:string):Promise<ResponseAttachment[]> {
+ if(!/^[A-Za-z0-9_-]{1,96}$/.test(requestId)||!/^[A-Za-z0-9_-]{1,96}$/.test(jobKey)||
+   files.length!==2||files.filter(f=>/\.xlsx$/i.test(f.name)).length!==1||
+   files.filter(f=>/\.png$/i.test(f.name)).length!==1)throw new Error('invalid_render_pair');
+ const validated=await Promise.all(files.map(f=>validateAttachment(f.name,f.base64)));
+ if(validated.reduce((sum,f)=>sum+f.bytes.length,0)>3*1024*1024)throw new Error('render_pair_too_large');
+ const byJob='panellist-renderer:'+jobKey;
+ const previous=await db<StoredAttachment[]>('pocket_hr_response_files?select=*&request_id=eq.'+encodeURIComponent(requestId)+'&uploaded_by=eq.'+encodeURIComponent(byJob)+'&limit=5');
+ if(previous.length) {
+   if(previous.length!==2)throw new Error('partial_render_pair');
+   const ordered=['xlsx','png'].map(extension=>previous.find(file=>file.name.endsWith('.'+extension)));
+   if(ordered.some(file=>!file))throw new Error('partial_render_pair');
+   return ordered.map(file=>({id:file!.id,name:file!.name,mime:file!.mime,size:file!.size}));
+ }
+ const saved:ResponseAttachment[]=[];
+ try {
+   for(const file of validated)saved.push(await storeAttachment(requestId,byJob,file));
+ }catch(error){
+   const config=storageConfig();
+   for(const file of saved){
+     try {
+       const deletion=await fetch(config.url+'/storage/v1/object/'+bucket+'/'+encodeURIComponent(file.id),{method:'DELETE',headers:config.headers});
+       if(deletion.ok)await db('pocket_hr_response_files?id=eq.'+file.id,'DELETE');
+     }catch { /* original failure remains authoritative; orphan cleanup may be needed */ }
+   }
+   throw error;
+ }
+ return saved;
+}

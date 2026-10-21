@@ -2,7 +2,7 @@
 import {describe,it,expect,vi} from 'vitest';
 import sharp from 'sharp';
 import {zipSync,strToU8} from 'fflate';
-import {validateAttachment,selectAttachments,storeAttachment} from './responseAttachments';
+import {validateAttachment,selectAttachments,storeAttachment,storeRenderedPair} from './responseAttachments';
 import {db} from './pocketHrData';
 vi.mock('./pocketHrData',()=>({db:vi.fn()}));
 describe('private response attachment validation',()=>{
@@ -46,6 +46,11 @@ describe('private response attachment validation',()=>{
    vi.unstubAllEnvs();
    vi.unstubAllGlobals();
   }
+ });
+
+ it('refuses mismatched rendered pairs before reaching Storage',async()=>{
+  await expect(storeRenderedPair('request-1',[{name:'one.png',base64:''},{name:'two.png',base64:''}],'jobtest')).rejects.toThrow('invalid_render_pair');
+  await expect(storeRenderedPair('../invalid',[{name:'one.xlsx',base64:''},{name:'two.png',base64:''}],'jobtest')).rejects.toThrow('invalid_render_pair');
  });
 
 });

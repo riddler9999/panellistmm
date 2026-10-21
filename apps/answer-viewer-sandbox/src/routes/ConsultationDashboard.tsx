@@ -185,7 +185,14 @@ export function ConsultationDashboard({side = 'user'}: {side?: 'user'|'admin'}) 
     finally{setUploading(false);}
   }
   function fileLinks(files:ResponseAttachment[]|undefined,revision:number){
-    return files?.length ? <ul className="consult-attachments">{files.map(file=><li key={file.id}><a href={'/api/consultation-file?id='+encodeURIComponent(file.id)+'&revision='+revision} download>{file.name}</a><small> · {Math.ceil(file.size/1024)} KB</small></li>)}</ul> : null;
+    return files?.length ? <ul className="consult-attachments">{files.map(file=>{
+      const url='/api/consultation-file?id='+encodeURIComponent(file.id)+'&revision='+revision;
+      return <li key={file.id}>
+        {file.mime==='image/png' ? <details><summary>Preview {file.name}</summary><img src={url+'&inline=1'} alt={file.name} style={{maxWidth:'100%',maxHeight:480,objectFit:'contain'}} loading="lazy"/></details> : null}
+        <a href={url} download>{file.mime.includes('spreadsheetml')?'Download Excel: ': 'Download: '}{file.name}</a>
+        <small> · {Math.ceil(file.size/1024)} KB</small>
+      </li>;
+    })}</ul> : null;
   }
   function messageText(content:string|undefined){
     return <p>{messageParts(content??'').map((part,index)=>part.type==='link'
